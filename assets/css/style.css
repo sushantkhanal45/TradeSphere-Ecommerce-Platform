@@ -1,0 +1,21 @@
+body{
+font-family: Arial;
+background:#f4f4f4;
+}
+
+.products{
+display:flex;
+gap:20px;
+}
+
+.card{
+background:white;
+padding:20px;
+border-radius:8px;
+width:200px;
+}
+
+.sold{
+color:red;
+font-weight:bold;
+}
