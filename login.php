@@ -1,38 +1,64 @@
 <?php
 session_start();
-include "includes/db.php";
+include "config/db.php";
 
-if(isset($_POST['login'])){
+$error = "";
 
-$email=$_POST['email'];
-$password=$_POST['password'];
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $email = trim($_POST['email']);
+    $password = $_POST['password'];
 
-$query="SELECT * FROM users WHERE email='$email'";
-$result=mysqli_query($conn,$query);
+    $result = $conn->query("SELECT * FROM users WHERE email='$email'");
+    $user = $result ? $result->fetch_assoc() : null;
 
-$user=mysqli_fetch_assoc($result);
-
-if(password_verify($password,$user['password'])){
-
-$_SESSION['user']=$user;
-
-header("Location: dashboard.php");
-
-}else{
-
-echo "Invalid login";
-
-}
-
+    if ($user && password_verify($password, $user['password'])) {
+        $_SESSION['user'] = $user['email'];
+        header("Location: index.php");
+        exit();
+    } else {
+        $error = "Invalid email or password.";
+    }
 }
 ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - TradeSphere</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
 
-<form method="POST">
+<div class="form-page">
+    <div class="form-card">
+        <h2>Login</h2>
+        <p class="helper">Login to continue buying, selling, and managing your activity.</p>
 
-<input type="email" name="email" placeholder="Email">
+        <?php if ($error): ?>
+            <div class="error-msg"><?php echo $error; ?></div>
+        <?php endif; ?>
 
-<input type="password" name="password" placeholder="Password">
+        <form method="POST">
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" name="email" placeholder="Enter your email" required>
+            </div>
 
-<button name="login">Login</button>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" name="password" placeholder="Enter your password" required>
+            </div>
 
-</form>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Login</button>
+            </div>
+        </form>
+
+        <p class="form-note">
+            Don’t have an account? <a href="register.php">Create one here</a>
+        </p>
+    </div>
+</div>
+
+</body>
+</html>
