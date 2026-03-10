@@ -1,2 +1,2 @@
-# TradeSphere-Ecommerce-Platform
+# TradeSphere-Ecommerce-Platform [Final Year Project- B.Sc.CSIT]
 TradeSphere is a multi-vendor e-commerce marketplace built with PHP, MySQL, HTML, CSS, and JavaScript. Users can buy and sell products through a single account. It includes product listings, cart and checkout features, dashboards, an admin panel, a recommendation system using cosine similarity, and secure buyer–seller chat with RSA key exchange.
