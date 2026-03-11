@@ -32,7 +32,7 @@ body{
     top: 0;
     left: 0;
     width: 100%;
-    background: rgba(15, 23, 42, 0.25);
+    background: rgba(15, 23, 42, 0.35);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     border-bottom: 1px solid rgba(255,255,255,0.08);
@@ -42,7 +42,7 @@ body{
 .navbar-inner{
     max-width: 1200px;
     margin: auto;
-    padding: 16px 20px;
+    padding: 20px 28px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -50,22 +50,11 @@ body{
 }
 
 .logo a{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    text-decoration:none;
-}
-
-.site-logo{
-    height:40px;
-    width:auto;
-    display:block;
-}
-
-.logo-text{
-    font-size:22px;
-    font-weight:700;
-    color:white;
+    text-decoration: none;
+    color: white;
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
 }
 
 .menu-toggle{
@@ -78,14 +67,15 @@ body{
 .nav-links{
     display: flex;
     align-items: center;
-    gap: 22px;
+    gap: 28px;
 }
 
 .nav-links a{
     color: white;
     text-decoration: none;
-    font-size: 14px;
-    opacity: 0.92;
+    font-size: 17px;
+    font-weight: 500;
+    opacity: 0.95;
     transition: 0.2s ease;
 }
 
@@ -95,10 +85,39 @@ body{
 }
 
 .nav-btn{
-    background: rgba(56, 189, 248, 0.18);
-    border: 1px solid rgba(56, 189, 248, 0.45);
-    padding: 8px 14px;
-    border-radius: 10px;
+    padding: 10px 18px;
+    border-radius: 12px;
+    border: 1px solid #38bdf8;
+    background: rgba(56,189,248,0.15);
+    font-size: 16px;
+}
+
+/* FLOATING CART */
+.floating-cart{
+    position: fixed;
+    left: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: rgba(15, 23, 42, 0.88);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-size: 28px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.22);
+    z-index: 1100;
+    transition: 0.2s ease;
+    border: 1px solid rgba(56,189,248,0.35);
+}
+
+.floating-cart:hover{
+    background: var(--primary);
+    color: #062033;
+    transform: translateY(-50%) scale(1.06);
 }
 
 /* HERO */
@@ -151,6 +170,8 @@ body{
     border-radius: 12px;
     font-weight: 600;
     transition: 0.2s ease;
+    border: none;
+    cursor: pointer;
 }
 
 .btn-primary{
@@ -209,6 +230,33 @@ body{
 
 .dark .section-subtitle{
     color: #cbd5e1;
+}
+
+/* CATEGORY CHIPS */
+.category-chip-row{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 18px;
+}
+
+.category-chip{
+    display: inline-block;
+    padding: 11px 18px;
+    border-radius: 999px;
+    background: white;
+    color: var(--text);
+    text-decoration: none;
+    box-shadow: var(--shadow);
+    font-size: 15px;
+    font-weight: 600;
+    transition: 0.2s ease;
+}
+
+.category-chip:hover{
+    background: var(--primary);
+    color: #062033;
 }
 
 /* FEATURES */
@@ -337,6 +385,146 @@ body{
     padding: 35px 0;
 }
 
+/* SELL FORM */
+.form-page{
+    min-height: 100vh;
+    padding-top: 120px;
+    padding-bottom: 60px;
+    background: linear-gradient(180deg, #eff6ff, #f8fafc);
+}
+
+.form-card{
+    max-width: 700px;
+    margin: auto;
+    background: white;
+    padding: 32px;
+    border-radius: 22px;
+    box-shadow: var(--shadow);
+}
+
+.form-card h2{
+    font-size: 30px;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.form-card p.helper{
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 24px;
+    line-height: 1.6;
+}
+
+.form-group{
+    margin-bottom: 18px;
+}
+
+.form-group label{
+    display: block;
+    margin-bottom: 7px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select{
+    width: 100%;
+    padding: 13px 14px;
+    border-radius: 12px;
+    border: 1px solid #d1d5db;
+    font-size: 15px;
+    outline: none;
+}
+
+.form-group textarea{
+    resize: vertical;
+    min-height: 110px;
+}
+
+.form-actions{
+    margin-top: 10px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.success-msg,
+.error-msg{
+    padding: 12px 14px;
+    border-radius: 12px;
+    margin-bottom: 18px;
+    font-size: 14px;
+}
+
+.success-msg{
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.error-msg{
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.seller-listings-section{
+    margin-top: 60px;
+}
+
+/* 3 DOT MENU */
+.seller-card .product-image-wrap{
+    overflow: visible;
+}
+
+.card-menu{
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 50;
+}
+
+.card-menu-btn{
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(15, 23, 42, 0.82);
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.card-menu-dropdown{
+    display: none;
+    position: absolute;
+    top: 46px;
+    right: 0;
+    min-width: 180px;
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 16px 35px rgba(0,0,0,0.16);
+    overflow: hidden;
+}
+
+.card-menu-dropdown a,
+.menu-action-btn{
+    display: block;
+    width: 100%;
+    padding: 13px 14px;
+    text-align: left;
+    background: white;
+    border: none;
+    text-decoration: none;
+    color: var(--text);
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.card-menu-dropdown a:hover,
+.menu-action-btn:hover{
+    background: #f3f4f6;
+}
+
 /* CONTACT CARD */
 .profile-card{
     max-width: 420px;
@@ -404,9 +592,9 @@ footer{
     .nav-links{
         display: none;
         position: absolute;
-        top: 72px;
+        top: 78px;
         right: 16px;
-        width: 220px;
+        width: 240px;
         background: rgba(15, 23, 42, 0.95);
         backdrop-filter: blur(12px);
         border-radius: 16px;
@@ -424,14 +612,11 @@ footer{
         width: 100%;
         padding: 6px 0;
         margin: 0;
+        font-size: 16px;
     }
 
-    .site-logo{
-        height: 42px;
-    }
-
-    .logo-text{
-        font-size: 20px;
+    .logo a{
+        font-size: 24px;
     }
 
     .hero-content h1{
@@ -448,5 +633,12 @@ footer{
 
     .section-title{
         font-size: 28px;
+    }
+
+    .floating-cart{
+        width: 52px;
+        height: 52px;
+        font-size: 24px;
+        left: 12px;
     }
 }

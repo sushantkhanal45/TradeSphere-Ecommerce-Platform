@@ -2,36 +2,36 @@
 session_start();
 include "config/db.php";
 
-$recent = $conn->query("SELECT * FROM products ORDER BY created_at DESC, id DESC LIMIT 6");
- ?>
+$recent = $conn->query("SELECT * FROM products ORDER BY id DESC LIMIT 6");
+$categoryQuery = $conn->query("SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != '' ORDER BY category ASC");
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TradeSphere</title>
     <link rel="stylesheet" href="css/style.css">
- </head>
+</head>
 <body>
 
 <nav class="navbar">
     <div class="navbar-inner">
-     <div class="logo">
-    <a href="index.php">
-        <img src="./images/logo.png" class="site-logo" alt="TradeSphere Logo">
-        <!-- <span class="logo-text">TradeSphere</span> -->
-    </a>
-</div>
+        <div class="logo">
+            <a href="index.php">TradeSphere</a>
+        </div>
+
         <div class="menu-toggle" id="menuToggle">☰</div>
+
         <div class="nav-links" id="navLinks">
             <a href="index.php">Home</a>
             <a href="products.php">Products</a>
+            <a href="#categories">Categories</a>
+            <a href="sell.php">Sell</a>
             <a href="#about">About</a>
-            <a href="#services">Services</a>
             <a href="#contact">Contact</a>
 
             <?php if (isset($_SESSION['user'])): ?>
-                <a href="sell.php">Sell</a>
-                <a href="cart.php">Cart</a>
                 <a href="logout.php" class="nav-btn">Logout</a>
             <?php else: ?>
                 <a href="login.php">Login</a>
@@ -41,20 +41,48 @@ $recent = $conn->query("SELECT * FROM products ORDER BY created_at DESC, id DESC
     </div>
 </nav>
 
+<?php if (isset($_SESSION['user'])): ?>
+    <a href="cart.php" class="floating-cart" title="View Cart">🛒</a>
+<?php endif; ?>
+
 <section class="hero" id="home">
     <div class="hero-content">
-        <h1>Modern Digital Marketplace for Buying and Selling</h1>
+        <h1>Buy, Sell, and Discover Smarter with TradeSphere</h1>
         <p>
-            TradeSphere is a smart marketplace where users can discover products,
-            list their own items, and explore a cleaner buying experience with a
-            modern interface and intelligent recommendation-ready design.
+            A modern digital marketplace where users can explore products, list their own items,
+            and enjoy a cleaner and more intelligent buying and selling experience.
         </p>
+
         <div class="hero-actions">
-            <a href="products.php" class="btn btn-primary">Buy Items</a>
+            <a href="products.php" class="btn btn-primary">Browse Products</a>
+
             <?php if (isset($_SESSION['user'])): ?>
-                <a href="sell.php" class="btn btn-secondary">Sell Items</a>
+                <a href="sell.php" class="btn btn-secondary">Start Selling</a>
             <?php else: ?>
-                <a href="register.php" class="btn btn-secondary">Start Selling</a>
+                <a href="register.php" class="btn btn-secondary">Join TradeSphere</a>
+            <?php endif; ?>
+        </div>
+    </div>
+</section>
+
+<section class="home-block alt" id="categories">
+    <div class="container">
+        <h2 class="section-title">Browse by Category</h2>
+        <p class="section-subtitle">
+            Explore product categories to quickly discover items that match your interests.
+        </p>
+
+        <div class="category-chip-row">
+            <a href="products.php" class="category-chip">All</a>
+
+            <?php if ($categoryQuery && $categoryQuery->num_rows > 0): ?>
+                <?php while ($cat = $categoryQuery->fetch_assoc()): ?>
+                    <a href="products.php?category=<?php echo urlencode($cat['category']); ?>" class="category-chip">
+                        <?php echo htmlspecialchars($cat['category']); ?>
+                    </a>
+                <?php endwhile; ?>
+            <?php else: ?>
+                <span class="category-chip">No Categories Yet</span>
             <?php endif; ?>
         </div>
     </div>
@@ -64,8 +92,8 @@ $recent = $conn->query("SELECT * FROM products ORDER BY created_at DESC, id DESC
     <div class="container">
         <h2 class="section-title">Recently Listed Items</h2>
         <p class="section-subtitle">
-            Browse the latest items added to TradeSphere. The home page highlights recent listings,
-            while the full Products page lets users explore the complete marketplace.
+            These are the latest products added to the TradeSphere marketplace.
+            Visit the Products page to explore all available listings.
         </p>
 
         <?php if ($recent && $recent->num_rows > 0): ?>
@@ -73,54 +101,36 @@ $recent = $conn->query("SELECT * FROM products ORDER BY created_at DESC, id DESC
                 <?php while ($row = $recent->fetch_assoc()): ?>
                     <div class="product-card">
                         <div class="product-image-wrap">
-                            <img src="uploads/<?php echo htmlspecialchars($row['image']); ?>" alt="Product">
+                            <img src="uploads/<?php echo htmlspecialchars($row['image']); ?>" alt="Product Image">
                             <?php if (isset($row['status']) && $row['status'] === 'sold'): ?>
                                 <div class="sold-badge">SOLD</div>
                             <?php endif; ?>
                         </div>
+
                         <div class="product-body">
                             <h3><?php echo htmlspecialchars($row['name']); ?></h3>
                             <p class="price">Rs <?php echo htmlspecialchars($row['price']); ?></p>
-                            <p class="meta">City: <?php echo htmlspecialchars($row['city']); ?></p>
-                            <?php if (!empty($row['seller_email'])): ?>
-                                <p class="meta">Seller: <?php echo htmlspecialchars($row['seller_email']); ?></p>
+
+                            <?php if (!empty($row['category'])): ?>
+                                <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category']); ?></p>
                             <?php endif; ?>
+
+                            <p class="meta"><strong>City:</strong> <?php echo htmlspecialchars($row['city']); ?></p>
+
+                            <?php if (!empty($row['seller_email'])): ?>
+                                <p class="meta"><strong>Seller:</strong> <?php echo htmlspecialchars($row['seller_email']); ?></p>
+                            <?php endif; ?>
+
                             <div class="product-actions">
-                                <a class="small-btn primary" href="product_details.php?id=<?php echo $row['id']; ?>">View Details</a>
-                                <a class="small-btn outline" href="products.php">More Items</a>
+                                <a href="product_details.php?id=<?php echo $row['id']; ?>" class="small-btn primary">View Details</a>
                             </div>
                         </div>
                     </div>
                 <?php endwhile; ?>
             </div>
         <?php else: ?>
-            <p class="empty-state">No items have been listed yet.</p>
+            <p class="empty-state">No products have been listed yet.</p>
         <?php endif; ?>
-    </div>
-</section>
-
-<section class="home-block" id="services">
-    <div class="container">
-        <h2 class="section-title">Our Services</h2>
-        <p class="section-subtitle">
-            TradeSphere supports a user-centered buying and selling workflow through
-            product browsing, listing management, cart flow, and recommendation-ready structure.
-        </p>
-
-        <div class="feature-grid">
-            <div class="feature-card">
-                <h3>Buy Products</h3>
-                <p>Users can browse listed items, open product details, and move toward cart and checkout with a clean and clear interface.</p>
-            </div>
-            <div class="feature-card">
-                <h3>Sell Products</h3>
-                <p>Registered users can post their own items with images, price, city, and seller details directly from the platform.</p>
-            </div>
-            <div class="feature-card">
-                <h3>Smart Discovery</h3>
-                <p>The system is designed for content-based recommendation, helping users discover more relevant products over time.</p>
-            </div>
-        </div>
     </div>
 </section>
 
@@ -128,22 +138,30 @@ $recent = $conn->query("SELECT * FROM products ORDER BY created_at DESC, id DESC
     <div class="container">
         <h2 class="section-title">About TradeSphere</h2>
         <p class="section-subtitle">
-            TradeSphere is an intelligent digital marketplace project designed to combine
-            usability, product discovery, and secure web-based operations in a modern full-stack system.
+            TradeSphere is an intelligent digital marketplace project developed to combine modern UI design,
+            structured marketplace features, and future-ready recommendation functionality.
         </p>
 
         <div class="feature-grid">
             <div class="feature-card">
-                <h3>Modern UI</h3>
-                <p>A cleaner visual design improves navigation, readability, and user confidence while interacting with the marketplace.</p>
+                <h3>Modern Interface</h3>
+                <p>
+                    The platform uses a clean and responsive layout so users can navigate the system more easily.
+                </p>
             </div>
+
             <div class="feature-card">
-                <h3>Structured Workflow</h3>
-                <p>The platform separates home discovery, product browsing, selling, cart flow, and admin-oriented management into clear pages.</p>
+                <h3>Marketplace Workflow</h3>
+                <p>
+                    Users can discover products from the home page, browse all listings, and sell their own items after login.
+                </p>
             </div>
+
             <div class="feature-card">
-                <h3>Project Goal</h3>
-                <p>The system demonstrates a final-year level implementation of marketplace logic, recommendation concepts, and secure system thinking.</p>
+                <h3>Final Year Project Goal</h3>
+                <p>
+                    This project demonstrates a full-stack marketplace system with intelligent recommendation and secure design concepts.
+                </p>
             </div>
         </div>
     </div>
@@ -153,7 +171,7 @@ $recent = $conn->query("SELECT * FROM products ORDER BY created_at DESC, id DESC
     <div class="container">
         <h2 class="section-title">Contact</h2>
         <p class="section-subtitle">
-            Project profile and contact section for presentation and portfolio-style landing page layout.
+            Project profile and contact details for presentation and portfolio purposes.
         </p>
 
         <div class="profile-card">
