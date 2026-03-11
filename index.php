@@ -15,7 +15,12 @@ $recent = $conn->query("SELECT * FROM products ORDER BY created_at DESC, id DESC
 
 <nav class="navbar">
     <div class="navbar-inner">
-        <div class="logo"><a href="index.php">TradeSphere</a></div>
+     <div class="logo">
+    <a href="index.php">
+        <img src="./images/logo.png" class="site-logo" alt="TradeSphere Logo">
+        <!-- <span class="logo-text">TradeSphere</span> -->
+    </a>
+</div>
         <div class="menu-toggle" id="menuToggle">☰</div>
         <div class="nav-links" id="navLinks">
             <a href="index.php">Home</a>
