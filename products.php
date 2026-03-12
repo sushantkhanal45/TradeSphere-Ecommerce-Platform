@@ -84,6 +84,31 @@ $result = $conn->query($sql);
         </div>
     </div>
 </nav>
+<?php
+$cartCount = 0;
+
+if (isset($_SESSION['user'])) {
+    $userEmail = $_SESSION['user'];
+    $userRes = $conn->query("SELECT id FROM users WHERE email='$userEmail'");
+    $userRow = $userRes ? $userRes->fetch_assoc() : null;
+
+    if ($userRow) {
+        $userId = (int)$userRow['id'];
+        $cartCountRes = $conn->query("SELECT SUM(quantity) AS total_items FROM cart WHERE user_id=$userId");
+        $cartCountRow = $cartCountRes ? $cartCountRes->fetch_assoc() : null;
+        $cartCount = ($cartCountRow && $cartCountRow['total_items']) ? (int)$cartCountRow['total_items'] : 0;
+    }
+}
+?>
+
+<?php if (isset($_SESSION['user'])): ?>
+    <a href="cart.php" class="floating-cart <?php echo ($cartCount > 0) ? 'cart-active' : ''; ?>" title="View Cart">
+        🛒
+        <?php if ($cartCount > 0): ?>
+            <span class="cart-count-badge"><?php echo $cartCount; ?></span>
+        <?php endif; ?>
+    </a>
+<?php endif; ?>
 
 <?php if (isset($_SESSION['user'])): ?>
     <a href="cart.php" class="floating-cart <?php echo ($cartCount > 0) ? 'cart-active' : ''; ?>" title="View Cart">
