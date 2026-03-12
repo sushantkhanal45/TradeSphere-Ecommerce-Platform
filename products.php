@@ -6,7 +6,6 @@ $search = isset($_GET['search']) ? trim($_GET['search']) : "";
 $category = isset($_GET['category']) ? trim($_GET['category']) : "";
 
 $cartCount = 0;
-
 if (isset($_SESSION['user'])) {
     $userEmail = $_SESSION['user'];
     $userRes = $conn->query("SELECT id FROM users WHERE email='$userEmail'");
@@ -46,7 +45,6 @@ if ($category !== "") {
 }
 
 $sql .= " ORDER BY id DESC";
-
 $result = $conn->query($sql);
 ?>
 <!DOCTYPE html>
@@ -61,12 +59,8 @@ $result = $conn->query($sql);
 
 <nav class="navbar">
     <div class="navbar-inner">
-        <div class="logo">
-            <a href="index.php">TradeSphere</a>
-        </div>
-
+        <div class="logo"><a href="index.php">TradeSphere</a></div>
         <div class="menu-toggle" id="menuToggle">☰</div>
-
         <div class="nav-links" id="navLinks">
             <a href="index.php">Home</a>
             <a href="products.php">Products</a>
@@ -84,31 +78,6 @@ $result = $conn->query($sql);
         </div>
     </div>
 </nav>
-<?php
-$cartCount = 0;
-
-if (isset($_SESSION['user'])) {
-    $userEmail = $_SESSION['user'];
-    $userRes = $conn->query("SELECT id FROM users WHERE email='$userEmail'");
-    $userRow = $userRes ? $userRes->fetch_assoc() : null;
-
-    if ($userRow) {
-        $userId = (int)$userRow['id'];
-        $cartCountRes = $conn->query("SELECT SUM(quantity) AS total_items FROM cart WHERE user_id=$userId");
-        $cartCountRow = $cartCountRes ? $cartCountRes->fetch_assoc() : null;
-        $cartCount = ($cartCountRow && $cartCountRow['total_items']) ? (int)$cartCountRow['total_items'] : 0;
-    }
-}
-?>
-
-<?php if (isset($_SESSION['user'])): ?>
-    <a href="cart.php" class="floating-cart <?php echo ($cartCount > 0) ? 'cart-active' : ''; ?>" title="View Cart">
-        🛒
-        <?php if ($cartCount > 0): ?>
-            <span class="cart-count-badge"><?php echo $cartCount; ?></span>
-        <?php endif; ?>
-    </a>
-<?php endif; ?>
 
 <?php if (isset($_SESSION['user'])): ?>
     <a href="cart.php" class="floating-cart <?php echo ($cartCount > 0) ? 'cart-active' : ''; ?>" title="View Cart">
@@ -142,8 +111,7 @@ if (isset($_SESSION['user'])) {
                         <option value="">All Categories</option>
                         <?php if ($categoryQuery && $categoryQuery->num_rows > 0): ?>
                             <?php while ($cat = $categoryQuery->fetch_assoc()): ?>
-                                <option value="<?php echo htmlspecialchars($cat['category']); ?>"
-                                    <?php echo ($category === $cat['category']) ? 'selected' : ''; ?>>
+                                <option value="<?php echo htmlspecialchars($cat['category']); ?>" <?php echo ($category === $cat['category']) ? 'selected' : ''; ?>>
                                     <?php echo htmlspecialchars($cat['category']); ?>
                                 </option>
                             <?php endwhile; ?>
@@ -162,8 +130,7 @@ if (isset($_SESSION['user'])) {
                     <div class="product-card">
                         <div class="product-image-wrap">
                             <img src="uploads/<?php echo htmlspecialchars($row['image']); ?>" alt="Product Image">
-
-                            <?php if (isset($row['status']) && $row['status'] === 'sold'): ?>
+                            <?php if ($row['status'] === 'sold'): ?>
                                 <div class="sold-badge">SOLD</div>
                             <?php endif; ?>
                         </div>
@@ -171,20 +138,17 @@ if (isset($_SESSION['user'])) {
                         <div class="product-body">
                             <h3><?php echo htmlspecialchars($row['name']); ?></h3>
                             <p class="price">Rs <?php echo htmlspecialchars($row['price']); ?></p>
-
-                            <?php if (!empty($row['category'])): ?>
-                                <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category']); ?></p>
-                            <?php endif; ?>
-
+                            <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category']); ?></p>
                             <p class="meta"><strong>City:</strong> <?php echo htmlspecialchars($row['city']); ?></p>
+                            <p class="meta"><strong>Seller:</strong> <?php echo htmlspecialchars($row['seller_email']); ?></p>
 
-                            <?php if (!empty($row['seller_email'])): ?>
-                                <p class="meta"><strong>Seller:</strong> <?php echo htmlspecialchars($row['seller_email']); ?></p>
-                            <?php endif; ?>
-
-                            <?php if (!empty($row['description'])): ?>
-                                <p class="meta"><strong>Description:</strong> <?php echo htmlspecialchars(mb_strimwidth($row['description'], 0, 70, "...")); ?></p>
-                            <?php endif; ?>
+                            <?php
+                            $desc = $row['description'];
+                            if (strlen($desc) > 70) {
+                                $desc = substr($desc, 0, 70) . "...";
+                            }
+                            ?>
+                            <p class="meta"><strong>Description:</strong> <?php echo htmlspecialchars($desc); ?></p>
 
                             <div class="product-actions">
                                 <a href="product_details.php?id=<?php echo $row['id']; ?>" class="small-btn primary">View Details</a>
@@ -199,9 +163,7 @@ if (isset($_SESSION['user'])) {
     </div>
 </div>
 
-<footer>
-    © 2026 TradeSphere. All rights reserved.
-</footer>
+<footer>© 2026 TradeSphere. All rights reserved.</footer>
 
 <script src="js/script.js"></script>
 </body>

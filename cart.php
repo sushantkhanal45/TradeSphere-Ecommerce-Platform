@@ -46,12 +46,13 @@ $items = $conn->query("
 ");
 
 $total = 0;
+$cartCount = 0;
 
 if ($items) {
     while ($row = $items->fetch_assoc()) {
         $total += ((float) $row['price'] * (int) $row['quantity']);
+        $cartCount += (int) $row['quantity'];
     }
-
     $items->data_seek(0);
 }
 ?>
@@ -59,6 +60,7 @@ if ($items) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cart - TradeSphere</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -71,22 +73,26 @@ if ($items) {
         <div class="nav-links" id="navLinks">
             <a href="index.php">Home</a>
             <a href="products.php">Products</a>
-            <a href="index.php#about">About</a>
-            <a href="index.php#services">Services</a>
-            <a href="index.php#contact">Contact</a>
+            <a href="index.php#categories">Categories</a>
             <a href="sell.php">Sell</a>
-            <a href="cart.php">Cart</a>
+            <a href="index.php#about">About</a>
+            <a href="index.php#contact">Contact</a>
             <a href="logout.php" class="nav-btn">Logout</a>
         </div>
     </div>
 </nav>
 
+<a href="cart.php" class="floating-cart <?php echo ($cartCount > 0) ? 'cart-active' : ''; ?>" title="View Cart">
+    🛒
+    <?php if ($cartCount > 0): ?>
+        <span class="cart-count-badge"><?php echo $cartCount; ?></span>
+    <?php endif; ?>
+</a>
+
 <div class="page-wrap">
     <div class="container">
         <h1 class="section-title">Your Cart</h1>
-        <p class="section-subtitle">
-            Review your selected products, update quantity, remove items, and continue toward checkout.
-        </p>
+        <p class="section-subtitle">Review your selected products, update quantity, remove items, and continue toward checkout.</p>
 
         <?php if ($items && $items->num_rows > 0): ?>
             <div class="cart-list">
@@ -96,35 +102,21 @@ if ($items) {
 
                         <div>
                             <h3><?php echo htmlspecialchars($row['name']); ?></h3>
+                            <p class="meta">Category: <?php echo htmlspecialchars($row['category']); ?></p>
                             <p class="meta">City: <?php echo htmlspecialchars($row['city']); ?></p>
-
-                            <?php if (!empty($row['seller_email'])): ?>
-                                <p class="meta">Seller: <?php echo htmlspecialchars($row['seller_email']); ?></p>
-                            <?php endif; ?>
-
+                            <p class="meta">Seller: <?php echo htmlspecialchars($row['seller_email']); ?></p>
                             <p class="meta">Unit Price: Rs <?php echo htmlspecialchars($row['price']); ?></p>
-                            <p class="meta">Subtotal: Rs <?php echo ((float) $row['price'] * (int) $row['quantity']); ?></p>
+                            <p class="meta">Subtotal: Rs <?php echo ((float)$row['price'] * (int)$row['quantity']); ?></p>
 
                             <form method="POST" style="margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-                                <input type="hidden" name="cart_id" value="<?php echo (int) $row['cart_id']; ?>">
-
-                                <input
-                                    type="number"
-                                    name="quantity"
-                                    min="1"
-                                    value="<?php echo (int) $row['quantity']; ?>"
-                                    style="width: 90px; padding: 10px; border: 1px solid #d1d5db; border-radius: 10px;"
-                                    required
-                                >
-
+                                <input type="hidden" name="cart_id" value="<?php echo (int)$row['cart_id']; ?>">
+                                <input type="number" name="quantity" min="1" value="<?php echo (int)$row['quantity']; ?>" style="width: 90px; padding: 10px; border: 1px solid #d1d5db; border-radius: 10px;" required>
                                 <button type="submit" name="update_quantity" class="btn btn-primary">Update</button>
                                 <button type="submit" name="remove_item" class="btn btn-dark">Remove</button>
                             </form>
                         </div>
 
-                        <div class="price">
-                            Qty: <?php echo (int) $row['quantity']; ?>
-                        </div>
+                        <div class="price">Qty: <?php echo (int)$row['quantity']; ?></div>
                     </div>
                 <?php endwhile; ?>
             </div>
@@ -139,9 +131,7 @@ if ($items) {
     </div>
 </div>
 
-<footer>
-    © 2026 TradeSphere. All rights reserved.
-</footer>
+<footer>© 2026 TradeSphere. All rights reserved.</footer>
 
 <script src="js/script.js"></script>
 </body>

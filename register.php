@@ -1,19 +1,22 @@
 <?php
 include "config/db.php";
 
-$success = "";
 $error = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $name = trim($_POST['name']);
     $email = trim($_POST['email']);
-    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    $passwordRaw = $_POST['password'];
 
-    $check = $conn->query("SELECT * FROM users WHERE email='$email'");
+    $safeName = $conn->real_escape_string($name);
+    $safeEmail = $conn->real_escape_string($email);
+    $password = password_hash($passwordRaw, PASSWORD_DEFAULT);
+
+    $check = $conn->query("SELECT * FROM users WHERE email='$safeEmail'");
     if ($check && $check->num_rows > 0) {
         $error = "An account with this email already exists.";
     } else {
-        if ($conn->query("INSERT INTO users (name, email, password) VALUES ('$name', '$email', '$password')")) {
+        if ($conn->query("INSERT INTO users (name, email, password) VALUES ('$safeName', '$safeEmail', '$password')")) {
             header("Location: login.php");
             exit();
         } else {
@@ -26,6 +29,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Account - TradeSphere</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -61,7 +65,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             </div>
         </form>
 
-        <p class="form-note">
+        <p style="margin-top:16px; text-align:center;">
             Already have an account? <a href="login.php">Login here</a>
         </p>
     </div>

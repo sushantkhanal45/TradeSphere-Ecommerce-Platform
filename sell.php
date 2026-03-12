@@ -16,11 +16,14 @@ if (!$user) {
 }
 
 $userId = (int)$user['id'];
-
 $success = "";
 $error = "";
+$cartCount = 0;
 
-/* Add product */
+$cartCountRes = $conn->query("SELECT SUM(quantity) AS total_items FROM cart WHERE user_id=$userId");
+$cartCountRow = $cartCountRes ? $cartCountRes->fetch_assoc() : null;
+$cartCount = ($cartCountRow && $cartCountRow['total_items']) ? (int)$cartCountRow['total_items'] : 0;
+
 if (isset($_POST['submit'])) {
     $name = trim($_POST['name']);
     $category = trim($_POST['category']);
@@ -35,12 +38,20 @@ if (isset($_POST['submit'])) {
     if ($name === "" || $category === "" || $price === "" || $city === "" || $description === "" || $image === "") {
         $error = "Please fill in all fields.";
     } else {
-        $target = "uploads/" . basename($image);
+        $safeName = $conn->real_escape_string($name);
+        $safeCategory = $conn->real_escape_string($category);
+        $safePrice = $conn->real_escape_string($price);
+        $safeCity = $conn->real_escape_string($city);
+        $safeDescription = $conn->real_escape_string($description);
+        $safeSeller = $conn->real_escape_string($seller_email);
+
+        $imageName = time() . "_" . basename($image);
+        $target = "uploads/" . $imageName;
 
         if (move_uploaded_file($tmp, $target)) {
             $stmt = "
                 INSERT INTO products (user_id, name, category, price, city, seller_email, image, description, status)
-                VALUES ('$userId', '$name', '$category', '$price', '$city', '$seller_email', '$image', '$description', 'available')
+                VALUES ('$userId', '$safeName', '$safeCategory', '$safePrice', '$safeCity', '$safeSeller', '$imageName', '$safeDescription', 'available')
             ";
 
             if ($conn->query($stmt)) {
@@ -54,7 +65,6 @@ if (isset($_POST['submit'])) {
     }
 }
 
-/* Toggle status */
 if (isset($_POST['toggle_status'])) {
     $productId = (int)$_POST['product_id'];
 
@@ -83,12 +93,8 @@ $myProducts = $conn->query("SELECT * FROM products WHERE user_id=$userId ORDER B
 
 <nav class="navbar">
     <div class="navbar-inner">
-        <div class="logo">
-            <a href="index.php">TradeSphere</a>
-        </div>
-
+        <div class="logo"><a href="index.php">TradeSphere</a></div>
         <div class="menu-toggle" id="menuToggle">☰</div>
-
         <div class="nav-links" id="navLinks">
             <a href="index.php">Home</a>
             <a href="products.php">Products</a>
@@ -100,41 +106,19 @@ $myProducts = $conn->query("SELECT * FROM products WHERE user_id=$userId ORDER B
         </div>
     </div>
 </nav>
-<?php
-$cartCount = 0;
 
-if (isset($_SESSION['user'])) {
-    $userEmail = $_SESSION['user'];
-    $userRes = $conn->query("SELECT id FROM users WHERE email='$userEmail'");
-    $userRow = $userRes ? $userRes->fetch_assoc() : null;
-
-    if ($userRow) {
-        $userId = (int)$userRow['id'];
-        $cartCountRes = $conn->query("SELECT SUM(quantity) AS total_items FROM cart WHERE user_id=$userId");
-        $cartCountRow = $cartCountRes ? $cartCountRes->fetch_assoc() : null;
-        $cartCount = ($cartCountRow && $cartCountRow['total_items']) ? (int)$cartCountRow['total_items'] : 0;
-    }
-}
-?>
-
-<?php if (isset($_SESSION['user'])): ?>
-    <a href="cart.php" class="floating-cart <?php echo ($cartCount > 0) ? 'cart-active' : ''; ?>" title="View Cart">
-        🛒
-        <?php if ($cartCount > 0): ?>
-            <span class="cart-count-badge"><?php echo $cartCount; ?></span>
-        <?php endif; ?>
-    </a>
-<?php endif; ?>
-
-<a href="cart.php" class="floating-cart" title="View Cart">🛒</a>
+<a href="cart.php" class="floating-cart <?php echo ($cartCount > 0) ? 'cart-active' : ''; ?>" title="View Cart">
+    🛒
+    <?php if ($cartCount > 0): ?>
+        <span class="cart-count-badge"><?php echo $cartCount; ?></span>
+    <?php endif; ?>
+</a>
 
 <div class="form-page">
     <div class="container">
         <div class="form-card">
             <h2>Sell Your Product</h2>
-            <p class="helper">
-                Add your product to the TradeSphere marketplace. Product status will be available by default and can be updated later by you.
-            </p>
+            <p class="helper">Add your product to the TradeSphere marketplace. Product status is available by default and can be updated later by you.</p>
 
             <?php if ($success): ?>
                 <div class="success-msg"><?php echo $success; ?></div>
@@ -183,9 +167,7 @@ if (isset($_SESSION['user'])) {
 
         <div class="seller-listings-section">
             <h2 class="section-title">My Listings</h2>
-            <p class="section-subtitle">
-                Manage your products here. You can edit details and change the status of your own listings.
-            </p>
+            <p class="section-subtitle">Manage your products here. You can edit details and change the status of your own listings.</p>
 
             <?php if ($myProducts && $myProducts->num_rows > 0): ?>
                 <div class="products-grid">
@@ -199,10 +181,8 @@ if (isset($_SESSION['user'])) {
 
                                 <div class="card-menu">
                                     <button type="button" class="card-menu-btn" onclick="toggleMenu(<?php echo $row['id']; ?>)">⋮</button>
-
                                     <div class="card-menu-dropdown" id="menu-<?php echo $row['id']; ?>">
                                         <a href="edit_product.php?id=<?php echo $row['id']; ?>">Edit Product</a>
-
                                         <form method="POST">
                                             <input type="hidden" name="product_id" value="<?php echo $row['id']; ?>">
                                             <button type="submit" name="toggle_status" class="menu-action-btn">
@@ -230,9 +210,7 @@ if (isset($_SESSION['user'])) {
     </div>
 </div>
 
-<footer>
-    © 2026 TradeSphere. All rights reserved.
-</footer>
+<footer>© 2026 TradeSphere. All rights reserved.</footer>
 
 <script src="js/script.js"></script>
 <script>
@@ -241,16 +219,10 @@ function toggleMenu(id) {
     const allMenus = document.querySelectorAll(".card-menu-dropdown");
 
     allMenus.forEach(item => {
-        if (item !== menu) {
-            item.style.display = "none";
-        }
+        if (item !== menu) item.style.display = "none";
     });
 
-    if (menu.style.display === "block") {
-        menu.style.display = "none";
-    } else {
-        menu.style.display = "block";
-    }
+    menu.style.display = (menu.style.display === "block") ? "none" : "block";
 }
 
 window.addEventListener("click", function(e) {

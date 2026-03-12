@@ -8,7 +8,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $email = trim($_POST['email']);
     $password = $_POST['password'];
 
-    $result = $conn->query("SELECT * FROM users WHERE email='$email'");
+    $safeEmail = $conn->real_escape_string($email);
+    $result = $conn->query("SELECT * FROM users WHERE email='$safeEmail'");
     $user = $result ? $result->fetch_assoc() : null;
 
     if ($user && password_verify($password, $user['password'])) {
@@ -24,6 +25,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - TradeSphere</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -54,7 +56,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             </div>
         </form>
 
-        <p class="form-note">
+        <p style="margin-top:16px; text-align:center;">
             Don’t have an account? <a href="register.php">Create one here</a>
         </p>
     </div>

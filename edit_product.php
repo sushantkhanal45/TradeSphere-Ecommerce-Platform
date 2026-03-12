@@ -16,6 +16,11 @@ if (!$user) {
 }
 
 $userId = (int)$user['id'];
+$cartCount = 0;
+
+$cartCountRes = $conn->query("SELECT SUM(quantity) AS total_items FROM cart WHERE user_id=$userId");
+$cartCountRow = $cartCountRes ? $cartCountRes->fetch_assoc() : null;
+$cartCount = ($cartCountRow && $cartCountRow['total_items']) ? (int)$cartCountRow['total_items'] : 0;
 
 if (!isset($_GET['id'])) {
     header("Location: sell.php");
@@ -44,27 +49,36 @@ if (isset($_POST['update_product'])) {
     if ($name === "" || $category === "" || $price === "" || $city === "" || $description === "" || $status === "") {
         $error = "Please fill in all fields.";
     } else {
+        $safeName = $conn->real_escape_string($name);
+        $safeCategory = $conn->real_escape_string($category);
+        $safePrice = $conn->real_escape_string($price);
+        $safeCity = $conn->real_escape_string($city);
+        $safeDescription = $conn->real_escape_string($description);
+        $safeStatus = $conn->real_escape_string($status);
+
         $imageName = $product['image'];
 
         if (isset($_FILES['image']) && !empty($_FILES['image']['name'])) {
-            $newImage = $_FILES['image']['name'];
+            $newImage = time() . "_" . basename($_FILES['image']['name']);
             $tmp = $_FILES['image']['tmp_name'];
-            $target = "uploads/" . basename($newImage);
+            $target = "uploads/" . $newImage;
 
             if (move_uploaded_file($tmp, $target)) {
                 $imageName = $newImage;
             }
         }
 
+        $safeImage = $conn->real_escape_string($imageName);
+
         $update = "
             UPDATE products
-            SET name='$name',
-                category='$category',
-                price='$price',
-                city='$city',
-                description='$description',
-                status='$status',
-                image='$imageName'
+            SET name='$safeName',
+                category='$safeCategory',
+                price='$safePrice',
+                city='$safeCity',
+                description='$safeDescription',
+                status='$safeStatus',
+                image='$safeImage'
             WHERE id=$productId AND user_id=$userId
         ";
 
@@ -90,12 +104,8 @@ if (isset($_POST['update_product'])) {
 
 <nav class="navbar">
     <div class="navbar-inner">
-        <div class="logo">
-            <a href="index.php">TradeSphere</a>
-        </div>
-
+        <div class="logo"><a href="index.php">TradeSphere</a></div>
         <div class="menu-toggle" id="menuToggle">☰</div>
-
         <div class="nav-links" id="navLinks">
             <a href="index.php">Home</a>
             <a href="products.php">Products</a>
@@ -107,40 +117,18 @@ if (isset($_POST['update_product'])) {
         </div>
     </div>
 </nav>
-<?php
-$cartCount = 0;
 
-if (isset($_SESSION['user'])) {
-    $userEmail = $_SESSION['user'];
-    $userRes = $conn->query("SELECT id FROM users WHERE email='$userEmail'");
-    $userRow = $userRes ? $userRes->fetch_assoc() : null;
-
-    if ($userRow) {
-        $userId = (int)$userRow['id'];
-        $cartCountRes = $conn->query("SELECT SUM(quantity) AS total_items FROM cart WHERE user_id=$userId");
-        $cartCountRow = $cartCountRes ? $cartCountRes->fetch_assoc() : null;
-        $cartCount = ($cartCountRow && $cartCountRow['total_items']) ? (int)$cartCountRow['total_items'] : 0;
-    }
-}
-?>
-
-<?php if (isset($_SESSION['user'])): ?>
-    <a href="cart.php" class="floating-cart <?php echo ($cartCount > 0) ? 'cart-active' : ''; ?>" title="View Cart">
-        🛒
-        <?php if ($cartCount > 0): ?>
-            <span class="cart-count-badge"><?php echo $cartCount; ?></span>
-        <?php endif; ?>
-    </a>
-<?php endif; ?>
-
-<a href="cart.php" class="floating-cart" title="View Cart">🛒</a>
+<a href="cart.php" class="floating-cart <?php echo ($cartCount > 0) ? 'cart-active' : ''; ?>" title="View Cart">
+    🛒
+    <?php if ($cartCount > 0): ?>
+        <span class="cart-count-badge"><?php echo $cartCount; ?></span>
+    <?php endif; ?>
+</a>
 
 <div class="form-page">
     <div class="form-card">
         <h2>Edit Product</h2>
-        <p class="helper">
-            Update your product details and change its availability status when needed.
-        </p>
+        <p class="helper">Update your product details and change its availability status when needed.</p>
 
         <?php if ($success): ?>
             <div class="success-msg"><?php echo $success; ?></div>
@@ -196,15 +184,13 @@ if (isset($_SESSION['user'])) {
 
             <div class="form-actions">
                 <button type="submit" name="update_product" class="btn btn-primary">Update Product</button>
-                <a href="sell.php" class="btn btn-secondary">Back</a>
+                <a href="sell.php" class="btn btn-dark">Back</a>
             </div>
         </form>
     </div>
 </div>
 
-<footer>
-    © 2026 TradeSphere. All rights reserved.
-</footer>
+<footer>© 2026 TradeSphere. All rights reserved.</footer>
 
 <script src="js/script.js"></script>
 </body>

@@ -20,6 +20,7 @@ $success = "";
 $error = "";
 $showGoToCart = false;
 $cartCount = 0;
+$userId = 0;
 
 if (isset($_SESSION['user'])) {
     $userEmail = $_SESSION['user'];
@@ -28,7 +29,6 @@ if (isset($_SESSION['user'])) {
 
     if ($userRow) {
         $userId = (int) $userRow['id'];
-
         $cartCountRes = $conn->query("SELECT SUM(quantity) AS total_items FROM cart WHERE user_id=$userId");
         $cartCountRow = $cartCountRes ? $cartCountRes->fetch_assoc() : null;
         $cartCount = ($cartCountRow && $cartCountRow['total_items']) ? (int)$cartCountRow['total_items'] : 0;
@@ -41,30 +41,22 @@ if (isset($_POST['add_to_cart'])) {
         exit();
     }
 
-    if (isset($product['status']) && $product['status'] === 'sold') {
+    if ($product['status'] === 'sold') {
         $error = "This item has already been marked as sold.";
     } else {
         $quantity = isset($_POST['quantity']) ? (int) $_POST['quantity'] : 1;
-
         if ($quantity < 1) {
             $quantity = 1;
         }
 
-        $userEmail = $_SESSION['user'];
-        $userRes = $conn->query("SELECT id FROM users WHERE email='$userEmail'");
-        $userRow = $userRes ? $userRes->fetch_assoc() : null;
-
-        if ($userRow) {
-            $userId = (int) $userRow['id'];
+        if ($userId > 0) {
             $productId = (int) $product['id'];
 
             $check = $conn->query("SELECT * FROM cart WHERE user_id=$userId AND product_id=$productId");
-
             if ($check && $check->num_rows > 0) {
                 $existing = $check->fetch_assoc();
-                $newQty = (int) $existing['quantity'] + $quantity;
-                $cartId = (int) $existing['id'];
-
+                $newQty = (int)$existing['quantity'] + $quantity;
+                $cartId = (int)$existing['id'];
                 $conn->query("UPDATE cart SET quantity=$newQty WHERE id=$cartId");
                 $success = "Product quantity updated in cart.";
             } else {
@@ -73,7 +65,6 @@ if (isset($_POST['add_to_cart'])) {
             }
 
             $showGoToCart = true;
-
             $cartCountRes = $conn->query("SELECT SUM(quantity) AS total_items FROM cart WHERE user_id=$userId");
             $cartCountRow = $cartCountRes ? $cartCountRes->fetch_assoc() : null;
             $cartCount = ($cartCountRow && $cartCountRow['total_items']) ? (int)$cartCountRow['total_items'] : 0;
@@ -95,12 +86,8 @@ if (isset($_POST['add_to_cart'])) {
 
 <nav class="navbar">
     <div class="navbar-inner">
-        <div class="logo">
-            <a href="index.php">TradeSphere</a>
-        </div>
-
+        <div class="logo"><a href="index.php">TradeSphere</a></div>
         <div class="menu-toggle" id="menuToggle">☰</div>
-
         <div class="nav-links" id="navLinks">
             <a href="index.php">Home</a>
             <a href="products.php">Products</a>
@@ -118,31 +105,6 @@ if (isset($_POST['add_to_cart'])) {
         </div>
     </div>
 </nav>
-<?php
-$cartCount = 0;
-
-if (isset($_SESSION['user'])) {
-    $userEmail = $_SESSION['user'];
-    $userRes = $conn->query("SELECT id FROM users WHERE email='$userEmail'");
-    $userRow = $userRes ? $userRes->fetch_assoc() : null;
-
-    if ($userRow) {
-        $userId = (int)$userRow['id'];
-        $cartCountRes = $conn->query("SELECT SUM(quantity) AS total_items FROM cart WHERE user_id=$userId");
-        $cartCountRow = $cartCountRes ? $cartCountRes->fetch_assoc() : null;
-        $cartCount = ($cartCountRow && $cartCountRow['total_items']) ? (int)$cartCountRow['total_items'] : 0;
-    }
-}
-?>
-
-<?php if (isset($_SESSION['user'])): ?>
-    <a href="cart.php" class="floating-cart <?php echo ($cartCount > 0) ? 'cart-active' : ''; ?>" title="View Cart">
-        🛒
-        <?php if ($cartCount > 0): ?>
-            <span class="cart-count-badge"><?php echo $cartCount; ?></span>
-        <?php endif; ?>
-    </a>
-<?php endif; ?>
 
 <?php if (isset($_SESSION['user'])): ?>
     <a href="cart.php" class="floating-cart <?php echo ($cartCount > 0) ? 'cart-active' : ''; ?>" title="View Cart">
@@ -173,27 +135,15 @@ if (isset($_SESSION['user'])) {
                 <div class="detail-price">Rs <?php echo htmlspecialchars($product['price']); ?></div>
 
                 <div class="detail-info">
-                    <?php if (!empty($product['category'])): ?>
-                        <p><strong>Category:</strong> <?php echo htmlspecialchars($product['category']); ?></p>
-                    <?php endif; ?>
-
+                    <p><strong>Category:</strong> <?php echo htmlspecialchars($product['category']); ?></p>
                     <p><strong>City:</strong> <?php echo htmlspecialchars($product['city']); ?></p>
-
-                    <?php if (!empty($product['seller_email'])): ?>
-                        <p><strong>Seller Email:</strong> <?php echo htmlspecialchars($product['seller_email']); ?></p>
-                    <?php endif; ?>
-
-                    <?php if (!empty($product['description'])): ?>
-                        <p><strong>Description:</strong> <?php echo nl2br(htmlspecialchars($product['description'])); ?></p>
-                    <?php endif; ?>
-
-                    <?php if (isset($product['status'])): ?>
-                        <p><strong>Status:</strong> <?php echo htmlspecialchars(ucfirst($product['status'])); ?></p>
-                    <?php endif; ?>
+                    <p><strong>Seller Email:</strong> <?php echo htmlspecialchars($product['seller_email']); ?></p>
+                    <p><strong>Description:</strong> <?php echo nl2br(htmlspecialchars($product['description'])); ?></p>
+                    <p><strong>Status:</strong> <?php echo htmlspecialchars(ucfirst($product['status'])); ?></p>
                 </div>
 
                 <?php if (isset($_SESSION['user'])): ?>
-                    <?php if (!isset($product['status']) || $product['status'] !== 'sold'): ?>
+                    <?php if ($product['status'] !== 'sold'): ?>
                         <form method="POST">
                             <div class="form-group" style="max-width: 140px; margin-bottom: 16px;">
                                 <label>Quantity</label>
@@ -208,6 +158,13 @@ if (isset($_SESSION['user'])) {
                                 <?php endif; ?>
                             </div>
                         </form>
+
+                        <?php if ($showGoToCart): ?>
+                            <div class="cart-hint-box">
+                                <strong>Here is your cart.</strong>
+                                Your selected item has been added. You can continue browsing or go straight to your cart now.
+                            </div>
+                        <?php endif; ?>
                     <?php else: ?>
                         <div class="error-msg">This item has already been marked as sold.</div>
                     <?php endif; ?>
@@ -219,9 +176,7 @@ if (isset($_SESSION['user'])) {
     </div>
 </div>
 
-<footer>
-    © 2026 TradeSphere. All rights reserved.
-</footer>
+<footer>© 2026 TradeSphere. All rights reserved.</footer>
 
 <script src="js/script.js"></script>
 </body>

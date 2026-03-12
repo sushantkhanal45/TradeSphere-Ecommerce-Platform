@@ -97,18 +97,18 @@ body{
     position: fixed;
     top: 108px;
     right: 24px;
-    width: 76px;
-    height: 76px;
+    width: 78px;
+    height: 78px;
     border-radius: 50%;
-    background: rgba(15, 23, 42, 0.94);
+    background: rgba(15, 23, 42, 0.95);
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
     text-decoration: none;
-    font-size: 34px;
-    box-shadow: 0 14px 34px rgba(0,0,0,0.28);
-    z-index: 1100;
+    font-size: 36px;
+    box-shadow: 0 16px 38px rgba(0,0,0,0.28);
+    z-index: 1200;
     transition: 0.2s ease;
     border: 2px solid rgba(56,189,248,0.42);
 }
@@ -122,8 +122,8 @@ body{
 .cart-active{
     box-shadow:
         0 0 0 8px rgba(56, 189, 248, 0.12),
-        0 0 28px rgba(56, 189, 248, 0.65),
-        0 14px 34px rgba(0,0,0,0.30);
+        0 0 30px rgba(56, 189, 248, 0.68),
+        0 16px 38px rgba(0,0,0,0.30);
     animation: cartGlow 1.4s infinite alternate;
 }
 
@@ -132,13 +132,13 @@ body{
         box-shadow:
             0 0 0 5px rgba(56, 189, 248, 0.10),
             0 0 18px rgba(56, 189, 248, 0.40),
-            0 14px 34px rgba(0,0,0,0.25);
+            0 16px 38px rgba(0,0,0,0.25);
     }
     to{
         box-shadow:
             0 0 0 10px rgba(56, 189, 248, 0.16),
-            0 0 34px rgba(56, 189, 248, 0.78),
-            0 14px 34px rgba(0,0,0,0.30);
+            0 0 36px rgba(56, 189, 248, 0.78),
+            0 16px 38px rgba(0,0,0,0.30);
     }
 }
 
@@ -146,8 +146,8 @@ body{
     position: absolute;
     top: -8px;
     right: -6px;
-    min-width: 28px;
-    height: 28px;
+    min-width: 30px;
+    height: 30px;
     padding: 0 7px;
     border-radius: 999px;
     background: #ef4444;
@@ -594,6 +594,64 @@ body{
     color: #b91c1c;
 }
 
+/* SELL LISTINGS / MENU */
+.seller-listings-section{
+    margin-top: 60px;
+}
+
+.seller-card .product-image-wrap{
+    overflow: visible;
+}
+
+.card-menu{
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 50;
+}
+
+.card-menu-btn{
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(15, 23, 42, 0.82);
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.card-menu-dropdown{
+    display: none;
+    position: absolute;
+    top: 46px;
+    right: 0;
+    min-width: 180px;
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 16px 35px rgba(0,0,0,0.16);
+    overflow: hidden;
+}
+
+.card-menu-dropdown a,
+.menu-action-btn{
+    display: block;
+    width: 100%;
+    padding: 13px 14px;
+    text-align: left;
+    background: white;
+    border: none;
+    text-decoration: none;
+    color: var(--text);
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.card-menu-dropdown a:hover,
+.menu-action-btn:hover{
+    background: #f3f4f6;
+}
+
 /* CONTACT */
 .profile-card{
     max-width: 420px;
@@ -656,6 +714,47 @@ body{
 
 .reset-btn{
     text-align: center;
+}
+
+/* CART PAGE */
+.cart-list{
+    max-width: 920px;
+    margin: auto;
+    display: grid;
+    gap: 18px;
+}
+
+.cart-item{
+    display: grid;
+    grid-template-columns: 150px 1fr auto;
+    gap: 18px;
+    background: white;
+    box-shadow: var(--shadow);
+    border-radius: 18px;
+    padding: 16px;
+    align-items: center;
+}
+
+.cart-item img{
+    width: 150px;
+    height: 115px;
+    object-fit: cover;
+    border-radius: 12px;
+    background: #e5e7eb;
+}
+
+.cart-total{
+    max-width: 920px;
+    margin: 24px auto 0;
+    background: white;
+    box-shadow: var(--shadow);
+    border-radius: 18px;
+    padding: 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
 }
 
 /* FOOTER */
@@ -741,9 +840,9 @@ footer{
     .floating-cart{
         top: 94px;
         right: 14px;
-        width: 64px;
-        height: 64px;
-        font-size: 28px;
+        width: 66px;
+        height: 66px;
+        font-size: 30px;
     }
 
     .cart-count-badge{
@@ -754,5 +853,14 @@ footer{
 
     .search-form{
         grid-template-columns: 1fr;
+    }
+
+    .cart-item{
+        grid-template-columns: 1fr;
+    }
+
+    .cart-item img{
+        width: 100%;
+        height: 220px;
     }
 }
