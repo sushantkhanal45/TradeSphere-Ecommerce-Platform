@@ -6,28 +6,37 @@ $success = "";
 $error = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
     $email = trim($_POST['email']);
-    $safeEmail = $conn->real_escape_string($email);
 
-    $result = $conn->query("SELECT * FROM users WHERE email='$safeEmail'");
-    $user = $result ? $result->fetch_assoc() : null;
+    if ($email === "") {
+        $error = "Please enter your email address.";
+    } else {
+        $safeEmail = $conn->real_escape_string($email);
 
-    if ($user) {
-        $token = bin2hex(random_bytes(32));
-        $expiresAt = date("Y-m-d H:i:s", time() + 1800);
+        $result = $conn->query("SELECT * FROM users WHERE email='$safeEmail'");
+        $user = $result ? $result->fetch_assoc() : null;
 
-        $safeToken = $conn->real_escape_string($token);
-        $conn->query("
-            UPDATE users
-            SET reset_token='$safeToken', reset_expires_at='$expiresAt'
-            WHERE email='$safeEmail'
-        ");
+        if ($user) {
+            $token = bin2hex(random_bytes(32));
+            $expiresAt = date("Y-m-d H:i:s", time() + 1800);
 
-        $baseUrl = "http://localhost/TradeSphere/reset_password.php?token=" . urlencode($token);
-        sendResetEmail($user['email'], $user['name'], $baseUrl);
+            $safeToken = $conn->real_escape_string($token);
+
+            $conn->query("
+                UPDATE users
+                SET reset_token='$safeToken',
+                    reset_expires_at='$expiresAt'
+                WHERE email='$safeEmail'
+            ");
+
+            $resetLink = "http://localhost/TradeSphere/reset_password.php?token=" . urlencode($token);
+
+            sendResetEmail($user['email'], $user['name'], $resetLink);
+        }
+
+        $success = "If that email exists, password reset instructions have been sent.";
     }
-
-    $success = "If that email exists, password reset instructions have been sent.";
 }
 ?>
 <!DOCTYPE html>
@@ -43,7 +52,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <div class="form-page">
     <div class="form-card">
         <h2>Forgot Password</h2>
-        <p class="helper">Enter your email address and we’ll send you password reset instructions.</p>
+        <p class="helper">
+            Enter your email address and we will send password reset instructions.
+        </p>
 
         <?php if ($success): ?>
             <div class="success-msg"><?php echo $success; ?></div>

@@ -18,11 +18,12 @@ if (!$user) {
     die("Invalid or expired reset link.");
 }
 
-if (strtotime($user['reset_expires_at']) < time()) {
+if (empty($user['reset_expires_at']) || strtotime($user['reset_expires_at']) < time()) {
     die("This reset link has expired.");
 }
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
     $password = $_POST['password'];
     $confirmPassword = $_POST['confirm_password'];
 
@@ -30,16 +31,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $error = "Please fill in all fields.";
     } elseif ($password !== $confirmPassword) {
         $error = "Passwords do not match.";
+    } elseif (strlen($password) < 6) {
+        $error = "Password must be at least 6 characters long.";
     } else {
         $newHash = password_hash($password, PASSWORD_DEFAULT);
 
         $conn->query("
             UPDATE users
-            SET password='$newHash', reset_token=NULL, reset_expires_at=NULL
+            SET password='$newHash',
+                reset_token=NULL,
+                reset_expires_at=NULL
             WHERE id=" . (int)$user['id']
-        ");
+        );
 
-        $success = "Password reset successfully. You can now log in.";
+        $success = "Password reset successfully. You can now login.";
     }
 }
 ?>
@@ -51,11 +56,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <title>Reset Password - TradeSphere</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        .password-wrap{position:relative;}
-        .password-wrap input{padding-right:50px;}
+        .password-wrap{
+            position: relative;
+        }
+
+        .password-wrap input{
+            padding-right: 50px;
+        }
+
         .toggle-eye{
-            position:absolute; right:14px; top:50%; transform:translateY(-50%);
-            cursor:pointer; user-select:none; font-size:18px;
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            user-select: none;
+            font-size: 18px;
         }
     </style>
 </head>
@@ -68,6 +84,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         <?php if ($success): ?>
             <div class="success-msg"><?php echo $success; ?></div>
+
             <div style="text-align:center; margin-top:16px;">
                 <a href="login.php" class="btn btn-primary">Go to Login</a>
             </div>
@@ -78,6 +95,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <?php endif; ?>
 
             <form method="POST">
+
                 <div class="form-group">
                     <label>New Password</label>
                     <div class="password-wrap">
@@ -97,6 +115,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Reset Password</button>
                 </div>
+
             </form>
 
         <?php endif; ?>
@@ -106,6 +125,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <script>
 function togglePassword(fieldId, icon) {
     const input = document.getElementById(fieldId);
+
     if (input.type === "password") {
         input.type = "text";
         icon.textContent = "🙈";
@@ -115,5 +135,6 @@ function togglePassword(fieldId, icon) {
     }
 }
 </script>
+
 </body>
 </html>

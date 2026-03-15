@@ -5,30 +5,37 @@ include "config/db.php";
 $error = "";
 $success = "";
 
-if (isset($_SESSION['verification_success'])) {
-    $success = $_SESSION['verification_success'];
-    unset($_SESSION['verification_success']);
+if (isset($_SESSION['login_success'])) {
+    $success = $_SESSION['login_success'];
+    unset($_SESSION['login_success']);
 }
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
     $email = trim($_POST['email']);
     $password = $_POST['password'];
 
-    $safeEmail = $conn->real_escape_string($email);
-    $result = $conn->query("SELECT * FROM users WHERE email='$safeEmail'");
-    $user = $result ? $result->fetch_assoc() : null;
+    if ($email === "" || $password === "") {
+        $error = "Please fill in all fields.";
+    } else {
+        $safeEmail = $conn->real_escape_string($email);
 
-    if ($user && password_verify($password, $user['password'])) {
-        if ((int)$user['is_verified'] !== 1) {
+        $result = $conn->query("SELECT * FROM users WHERE email='$safeEmail'");
+        $user = $result ? $result->fetch_assoc() : null;
+
+        if (!$user) {
+            $error = "Invalid email or password.";
+        } elseif (!password_verify($password, $user['password'])) {
+            $error = "Invalid email or password.";
+        } elseif ((int)$user['is_verified'] !== 1) {
             $error = "Please verify your email before logging in.";
         } else {
             session_regenerate_id(true);
             $_SESSION['user'] = $user['email'];
+
             header("Location: index.php");
             exit();
         }
-    } else {
-        $error = "Invalid email or password.";
     }
 }
 ?>
@@ -40,11 +47,38 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <title>Login - TradeSphere</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        .password-wrap{position:relative;}
-        .password-wrap input{padding-right:50px;}
+        .password-wrap{
+            position: relative;
+        }
+
+        .password-wrap input{
+            padding-right: 50px;
+        }
+
         .toggle-eye{
-            position:absolute; right:14px; top:50%; transform:translateY(-50%);
-            cursor:pointer; user-select:none; font-size:18px;
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            user-select: none;
+            font-size: 18px;
+        }
+
+        .forgot-link{
+            text-align: right;
+            margin-top: 8px;
+            margin-bottom: 18px;
+        }
+
+        .forgot-link a{
+            text-decoration: none;
+            color: #0ea5e9;
+            font-size: 14px;
+        }
+
+        .forgot-link a:hover{
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -64,6 +98,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <?php endif; ?>
 
         <form method="POST">
+
             <div class="form-group">
                 <label>Email Address</label>
                 <input type="email" name="email" placeholder="Enter your email" required>
@@ -77,13 +112,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 </div>
             </div>
 
-            <div style="text-align:right; margin-bottom:16px;">
+            <div class="forgot-link">
                 <a href="forgot_password.php">Forgot Password?</a>
             </div>
 
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary">Login</button>
             </div>
+
         </form>
 
         <p style="margin-top:16px; text-align:center;">
@@ -95,6 +131,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <script>
 function togglePassword(fieldId, icon) {
     const input = document.getElementById(fieldId);
+
     if (input.type === "password") {
         input.type = "text";
         icon.textContent = "🙈";
@@ -104,5 +141,6 @@ function togglePassword(fieldId, icon) {
     }
 }
 </script>
+
 </body>
 </html>

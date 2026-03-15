@@ -12,9 +12,9 @@ function sendMailMessage($toEmail, $toName, $subject, $bodyHtml) {
         $mail->Host       = 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
         $mail->Username   = 'hellwrld0045@gmail.com';
-        $mail->Password   = '0123456789abcde#';
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port       = 587;
+        $mail->Password   = 'akvj reov cwsg zfqe';
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+        $mail->Port       = 465;
 
         $mail->setFrom('hellwrld0045@gmail.com', 'TradeSphere');
         $mail->addAddress($toEmail, $toName);
@@ -25,8 +25,9 @@ function sendMailMessage($toEmail, $toName, $subject, $bodyHtml) {
 
         $mail->send();
         return true;
+
     } catch (Exception $e) {
-        return false;
+        die("Mailer Error: " . $mail->ErrorInfo);
     }
 }
 
