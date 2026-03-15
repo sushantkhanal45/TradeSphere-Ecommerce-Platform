@@ -3,6 +3,12 @@ session_start();
 include "config/db.php";
 
 $error = "";
+$success = "";
+
+if (isset($_SESSION['verification_success'])) {
+    $success = $_SESSION['verification_success'];
+    unset($_SESSION['verification_success']);
+}
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $email = trim($_POST['email']);
@@ -13,9 +19,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $user = $result ? $result->fetch_assoc() : null;
 
     if ($user && password_verify($password, $user['password'])) {
-        $_SESSION['user'] = $user['email'];
-        header("Location: index.php");
-        exit();
+        if ((int)$user['is_verified'] !== 1) {
+            $error = "Please verify your email before logging in.";
+        } else {
+            session_regenerate_id(true);
+            $_SESSION['user'] = $user['email'];
+            header("Location: index.php");
+            exit();
+        }
     } else {
         $error = "Invalid email or password.";
     }
@@ -28,6 +39,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - TradeSphere</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .password-wrap{position:relative;}
+        .password-wrap input{padding-right:50px;}
+        .toggle-eye{
+            position:absolute; right:14px; top:50%; transform:translateY(-50%);
+            cursor:pointer; user-select:none; font-size:18px;
+        }
+    </style>
 </head>
 <body>
 
@@ -35,6 +54,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <div class="form-card">
         <h2>Login</h2>
         <p class="helper">Login to continue buying, selling, and managing your activity.</p>
+
+        <?php if ($success): ?>
+            <div class="success-msg"><?php echo $success; ?></div>
+        <?php endif; ?>
 
         <?php if ($error): ?>
             <div class="error-msg"><?php echo $error; ?></div>
@@ -48,7 +71,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             <div class="form-group">
                 <label>Password</label>
-                <input type="password" name="password" placeholder="Enter your password" required>
+                <div class="password-wrap">
+                    <input type="password" id="loginPassword" name="password" placeholder="Enter your password" required>
+                    <span class="toggle-eye" onclick="togglePassword('loginPassword', this)">👁</span>
+                </div>
+            </div>
+
+            <div style="text-align:right; margin-bottom:16px;">
+                <a href="forgot_password.php">Forgot Password?</a>
             </div>
 
             <div class="form-actions">
@@ -62,5 +92,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     </div>
 </div>
 
+<script>
+function togglePassword(fieldId, icon) {
+    const input = document.getElementById(fieldId);
+    if (input.type === "password") {
+        input.type = "text";
+        icon.textContent = "🙈";
+    } else {
+        input.type = "password";
+        icon.textContent = "👁";
+    }
+}
+</script>
 </body>
 </html>

@@ -1,26 +1,67 @@
 <?php
+session_start();
 include "config/db.php";
+include "includes/mail_helper.php";
 
 $error = "";
+$success = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $name = trim($_POST['name']);
     $email = trim($_POST['email']);
     $passwordRaw = $_POST['password'];
+    $confirmPassword = $_POST['confirm_password'];
 
-    $safeName = $conn->real_escape_string($name);
-    $safeEmail = $conn->real_escape_string($email);
-    $password = password_hash($passwordRaw, PASSWORD_DEFAULT);
-
-    $check = $conn->query("SELECT * FROM users WHERE email='$safeEmail'");
-    if ($check && $check->num_rows > 0) {
-        $error = "An account with this email already exists.";
+    if ($name === "" || $email === "" || $passwordRaw === "" || $confirmPassword === "") {
+        $error = "Please fill in all fields.";
+    } elseif ($passwordRaw !== $confirmPassword) {
+        $error = "Passwords do not match.";
     } else {
-        if ($conn->query("INSERT INTO users (name, email, password) VALUES ('$safeName', '$safeEmail', '$password')")) {
-            header("Location: login.php");
-            exit();
+        $safeName = $conn->real_escape_string($name);
+        $safeEmail = $conn->real_escape_string($email);
+
+        $check = $conn->query("SELECT * FROM users WHERE email='$safeEmail'");
+        if ($check && $check->num_rows > 0) {
+            $existing = $check->fetch_assoc();
+
+            if ((int)$existing['is_verified'] === 1) {
+                $error = "An account with this email already exists.";
+            } else {
+                $otp = str_pad((string)random_int(0, 999999), 6, "0", STR_PAD_LEFT);
+                $otpHash = password_hash($otp, PASSWORD_DEFAULT);
+                $expiresAt = date("Y-m-d H:i:s", time() + 600);
+
+                $conn->query("
+                    UPDATE users
+                    SET email_otp='$otpHash', otp_expires_at='$expiresAt'
+                    WHERE email='$safeEmail'
+                ");
+
+                sendOtpEmail($email, $existing['name'], $otp);
+
+                $_SESSION['pending_email'] = $email;
+                header("Location: verify_otp.php");
+                exit();
+            }
         } else {
-            $error = "Registration failed. Please try again.";
+            $password = password_hash($passwordRaw, PASSWORD_DEFAULT);
+            $otp = str_pad((string)random_int(0, 999999), 6, "0", STR_PAD_LEFT);
+            $otpHash = password_hash($otp, PASSWORD_DEFAULT);
+            $expiresAt = date("Y-m-d H:i:s", time() + 600);
+
+            $sql = "
+                INSERT INTO users (name, email, password, is_verified, email_otp, otp_expires_at)
+                VALUES ('$safeName', '$safeEmail', '$password', 0, '$otpHash', '$expiresAt')
+            ";
+
+            if ($conn->query($sql)) {
+                sendOtpEmail($email, $name, $otp);
+                $_SESSION['pending_email'] = $email;
+                header("Location: verify_otp.php");
+                exit();
+            } else {
+                $error = "Registration failed. Please try again.";
+            }
         }
     }
 }
@@ -32,6 +73,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Account - TradeSphere</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .password-wrap{position:relative;}
+        .password-wrap input{padding-right:50px;}
+        .toggle-eye{
+            position:absolute; right:14px; top:50%; transform:translateY(-50%);
+            cursor:pointer; user-select:none; font-size:18px;
+        }
+    </style>
 </head>
 <body>
 
@@ -57,7 +106,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             <div class="form-group">
                 <label>Password</label>
-                <input type="password" name="password" placeholder="Create a password" required>
+                <div class="password-wrap">
+                    <input type="password" id="registerPassword" name="password" placeholder="Create a password" required>
+                    <span class="toggle-eye" onclick="togglePassword('registerPassword', this)">👁</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Confirm Password</label>
+                <div class="password-wrap">
+                    <input type="password" id="confirmPassword" name="confirm_password" placeholder="Confirm password" required>
+                    <span class="toggle-eye" onclick="togglePassword('confirmPassword', this)">👁</span>
+                </div>
             </div>
 
             <div class="form-actions">
@@ -71,5 +131,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     </div>
 </div>
 
+<script>
+function togglePassword(fieldId, icon) {
+    const input = document.getElementById(fieldId);
+    if (input.type === "password") {
+        input.type = "text";
+        icon.textContent = "🙈";
+    } else {
+        input.type = "password";
+        icon.textContent = "👁";
+    }
+}
+</script>
 </body>
 </html>

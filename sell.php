@@ -1,6 +1,7 @@
 <?php
 session_start();
 include "config/db.php";
+include "includes/rsa_helper.php";
 
 if (!isset($_SESSION['user'])) {
     header("Location: login.php");
@@ -24,6 +25,7 @@ $cartCountRes = $conn->query("SELECT SUM(quantity) AS total_items FROM cart WHER
 $cartCountRow = $cartCountRes ? $cartCountRes->fetch_assoc() : null;
 $cartCount = ($cartCountRow && $cartCountRow['total_items']) ? (int)$cartCountRow['total_items'] : 0;
 
+/* Add product */
 if (isset($_POST['submit'])) {
     $name = trim($_POST['name']);
     $category = trim($_POST['category']);
@@ -55,6 +57,21 @@ if (isset($_POST['submit'])) {
             ";
 
             if ($conn->query($stmt)) {
+                $productId = $conn->insert_id;
+
+                $actionData = json_encode([
+                    "user_id" => $userId,
+                    "product_id" => $productId,
+                    "action" => "product_created",
+                    "product_name" => $name,
+                    "timestamp" => date("Y-m-d H:i:s")
+                ]);
+
+                $signature = signData($actionData);
+                if ($signature) {
+                    storeSignatureRecord($conn, $userId, "product_created", $productId, $actionData, $signature);
+                }
+
                 $success = "Your product has been listed successfully.";
             } else {
                 $error = "Could not save product.";
@@ -65,6 +82,7 @@ if (isset($_POST['submit'])) {
     }
 }
 
+/* Toggle status with RSA signature */
 if (isset($_POST['toggle_status'])) {
     $productId = (int)$_POST['product_id'];
 
@@ -73,7 +91,24 @@ if (isset($_POST['toggle_status'])) {
 
     if ($product) {
         $newStatus = ($product['status'] === 'sold') ? 'available' : 'sold';
-        $conn->query("UPDATE products SET status='$newStatus' WHERE id=$productId AND user_id=$userId");
+
+        if ($conn->query("UPDATE products SET status='$newStatus' WHERE id=$productId AND user_id=$userId")) {
+            $actionData = json_encode([
+                "user_id" => $userId,
+                "product_id" => $productId,
+                "old_status" => $product['status'],
+                "new_status" => $newStatus,
+                "action" => "product_status_update",
+                "timestamp" => date("Y-m-d H:i:s")
+            ]);
+
+            $signature = signData($actionData);
+
+            if ($signature) {
+                storeSignatureRecord($conn, $userId, "product_status_update", $productId, $actionData, $signature);
+            }
+        }
+
         header("Location: sell.php");
         exit();
     }
