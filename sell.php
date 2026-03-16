@@ -82,7 +82,7 @@ if (isset($_POST['submit'])) {
     }
 }
 
-/* Toggle status with RSA signature */
+/* Toggle status and digitally sign the action */
 if (isset($_POST['toggle_status'])) {
     $productId = (int)$_POST['product_id'];
 
@@ -90,13 +90,14 @@ if (isset($_POST['toggle_status'])) {
     $product = $check ? $check->fetch_assoc() : null;
 
     if ($product) {
-        $newStatus = ($product['status'] === 'sold') ? 'available' : 'sold';
+        $oldStatus = $product['status'];
+        $newStatus = ($oldStatus === 'sold') ? 'available' : 'sold';
 
         if ($conn->query("UPDATE products SET status='$newStatus' WHERE id=$productId AND user_id=$userId")) {
             $actionData = json_encode([
                 "user_id" => $userId,
                 "product_id" => $productId,
-                "old_status" => $product['status'],
+                "old_status" => $oldStatus,
                 "new_status" => $newStatus,
                 "action" => "product_status_update",
                 "timestamp" => date("Y-m-d H:i:s")
