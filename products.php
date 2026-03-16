@@ -3,7 +3,7 @@ session_start();
 include "config/db.php";
 
 $search = isset($_GET['search']) ? trim($_GET['search']) : "";
-$category = isset($_GET['category']) ? trim($_GET['category']) : "";
+$categoryId = isset($_GET['category_id']) ? (int)$_GET['category_id'] : 0;
 
 $cartCount = 0;
 if (isset($_SESSION['user'])) {
@@ -19,32 +19,32 @@ if (isset($_SESSION['user'])) {
     }
 }
 
-$categoryQuery = $conn->query("
-    SELECT DISTINCT category 
-    FROM products 
-    WHERE category IS NOT NULL AND category != '' 
-    ORDER BY category ASC
-");
+$categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
 
-$sql = "SELECT * FROM products WHERE 1=1";
+$sql = "
+    SELECT p.*, c.name AS category_name
+    FROM products p
+    LEFT JOIN categories c ON p.category_id = c.id
+    WHERE 1=1
+";
 
 if ($search !== "") {
     $safeSearch = $conn->real_escape_string($search);
     $sql .= " AND (
-        name LIKE '%$safeSearch%' OR
-        city LIKE '%$safeSearch%' OR
-        category LIKE '%$safeSearch%' OR
-        seller_email LIKE '%$safeSearch%' OR
-        description LIKE '%$safeSearch%'
+        p.name LIKE '%$safeSearch%' OR
+        p.city LIKE '%$safeSearch%' OR
+        c.name LIKE '%$safeSearch%' OR
+        p.seller_email LIKE '%$safeSearch%' OR
+        p.description LIKE '%$safeSearch%' OR
+        p.product_condition LIKE '%$safeSearch%'
     )";
 }
 
-if ($category !== "") {
-    $safeCategory = $conn->real_escape_string($category);
-    $sql .= " AND category = '$safeCategory'";
+if ($categoryId > 0) {
+    $sql .= " AND p.category_id = $categoryId";
 }
 
-$sql .= " ORDER BY id DESC";
+$sql .= " ORDER BY p.id DESC";
 $result = $conn->query($sql);
 ?>
 <!DOCTYPE html>
@@ -92,7 +92,7 @@ $result = $conn->query($sql);
     <div class="container">
         <h1 class="section-title">Explore Products</h1>
         <p class="section-subtitle">
-            Search products by name, city, category, seller, or description and browse the complete TradeSphere marketplace.
+            Search products by name, city, category, seller, description, or condition.
         </p>
 
         <div class="search-filter-box">
@@ -107,12 +107,12 @@ $result = $conn->query($sql);
                 </div>
 
                 <div class="search-group">
-                    <select name="category">
+                    <select name="category_id">
                         <option value="">All Categories</option>
                         <?php if ($categoryQuery && $categoryQuery->num_rows > 0): ?>
                             <?php while ($cat = $categoryQuery->fetch_assoc()): ?>
-                                <option value="<?php echo htmlspecialchars($cat['category']); ?>" <?php echo ($category === $cat['category']) ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($cat['category']); ?>
+                                <option value="<?php echo (int)$cat['id']; ?>" <?php echo ($categoryId === (int)$cat['id']) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($cat['name']); ?>
                                 </option>
                             <?php endwhile; ?>
                         <?php endif; ?>
@@ -138,7 +138,8 @@ $result = $conn->query($sql);
                         <div class="product-body">
                             <h3><?php echo htmlspecialchars($row['name']); ?></h3>
                             <p class="price">Rs <?php echo htmlspecialchars($row['price']); ?></p>
-                            <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category']); ?></p>
+                            <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category_name']); ?></p>
+                            <p class="meta"><strong>Condition:</strong> <?php echo htmlspecialchars($row['product_condition']); ?></p>
                             <p class="meta"><strong>City:</strong> <?php echo htmlspecialchars($row['city']); ?></p>
                             <p class="meta"><strong>Seller:</strong> <?php echo htmlspecialchars($row['seller_email']); ?></p>
 

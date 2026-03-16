@@ -8,7 +8,14 @@ if (!isset($_GET['id'])) {
 }
 
 $id = (int) $_GET['id'];
-$productQuery = $conn->query("SELECT * FROM products WHERE id = $id");
+
+$productQuery = $conn->query("
+    SELECT p.*, c.name AS category_name
+    FROM products p
+    LEFT JOIN categories c ON p.category_id = c.id
+    WHERE p.id = $id
+");
+
 $product = $productQuery ? $productQuery->fetch_assoc() : null;
 
 if (!$product) {
@@ -135,7 +142,8 @@ if (isset($_POST['add_to_cart'])) {
                 <div class="detail-price">Rs <?php echo htmlspecialchars($product['price']); ?></div>
 
                 <div class="detail-info">
-                    <p><strong>Category:</strong> <?php echo htmlspecialchars($product['category']); ?></p>
+                    <p><strong>Category:</strong> <?php echo htmlspecialchars($product['category_name']); ?></p>
+                    <p><strong>Condition:</strong> <?php echo htmlspecialchars($product['product_condition']); ?></p>
                     <p><strong>City:</strong> <?php echo htmlspecialchars($product['city']); ?></p>
                     <p><strong>Seller Email:</strong> <?php echo htmlspecialchars($product['seller_email']); ?></p>
                     <p><strong>Description:</strong> <?php echo nl2br(htmlspecialchars($product['description'])); ?></p>

@@ -38,9 +38,10 @@ if (isset($_POST['remove_item'])) {
 }
 
 $items = $conn->query("
-    SELECT products.*, cart.quantity, cart.id AS cart_id
+    SELECT p.*, c.name AS category_name, cart.quantity, cart.id AS cart_id
     FROM cart
-    INNER JOIN products ON cart.product_id = products.id
+    INNER JOIN products p ON cart.product_id = p.id
+    LEFT JOIN categories c ON p.category_id = c.id
     WHERE cart.user_id = $userId
     ORDER BY cart.id DESC
 ");
@@ -102,7 +103,8 @@ if ($items) {
 
                         <div>
                             <h3><?php echo htmlspecialchars($row['name']); ?></h3>
-                            <p class="meta">Category: <?php echo htmlspecialchars($row['category']); ?></p>
+                            <p class="meta">Category: <?php echo htmlspecialchars($row['category_name']); ?></p>
+                            <p class="meta">Condition: <?php echo htmlspecialchars($row['product_condition']); ?></p>
                             <p class="meta">City: <?php echo htmlspecialchars($row['city']); ?></p>
                             <p class="meta">Seller: <?php echo htmlspecialchars($row['seller_email']); ?></p>
                             <p class="meta">Unit Price: Rs <?php echo htmlspecialchars($row['price']); ?></p>

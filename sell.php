@@ -25,10 +25,13 @@ $cartCountRes = $conn->query("SELECT SUM(quantity) AS total_items FROM cart WHER
 $cartCountRow = $cartCountRes ? $cartCountRes->fetch_assoc() : null;
 $cartCount = ($cartCountRow && $cartCountRow['total_items']) ? (int)$cartCountRow['total_items'] : 0;
 
+$categories = $conn->query("SELECT * FROM categories ORDER BY name ASC");
+
 /* Add product */
 if (isset($_POST['submit'])) {
     $name = trim($_POST['name']);
-    $category = trim($_POST['category']);
+    $categoryId = (int)$_POST['category_id'];
+    $productCondition = trim($_POST['product_condition']);
     $price = trim($_POST['price']);
     $city = trim($_POST['city']);
     $description = trim($_POST['description']);
@@ -37,23 +40,53 @@ if (isset($_POST['submit'])) {
     $image = $_FILES['image']['name'];
     $tmp = $_FILES['image']['tmp_name'];
 
-    if ($name === "" || $category === "" || $price === "" || $city === "" || $description === "" || $image === "") {
+    if (
+        $name === "" ||
+        $categoryId <= 0 ||
+        $productCondition === "" ||
+        $price === "" ||
+        $city === "" ||
+        $description === "" ||
+        $image === ""
+    ) {
         $error = "Please fill in all fields.";
     } else {
         $safeName = $conn->real_escape_string($name);
-        $safeCategory = $conn->real_escape_string($category);
         $safePrice = $conn->real_escape_string($price);
         $safeCity = $conn->real_escape_string($city);
         $safeDescription = $conn->real_escape_string($description);
         $safeSeller = $conn->real_escape_string($seller_email);
+        $safeCondition = $conn->real_escape_string($productCondition);
 
         $imageName = time() . "_" . basename($image);
         $target = "uploads/" . $imageName;
 
         if (move_uploaded_file($tmp, $target)) {
             $stmt = "
-                INSERT INTO products (user_id, name, category, price, city, seller_email, image, description, status)
-                VALUES ('$userId', '$safeName', '$safeCategory', '$safePrice', '$safeCity', '$safeSeller', '$imageName', '$safeDescription', 'available')
+                INSERT INTO products (
+                    user_id,
+                    name,
+                    category_id,
+                    price,
+                    city,
+                    seller_email,
+                    image,
+                    description,
+                    product_condition,
+                    status
+                )
+                VALUES (
+                    '$userId',
+                    '$safeName',
+                    '$categoryId',
+                    '$safePrice',
+                    '$safeCity',
+                    '$safeSeller',
+                    '$imageName',
+                    '$safeDescription',
+                    '$safeCondition',
+                    'available'
+                )
             ";
 
             if ($conn->query($stmt)) {
@@ -64,6 +97,7 @@ if (isset($_POST['submit'])) {
                     "product_id" => $productId,
                     "action" => "product_created",
                     "product_name" => $name,
+                    "condition" => $productCondition,
                     "timestamp" => date("Y-m-d H:i:s")
                 ]);
 
@@ -115,7 +149,13 @@ if (isset($_POST['toggle_status'])) {
     }
 }
 
-$myProducts = $conn->query("SELECT * FROM products WHERE user_id=$userId ORDER BY id DESC");
+$myProducts = $conn->query("
+    SELECT p.*, c.name AS category_name
+    FROM products p
+    LEFT JOIN categories c ON p.category_id = c.id
+    WHERE p.user_id = $userId
+    ORDER BY p.id DESC
+");
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -154,7 +194,7 @@ $myProducts = $conn->query("SELECT * FROM products WHERE user_id=$userId ORDER B
     <div class="container">
         <div class="form-card">
             <h2>Sell Your Product</h2>
-            <p class="helper">Add your product to the TradeSphere marketplace. Product status is available by default and can be updated later by you.</p>
+            <p class="helper">Choose a category and condition, then enter the exact product name and details.</p>
 
             <?php if ($success): ?>
                 <div class="success-msg"><?php echo $success; ?></div>
@@ -166,13 +206,33 @@ $myProducts = $conn->query("SELECT * FROM products WHERE user_id=$userId ORDER B
 
             <form method="POST" enctype="multipart/form-data">
                 <div class="form-group">
-                    <label>Product Name</label>
-                    <input type="text" name="name" placeholder="Enter product name" required>
+                    <label>Category</label>
+                    <select name="category_id" required>
+                        <option value="">Select Category</option>
+                        <?php if ($categories && $categories->num_rows > 0): ?>
+                            <?php while ($cat = $categories->fetch_assoc()): ?>
+                                <option value="<?php echo (int)$cat['id']; ?>">
+                                    <?php echo htmlspecialchars($cat['name']); ?>
+                                </option>
+                            <?php endwhile; ?>
+                        <?php endif; ?>
+                    </select>
                 </div>
 
                 <div class="form-group">
-                    <label>Category</label>
-                    <input type="text" name="category" placeholder="e.g. Electronics, Books, Fashion" required>
+                    <label>Condition</label>
+                    <select name="product_condition" required>
+                        <option value="">Select Condition</option>
+                        <option value="New">New</option>
+                        <option value="Like New">Like New</option>
+                        <option value="Used">Used</option>
+                        <option value="Refurbished">Refurbished</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Product Name</label>
+                    <input type="text" name="name" placeholder="e.g. Samsung Refrigerator, Dell Inspiron Laptop" required>
                 </div>
 
                 <div class="form-group">
@@ -232,7 +292,8 @@ $myProducts = $conn->query("SELECT * FROM products WHERE user_id=$userId ORDER B
                             <div class="product-body">
                                 <h3><?php echo htmlspecialchars($row['name']); ?></h3>
                                 <p class="price">Rs <?php echo htmlspecialchars($row['price']); ?></p>
-                                <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category']); ?></p>
+                                <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category_name']); ?></p>
+                                <p class="meta"><strong>Condition:</strong> <?php echo htmlspecialchars($row['product_condition']); ?></p>
                                 <p class="meta"><strong>City:</strong> <?php echo htmlspecialchars($row['city']); ?></p>
                                 <p class="meta"><strong>Status:</strong> <?php echo htmlspecialchars(ucfirst($row['status'])); ?></p>
                             </div>

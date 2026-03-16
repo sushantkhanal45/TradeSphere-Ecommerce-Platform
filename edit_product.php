@@ -35,26 +35,37 @@ if (!$product) {
     die("Product not found or access denied.");
 }
 
+$categories = $conn->query("SELECT * FROM categories ORDER BY name ASC");
+
 $success = "";
 $error = "";
 
 if (isset($_POST['update_product'])) {
     $name = trim($_POST['name']);
-    $category = trim($_POST['category']);
+    $categoryId = (int)$_POST['category_id'];
+    $productCondition = trim($_POST['product_condition']);
     $price = trim($_POST['price']);
     $city = trim($_POST['city']);
     $description = trim($_POST['description']);
     $status = trim($_POST['status']);
 
-    if ($name === "" || $category === "" || $price === "" || $city === "" || $description === "" || $status === "") {
+    if (
+        $name === "" ||
+        $categoryId <= 0 ||
+        $productCondition === "" ||
+        $price === "" ||
+        $city === "" ||
+        $description === "" ||
+        $status === ""
+    ) {
         $error = "Please fill in all fields.";
     } else {
         $safeName = $conn->real_escape_string($name);
-        $safeCategory = $conn->real_escape_string($category);
         $safePrice = $conn->real_escape_string($price);
         $safeCity = $conn->real_escape_string($city);
         $safeDescription = $conn->real_escape_string($description);
         $safeStatus = $conn->real_escape_string($status);
+        $safeCondition = $conn->real_escape_string($productCondition);
 
         $imageName = $product['image'];
 
@@ -73,10 +84,11 @@ if (isset($_POST['update_product'])) {
         $update = "
             UPDATE products
             SET name='$safeName',
-                category='$safeCategory',
+                category_id='$categoryId',
                 price='$safePrice',
                 city='$safeCity',
                 description='$safeDescription',
+                product_condition='$safeCondition',
                 status='$safeStatus',
                 image='$safeImage'
             WHERE id=$productId AND user_id=$userId
@@ -140,13 +152,32 @@ if (isset($_POST['update_product'])) {
 
         <form method="POST" enctype="multipart/form-data">
             <div class="form-group">
-                <label>Product Name</label>
-                <input type="text" name="name" value="<?php echo htmlspecialchars($product['name']); ?>" required>
+                <label>Category</label>
+                <select name="category_id" required>
+                    <option value="">Select Category</option>
+                    <?php if ($categories && $categories->num_rows > 0): ?>
+                        <?php while ($cat = $categories->fetch_assoc()): ?>
+                            <option value="<?php echo (int)$cat['id']; ?>" <?php echo ((int)$product['category_id'] === (int)$cat['id']) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($cat['name']); ?>
+                            </option>
+                        <?php endwhile; ?>
+                    <?php endif; ?>
+                </select>
             </div>
 
             <div class="form-group">
-                <label>Category</label>
-                <input type="text" name="category" value="<?php echo htmlspecialchars($product['category']); ?>" required>
+                <label>Condition</label>
+                <select name="product_condition" required>
+                    <option value="New" <?php echo ($product['product_condition'] === 'New') ? 'selected' : ''; ?>>New</option>
+                    <option value="Like New" <?php echo ($product['product_condition'] === 'Like New') ? 'selected' : ''; ?>>Like New</option>
+                    <option value="Used" <?php echo ($product['product_condition'] === 'Used') ? 'selected' : ''; ?>>Used</option>
+                    <option value="Refurbished" <?php echo ($product['product_condition'] === 'Refurbished') ? 'selected' : ''; ?>>Refurbished</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Product Name</label>
+                <input type="text" name="name" value="<?php echo htmlspecialchars($product['name']); ?>" required>
             </div>
 
             <div class="form-group">

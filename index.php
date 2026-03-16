@@ -2,8 +2,15 @@
 session_start();
 include "config/db.php";
 
-$recent = $conn->query("SELECT * FROM products ORDER BY id DESC LIMIT 6");
-$categoryQuery = $conn->query("SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != '' ORDER BY category ASC");
+$recent = $conn->query("
+    SELECT p.*, c.name AS category_name
+    FROM products p
+    LEFT JOIN categories c ON p.category_id = c.id
+    ORDER BY p.id DESC
+    LIMIT 6
+");
+
+$categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
 
 $cartCount = 0;
 if (isset($_SESSION['user'])) {
@@ -89,8 +96,8 @@ if (isset($_SESSION['user'])) {
 
             <?php if ($categoryQuery && $categoryQuery->num_rows > 0): ?>
                 <?php while ($cat = $categoryQuery->fetch_assoc()): ?>
-                    <a href="products.php?category=<?php echo urlencode($cat['category']); ?>" class="category-chip">
-                        <?php echo htmlspecialchars($cat['category']); ?>
+                    <a href="products.php?category_id=<?php echo (int)$cat['id']; ?>" class="category-chip">
+                        <?php echo htmlspecialchars($cat['name']); ?>
                     </a>
                 <?php endwhile; ?>
             <?php else: ?>
@@ -119,7 +126,8 @@ if (isset($_SESSION['user'])) {
                         <div class="product-body">
                             <h3><?php echo htmlspecialchars($row['name']); ?></h3>
                             <p class="price">Rs <?php echo htmlspecialchars($row['price']); ?></p>
-                            <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category']); ?></p>
+                            <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category_name']); ?></p>
+                            <p class="meta"><strong>Condition:</strong> <?php echo htmlspecialchars($row['product_condition']); ?></p>
                             <p class="meta"><strong>City:</strong> <?php echo htmlspecialchars($row['city']); ?></p>
                             <p class="meta"><strong>Seller:</strong> <?php echo htmlspecialchars($row['seller_email']); ?></p>
 
