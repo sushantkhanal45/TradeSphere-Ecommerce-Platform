@@ -16,6 +16,8 @@ if (!$user) {
 }
 
 $userId = (int) $user['id'];
+$success = "";
+$error = "";
 
 if (isset($_POST['update_quantity'])) {
     $cartId = (int) $_POST['cart_id'];
@@ -25,16 +27,29 @@ if (isset($_POST['update_quantity'])) {
         $quantity = 1;
     }
 
-    $conn->query("UPDATE cart SET quantity=$quantity WHERE id=$cartId AND user_id=$userId");
-    header("Location: cart.php");
-    exit();
+    if ($conn->query("UPDATE cart SET quantity=$quantity WHERE id=$cartId AND user_id=$userId")) {
+        $success = "Cart quantity updated successfully.";
+    } else {
+        $error = "Could not update quantity.";
+    }
 }
 
 if (isset($_POST['remove_item'])) {
     $cartId = (int) $_POST['cart_id'];
-    $conn->query("DELETE FROM cart WHERE id=$cartId AND user_id=$userId");
-    header("Location: cart.php");
-    exit();
+
+    if ($conn->query("DELETE FROM cart WHERE id=$cartId AND user_id=$userId")) {
+        $success = "Item removed from cart.";
+    } else {
+        $error = "Could not remove item.";
+    }
+}
+
+if (isset($_POST['clear_cart'])) {
+    if ($conn->query("DELETE FROM cart WHERE user_id=$userId")) {
+        $success = "Cart cleared successfully.";
+    } else {
+        $error = "Could not clear cart.";
+    }
 }
 
 $items = $conn->query("
@@ -93,9 +108,23 @@ if ($items) {
 <div class="page-wrap">
     <div class="container">
         <h1 class="section-title">Your Cart</h1>
-        <p class="section-subtitle">Review your selected products, update quantity, remove items, and continue toward checkout.</p>
+        <p class="section-subtitle">Review your selected products, update quantity, remove items, or clear your full cart.</p>
+
+        <?php if ($success): ?>
+            <div class="success-msg"><?php echo $success; ?></div>
+        <?php endif; ?>
+
+        <?php if ($error): ?>
+            <div class="error-msg"><?php echo $error; ?></div>
+        <?php endif; ?>
 
         <?php if ($items && $items->num_rows > 0): ?>
+            <div style="max-width:920px; margin:0 auto 18px; display:flex; justify-content:flex-end;">
+                <form method="POST" onsubmit="return confirm('Are you sure you want to clear the entire cart?');">
+                    <button type="submit" name="clear_cart" class="btn btn-dark">Clear Cart</button>
+                </form>
+            </div>
+
             <div class="cart-list">
                 <?php while ($row = $items->fetch_assoc()): ?>
                     <div class="cart-item">
@@ -112,7 +141,14 @@ if ($items) {
 
                             <form method="POST" style="margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
                                 <input type="hidden" name="cart_id" value="<?php echo (int)$row['cart_id']; ?>">
-                                <input type="number" name="quantity" min="1" value="<?php echo (int)$row['quantity']; ?>" style="width: 90px; padding: 10px; border: 1px solid #d1d5db; border-radius: 10px;" required>
+                                <input
+                                    type="number"
+                                    name="quantity"
+                                    min="1"
+                                    value="<?php echo (int)$row['quantity']; ?>"
+                                    style="width: 90px; padding: 10px; border: 1px solid #d1d5db; border-radius: 10px;"
+                                    required
+                                >
                                 <button type="submit" name="update_quantity" class="btn btn-primary">Update</button>
                                 <button type="submit" name="remove_item" class="btn btn-dark">Remove</button>
                             </form>
