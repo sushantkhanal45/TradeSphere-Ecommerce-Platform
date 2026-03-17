@@ -116,7 +116,7 @@ if (isset($_POST['submit'])) {
     }
 }
 
-/* Toggle status and digitally sign the action */
+/* Toggle status */
 if (isset($_POST['toggle_status'])) {
     $productId = (int)$_POST['product_id'];
 
@@ -142,10 +142,52 @@ if (isset($_POST['toggle_status'])) {
             if ($signature) {
                 storeSignatureRecord($conn, $userId, "product_status_update", $productId, $actionData, $signature);
             }
-        }
 
-        header("Location: sell.php");
-        exit();
+            $success = "Product status updated successfully.";
+        } else {
+            $error = "Could not update product status.";
+        }
+    } else {
+        $error = "Product not found or access denied.";
+    }
+}
+
+/* Delete product */
+if (isset($_POST['delete_product'])) {
+    $productId = (int)$_POST['product_id'];
+
+    $check = $conn->query("SELECT * FROM products WHERE id=$productId AND user_id=$userId");
+    $product = $check ? $check->fetch_assoc() : null;
+
+    if ($product) {
+        $productName = $product['name'];
+        $productImage = $product['image'];
+
+        if ($conn->query("DELETE FROM products WHERE id=$productId AND user_id=$userId")) {
+            $actionData = json_encode([
+                "user_id" => $userId,
+                "product_id" => $productId,
+                "product_name" => $productName,
+                "action" => "product_deleted",
+                "timestamp" => date("Y-m-d H:i:s")
+            ]);
+
+            $signature = signData($actionData);
+
+            if ($signature) {
+                storeSignatureRecord($conn, $userId, "product_deleted", $productId, $actionData, $signature);
+            }
+
+            if (!empty($productImage) && file_exists("uploads/" . $productImage)) {
+                @unlink("uploads/" . $productImage);
+            }
+
+            $success = "Product deleted successfully.";
+        } else {
+            $error = "Could not delete product.";
+        }
+    } else {
+        $error = "Product not found or access denied.";
     }
 }
 
@@ -263,7 +305,7 @@ $myProducts = $conn->query("
 
         <div class="seller-listings-section">
             <h2 class="section-title">My Listings</h2>
-            <p class="section-subtitle">Manage your products here. You can edit details and change the status of your own listings.</p>
+            <p class="section-subtitle">Manage your products here. You can edit, change status, or remove your own listings.</p>
 
             <?php if ($myProducts && $myProducts->num_rows > 0): ?>
                 <div class="products-grid">
@@ -279,10 +321,18 @@ $myProducts = $conn->query("
                                     <button type="button" class="card-menu-btn" onclick="toggleMenu(<?php echo $row['id']; ?>)">⋮</button>
                                     <div class="card-menu-dropdown" id="menu-<?php echo $row['id']; ?>">
                                         <a href="edit_product.php?id=<?php echo $row['id']; ?>">Edit Product</a>
+
                                         <form method="POST">
                                             <input type="hidden" name="product_id" value="<?php echo $row['id']; ?>">
                                             <button type="submit" name="toggle_status" class="menu-action-btn">
                                                 <?php echo ($row['status'] === 'sold') ? 'Mark as Available' : 'Mark as Sold'; ?>
+                                            </button>
+                                        </form>
+
+                                        <form method="POST" onsubmit="return confirm('Are you sure you want to delete this product?');">
+                                            <input type="hidden" name="product_id" value="<?php echo $row['id']; ?>">
+                                            <button type="submit" name="delete_product" class="menu-action-btn">
+                                                Delete Product
                                             </button>
                                         </form>
                                     </div>
@@ -316,14 +366,16 @@ function toggleMenu(id) {
     const allMenus = document.querySelectorAll(".card-menu-dropdown");
 
     allMenus.forEach(item => {
-        if (item !== menu) item.style.display = "none";
+        if (item !== menu) {
+            item.style.display = "none";
+        }
     });
 
     menu.style.display = (menu.style.display === "block") ? "none" : "block";
 }
 
 window.addEventListener("click", function(e) {
-    if (!e.target.matches(".card-menu-btn")) {
+    if (!e.target.closest(".card-menu")) {
         document.querySelectorAll(".card-menu-dropdown").forEach(menu => {
             menu.style.display = "none";
         });
