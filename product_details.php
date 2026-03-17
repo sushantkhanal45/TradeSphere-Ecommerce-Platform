@@ -26,19 +26,15 @@ if (!$product) {
 $success = "";
 $error = "";
 $showGoToCart = false;
-$cartCount = 0;
 $userId = 0;
 
 if (isset($_SESSION['user'])) {
     $userEmail = $_SESSION['user'];
-    $userRes = $conn->query("SELECT id FROM users WHERE email='$userEmail'");
+    $userRes = $conn->query("SELECT id FROM users WHERE email='$userEmail' LIMIT 1");
     $userRow = $userRes ? $userRes->fetch_assoc() : null;
 
     if ($userRow) {
-        $userId = (int) $userRow['id'];
-        $cartCountRes = $conn->query("SELECT SUM(quantity) AS total_items FROM cart WHERE user_id=$userId");
-        $cartCountRow = $cartCountRes ? $cartCountRes->fetch_assoc() : null;
-        $cartCount = ($cartCountRow && $cartCountRow['total_items']) ? (int)$cartCountRow['total_items'] : 0;
+        $userId = (int)$userRow['id'];
     }
 }
 
@@ -51,13 +47,14 @@ if (isset($_POST['add_to_cart'])) {
     if ($product['status'] === 'sold') {
         $error = "This item has already been marked as sold.";
     } else {
-        $quantity = isset($_POST['quantity']) ? (int) $_POST['quantity'] : 1;
+        $quantity = isset($_POST['quantity']) ? (int)$_POST['quantity'] : 1;
+
         if ($quantity < 1) {
             $quantity = 1;
         }
 
         if ($userId > 0) {
-            $productId = (int) $product['id'];
+            $productId = (int)$product['id'];
 
             $check = $conn->query("SELECT * FROM cart WHERE user_id=$userId AND product_id=$productId");
             if ($check && $check->num_rows > 0) {
@@ -72,9 +69,6 @@ if (isset($_POST['add_to_cart'])) {
             }
 
             $showGoToCart = true;
-            $cartCountRes = $conn->query("SELECT SUM(quantity) AS total_items FROM cart WHERE user_id=$userId");
-            $cartCountRow = $cartCountRes ? $cartCountRes->fetch_assoc() : null;
-            $cartCount = ($cartCountRow && $cartCountRow['total_items']) ? (int)$cartCountRow['total_items'] : 0;
         } else {
             $error = "User not found.";
         }
@@ -91,36 +85,7 @@ if (isset($_POST['add_to_cart'])) {
 </head>
 <body>
 
-<nav class="navbar">
-    <div class="navbar-inner">
-        <div class="logo"><a href="index.php">TradeSphere</a></div>
-        <div class="menu-toggle" id="menuToggle">☰</div>
-        <div class="nav-links" id="navLinks">
-            <a href="index.php">Home</a>
-            <a href="products.php">Products</a>
-            <a href="index.php#categories">Categories</a>
-            <a href="sell.php">Sell</a>
-            <a href="index.php#about">About</a>
-            <a href="index.php#contact">Contact</a>
-
-            <?php if (isset($_SESSION['user'])): ?>
-                <a href="logout.php" class="nav-btn">Logout</a>
-            <?php else: ?>
-                <a href="login.php">Login</a>
-                <a href="register.php" class="nav-btn">Create Account</a>
-            <?php endif; ?>
-        </div>
-    </div>
-</nav>
-
-<?php if (isset($_SESSION['user'])): ?>
-    <a href="cart.php" class="floating-cart <?php echo ($cartCount > 0) ? 'cart-active' : ''; ?>" title="View Cart">
-        🛒
-        <?php if ($cartCount > 0): ?>
-            <span class="cart-count-badge"><?php echo $cartCount; ?></span>
-        <?php endif; ?>
-    </a>
-<?php endif; ?>
+<?php include "includes/navbar.php"; ?>
 
 <div class="page-wrap">
     <div class="container">
@@ -161,7 +126,7 @@ if (isset($_POST['add_to_cart'])) {
                             <div class="detail-action-row">
                                 <button type="submit" name="add_to_cart" class="btn btn-primary">Add to Cart</button>
 
-                                <?php if ($showGoToCart || $cartCount > 0): ?>
+                                <?php if ($showGoToCart): ?>
                                     <a href="cart.php" class="btn btn-dark">Go to Cart</a>
                                 <?php endif; ?>
                             </div>

@@ -12,3 +12,20 @@ if (toggle && navLinks) {
         });
     });
 }
+
+const profileToggle = document.getElementById("profileToggle");
+const profileDropdown = document.getElementById("profileDropdown");
+
+if (profileToggle && profileDropdown) {
+    profileToggle.addEventListener("click", function (e) {
+        e.stopPropagation();
+        profileDropdown.style.display =
+            profileDropdown.style.display === "block" ? "none" : "block";
+    });
+
+    window.addEventListener("click", function (e) {
+        if (!e.target.closest(".profile-menu")) {
+            profileDropdown.style.display = "none";
+        }
+    });
+}

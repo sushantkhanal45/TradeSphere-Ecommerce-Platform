@@ -19,15 +19,9 @@ if (!$user) {
 $userId = (int)$user['id'];
 $success = "";
 $error = "";
-$cartCount = 0;
-
-$cartCountRes = $conn->query("SELECT SUM(quantity) AS total_items FROM cart WHERE user_id=$userId");
-$cartCountRow = $cartCountRes ? $cartCountRes->fetch_assoc() : null;
-$cartCount = ($cartCountRow && $cartCountRow['total_items']) ? (int)$cartCountRow['total_items'] : 0;
 
 $categories = $conn->query("SELECT * FROM categories ORDER BY name ASC");
 
-/* Add product */
 if (isset($_POST['submit'])) {
     $name = trim($_POST['name']);
     $categoryId = (int)$_POST['category_id'];
@@ -115,89 +109,6 @@ if (isset($_POST['submit'])) {
         }
     }
 }
-
-/* Toggle status */
-if (isset($_POST['toggle_status'])) {
-    $productId = (int)$_POST['product_id'];
-
-    $check = $conn->query("SELECT * FROM products WHERE id=$productId AND user_id=$userId");
-    $product = $check ? $check->fetch_assoc() : null;
-
-    if ($product) {
-        $oldStatus = $product['status'];
-        $newStatus = ($oldStatus === 'sold') ? 'available' : 'sold';
-
-        if ($conn->query("UPDATE products SET status='$newStatus' WHERE id=$productId AND user_id=$userId")) {
-            $actionData = json_encode([
-                "user_id" => $userId,
-                "product_id" => $productId,
-                "old_status" => $oldStatus,
-                "new_status" => $newStatus,
-                "action" => "product_status_update",
-                "timestamp" => date("Y-m-d H:i:s")
-            ]);
-
-            $signature = signData($actionData);
-
-            if ($signature) {
-                storeSignatureRecord($conn, $userId, "product_status_update", $productId, $actionData, $signature);
-            }
-
-            $success = "Product status updated successfully.";
-        } else {
-            $error = "Could not update product status.";
-        }
-    } else {
-        $error = "Product not found or access denied.";
-    }
-}
-
-/* Delete product */
-if (isset($_POST['delete_product'])) {
-    $productId = (int)$_POST['product_id'];
-
-    $check = $conn->query("SELECT * FROM products WHERE id=$productId AND user_id=$userId");
-    $product = $check ? $check->fetch_assoc() : null;
-
-    if ($product) {
-        $productName = $product['name'];
-        $productImage = $product['image'];
-
-        if ($conn->query("DELETE FROM products WHERE id=$productId AND user_id=$userId")) {
-            $actionData = json_encode([
-                "user_id" => $userId,
-                "product_id" => $productId,
-                "product_name" => $productName,
-                "action" => "product_deleted",
-                "timestamp" => date("Y-m-d H:i:s")
-            ]);
-
-            $signature = signData($actionData);
-
-            if ($signature) {
-                storeSignatureRecord($conn, $userId, "product_deleted", $productId, $actionData, $signature);
-            }
-
-            if (!empty($productImage) && file_exists("uploads/" . $productImage)) {
-                @unlink("uploads/" . $productImage);
-            }
-
-            $success = "Product deleted successfully.";
-        } else {
-            $error = "Could not delete product.";
-        }
-    } else {
-        $error = "Product not found or access denied.";
-    }
-}
-
-$myProducts = $conn->query("
-    SELECT p.*, c.name AS category_name
-    FROM products p
-    LEFT JOIN categories c ON p.category_id = c.id
-    WHERE p.user_id = $userId
-    ORDER BY p.id DESC
-");
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -209,28 +120,7 @@ $myProducts = $conn->query("
 </head>
 <body>
 
-<nav class="navbar">
-    <div class="navbar-inner">
-        <div class="logo"><a href="index.php">TradeSphere</a></div>
-        <div class="menu-toggle" id="menuToggle">☰</div>
-        <div class="nav-links" id="navLinks">
-            <a href="index.php">Home</a>
-            <a href="products.php">Products</a>
-            <a href="index.php#categories">Categories</a>
-            <a href="sell.php">Sell</a>
-            <a href="index.php#about">About</a>
-            <a href="index.php#contact">Contact</a>
-            <a href="logout.php" class="nav-btn">Logout</a>
-        </div>
-    </div>
-</nav>
-
-<a href="cart.php" class="floating-cart <?php echo ($cartCount > 0) ? 'cart-active' : ''; ?>" title="View Cart">
-    🛒
-    <?php if ($cartCount > 0): ?>
-        <span class="cart-count-badge"><?php echo $cartCount; ?></span>
-    <?php endif; ?>
-</a>
+<?php include "includes/navbar.php"; ?>
 
 <div class="form-page">
     <div class="container">
@@ -299,60 +189,9 @@ $myProducts = $conn->query("
 
                 <div class="form-actions">
                     <button type="submit" name="submit" class="btn btn-primary">Post Product</button>
+                    <a href="profile.php#listings" class="btn btn-dark">Go to My Listings</a>
                 </div>
             </form>
-        </div>
-
-        <div class="seller-listings-section">
-            <h2 class="section-title">My Listings</h2>
-            <p class="section-subtitle">Manage your products here. You can edit, change status, or remove your own listings.</p>
-
-            <?php if ($myProducts && $myProducts->num_rows > 0): ?>
-                <div class="products-grid">
-                    <?php while ($row = $myProducts->fetch_assoc()): ?>
-                        <div class="product-card seller-card">
-                            <div class="product-image-wrap">
-                                <img src="uploads/<?php echo htmlspecialchars($row['image']); ?>" alt="Product Image">
-                                <?php if ($row['status'] === 'sold'): ?>
-                                    <div class="sold-badge">SOLD</div>
-                                <?php endif; ?>
-
-                                <div class="card-menu">
-                                    <button type="button" class="card-menu-btn" onclick="toggleMenu(<?php echo $row['id']; ?>)">⋮</button>
-                                    <div class="card-menu-dropdown" id="menu-<?php echo $row['id']; ?>">
-                                        <a href="edit_product.php?id=<?php echo $row['id']; ?>">Edit Product</a>
-
-                                        <form method="POST">
-                                            <input type="hidden" name="product_id" value="<?php echo $row['id']; ?>">
-                                            <button type="submit" name="toggle_status" class="menu-action-btn">
-                                                <?php echo ($row['status'] === 'sold') ? 'Mark as Available' : 'Mark as Sold'; ?>
-                                            </button>
-                                        </form>
-
-                                        <form method="POST" onsubmit="return confirm('Are you sure you want to delete this product?');">
-                                            <input type="hidden" name="product_id" value="<?php echo $row['id']; ?>">
-                                            <button type="submit" name="delete_product" class="menu-action-btn">
-                                                Delete Product
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="product-body">
-                                <h3><?php echo htmlspecialchars($row['name']); ?></h3>
-                                <p class="price">Rs <?php echo htmlspecialchars($row['price']); ?></p>
-                                <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category_name']); ?></p>
-                                <p class="meta"><strong>Condition:</strong> <?php echo htmlspecialchars($row['product_condition']); ?></p>
-                                <p class="meta"><strong>City:</strong> <?php echo htmlspecialchars($row['city']); ?></p>
-                                <p class="meta"><strong>Status:</strong> <?php echo htmlspecialchars(ucfirst($row['status'])); ?></p>
-                            </div>
-                        </div>
-                    <?php endwhile; ?>
-                </div>
-            <?php else: ?>
-                <p class="empty-state">You have not listed any products yet.</p>
-            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -360,27 +199,5 @@ $myProducts = $conn->query("
 <footer>© 2026 TradeSphere. All rights reserved.</footer>
 
 <script src="js/script.js"></script>
-<script>
-function toggleMenu(id) {
-    const menu = document.getElementById("menu-" + id);
-    const allMenus = document.querySelectorAll(".card-menu-dropdown");
-
-    allMenus.forEach(item => {
-        if (item !== menu) {
-            item.style.display = "none";
-        }
-    });
-
-    menu.style.display = (menu.style.display === "block") ? "none" : "block";
-}
-
-window.addEventListener("click", function(e) {
-    if (!e.target.closest(".card-menu")) {
-        document.querySelectorAll(".card-menu-dropdown").forEach(menu => {
-            menu.style.display = "none";
-        });
-    }
-});
-</script>
 </body>
 </html>

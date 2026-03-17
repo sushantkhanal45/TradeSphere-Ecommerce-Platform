@@ -5,20 +5,6 @@ include "config/db.php";
 $search = isset($_GET['search']) ? trim($_GET['search']) : "";
 $categoryId = isset($_GET['category_id']) ? (int)$_GET['category_id'] : 0;
 
-$cartCount = 0;
-if (isset($_SESSION['user'])) {
-    $userEmail = $_SESSION['user'];
-    $userRes = $conn->query("SELECT id FROM users WHERE email='$userEmail'");
-    $userRow = $userRes ? $userRes->fetch_assoc() : null;
-
-    if ($userRow) {
-        $userId = (int)$userRow['id'];
-        $cartCountRes = $conn->query("SELECT SUM(quantity) AS total_items FROM cart WHERE user_id=$userId");
-        $cartCountRow = $cartCountRes ? $cartCountRes->fetch_assoc() : null;
-        $cartCount = ($cartCountRow && $cartCountRow['total_items']) ? (int)$cartCountRow['total_items'] : 0;
-    }
-}
-
 $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
 
 $sql = "
@@ -57,36 +43,7 @@ $result = $conn->query($sql);
 </head>
 <body>
 
-<nav class="navbar">
-    <div class="navbar-inner">
-        <div class="logo"><a href="index.php">TradeSphere</a></div>
-        <div class="menu-toggle" id="menuToggle">☰</div>
-        <div class="nav-links" id="navLinks">
-            <a href="index.php">Home</a>
-            <a href="products.php">Products</a>
-            <a href="index.php#categories">Categories</a>
-            <a href="sell.php">Sell</a>
-            <a href="index.php#about">About</a>
-            <a href="index.php#contact">Contact</a>
-
-            <?php if (isset($_SESSION['user'])): ?>
-                <a href="logout.php" class="nav-btn">Logout</a>
-            <?php else: ?>
-                <a href="login.php">Login</a>
-                <a href="register.php" class="nav-btn">Create Account</a>
-            <?php endif; ?>
-        </div>
-    </div>
-</nav>
-
-<?php if (isset($_SESSION['user'])): ?>
-    <a href="cart.php" class="floating-cart <?php echo ($cartCount > 0) ? 'cart-active' : ''; ?>" title="View Cart">
-        🛒
-        <?php if ($cartCount > 0): ?>
-            <span class="cart-count-badge"><?php echo $cartCount; ?></span>
-        <?php endif; ?>
-    </a>
-<?php endif; ?>
+<?php include "includes/navbar.php"; ?>
 
 <div class="page-wrap">
     <div class="container">

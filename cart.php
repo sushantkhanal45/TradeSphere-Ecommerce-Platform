@@ -8,20 +8,20 @@ if (!isset($_SESSION['user'])) {
 }
 
 $userEmail = $_SESSION['user'];
-$userRes = $conn->query("SELECT id FROM users WHERE email='$userEmail'");
+$userRes = $conn->query("SELECT id FROM users WHERE email='$userEmail' LIMIT 1");
 $user = $userRes ? $userRes->fetch_assoc() : null;
 
 if (!$user) {
     die("User not found.");
 }
 
-$userId = (int) $user['id'];
+$userId = (int)$user['id'];
 $success = "";
 $error = "";
 
 if (isset($_POST['update_quantity'])) {
-    $cartId = (int) $_POST['cart_id'];
-    $quantity = (int) $_POST['quantity'];
+    $cartId = (int)$_POST['cart_id'];
+    $quantity = (int)$_POST['quantity'];
 
     if ($quantity < 1) {
         $quantity = 1;
@@ -35,7 +35,7 @@ if (isset($_POST['update_quantity'])) {
 }
 
 if (isset($_POST['remove_item'])) {
-    $cartId = (int) $_POST['cart_id'];
+    $cartId = (int)$_POST['cart_id'];
 
     if ($conn->query("DELETE FROM cart WHERE id=$cartId AND user_id=$userId")) {
         $success = "Item removed from cart.";
@@ -62,12 +62,10 @@ $items = $conn->query("
 ");
 
 $total = 0;
-$cartCount = 0;
 
 if ($items) {
     while ($row = $items->fetch_assoc()) {
-        $total += ((float) $row['price'] * (int) $row['quantity']);
-        $cartCount += (int) $row['quantity'];
+        $total += ((float)$row['price'] * (int)$row['quantity']);
     }
     $items->data_seek(0);
 }
@@ -82,28 +80,7 @@ if ($items) {
 </head>
 <body>
 
-<nav class="navbar">
-    <div class="navbar-inner">
-        <div class="logo"><a href="index.php">TradeSphere</a></div>
-        <div class="menu-toggle" id="menuToggle">☰</div>
-        <div class="nav-links" id="navLinks">
-            <a href="index.php">Home</a>
-            <a href="products.php">Products</a>
-            <a href="index.php#categories">Categories</a>
-            <a href="sell.php">Sell</a>
-            <a href="index.php#about">About</a>
-            <a href="index.php#contact">Contact</a>
-            <a href="logout.php" class="nav-btn">Logout</a>
-        </div>
-    </div>
-</nav>
-
-<a href="cart.php" class="floating-cart <?php echo ($cartCount > 0) ? 'cart-active' : ''; ?>" title="View Cart">
-    🛒
-    <?php if ($cartCount > 0): ?>
-        <span class="cart-count-badge"><?php echo $cartCount; ?></span>
-    <?php endif; ?>
-</a>
+<?php include "includes/navbar.php"; ?>
 
 <div class="page-wrap">
     <div class="container">

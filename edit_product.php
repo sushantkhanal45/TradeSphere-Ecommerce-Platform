@@ -8,7 +8,7 @@ if (!isset($_SESSION['user'])) {
 }
 
 $userEmail = $_SESSION['user'];
-$userRes = $conn->query("SELECT id, email FROM users WHERE email='$userEmail'");
+$userRes = $conn->query("SELECT id, email FROM users WHERE email='$userEmail' LIMIT 1");
 $user = $userRes ? $userRes->fetch_assoc() : null;
 
 if (!$user) {
@@ -16,14 +16,9 @@ if (!$user) {
 }
 
 $userId = (int)$user['id'];
-$cartCount = 0;
-
-$cartCountRes = $conn->query("SELECT SUM(quantity) AS total_items FROM cart WHERE user_id=$userId");
-$cartCountRow = $cartCountRes ? $cartCountRes->fetch_assoc() : null;
-$cartCount = ($cartCountRow && $cartCountRow['total_items']) ? (int)$cartCountRow['total_items'] : 0;
 
 if (!isset($_GET['id'])) {
-    header("Location: sell.php");
+    header("Location: profile.php#listings");
     exit();
 }
 
@@ -114,28 +109,7 @@ if (isset($_POST['update_product'])) {
 </head>
 <body>
 
-<nav class="navbar">
-    <div class="navbar-inner">
-        <div class="logo"><a href="index.php">TradeSphere</a></div>
-        <div class="menu-toggle" id="menuToggle">☰</div>
-        <div class="nav-links" id="navLinks">
-            <a href="index.php">Home</a>
-            <a href="products.php">Products</a>
-            <a href="index.php#categories">Categories</a>
-            <a href="sell.php">Sell</a>
-            <a href="index.php#about">About</a>
-            <a href="index.php#contact">Contact</a>
-            <a href="logout.php" class="nav-btn">Logout</a>
-        </div>
-    </div>
-</nav>
-
-<a href="cart.php" class="floating-cart <?php echo ($cartCount > 0) ? 'cart-active' : ''; ?>" title="View Cart">
-    🛒
-    <?php if ($cartCount > 0): ?>
-        <span class="cart-count-badge"><?php echo $cartCount; ?></span>
-    <?php endif; ?>
-</a>
+<?php include "includes/navbar.php"; ?>
 
 <div class="form-page">
     <div class="form-card">
@@ -215,7 +189,7 @@ if (isset($_POST['update_product'])) {
 
             <div class="form-actions">
                 <button type="submit" name="update_product" class="btn btn-primary">Update Product</button>
-                <a href="sell.php" class="btn btn-dark">Back</a>
+                <a href="profile.php#listings" class="btn btn-dark">Back to My Listings</a>
             </div>
         </form>
     </div>
