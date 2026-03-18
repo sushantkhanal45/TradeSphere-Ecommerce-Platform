@@ -33,21 +33,13 @@ $firstLetter = $navUser ? strtoupper(substr($navUser['name'], 0, 1)) : "U";
 
         <div class="nav-links" id="navLinks">
             <a href="index.php">Home</a>
-            <a href="products.php">Products</a>
             <a href="index.php#categories">Categories</a>
             <a href="sell.php">Sell</a>
             <a href="index.php#about">About</a>
-            <a href="index.php#contact">Contact</a>
+        <a href="index.php#contact">Contact</a>
 
-            <?php if ($navUser): ?>
-                <a href="cart.php" class="nav-cart-inline" title="Cart">
-                    🛒
-                    <?php if ($navCartCount > 0): ?>
-                        <span class="nav-cart-badge"><?php echo $navCartCount; ?></span>
-                    <?php endif; ?>
-                </a>
-
-                <div class="profile-menu">
+        <?php if ($navUser): ?>
+            <div class="profile-menu">
                     <button type="button" class="profile-toggle" id="profileToggle">
                         <span class="profile-avatar"><?php echo htmlspecialchars($firstLetter); ?></span>
                         <span class="profile-name"><?php echo htmlspecialchars($navUser['name']); ?></span>
