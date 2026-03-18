@@ -38,6 +38,11 @@ if (isset($_SESSION['user'])) {
     }
 }
 
+if (isset($_GET['cart_added']) && $_GET['cart_added'] === '1') {
+    $success = "Product added to cart successfully.";
+    $showGoToCart = true;
+}
+
 if (isset($_POST['add_to_cart'])) {
     if (!isset($_SESSION['user'])) {
         header("Location: login.php");
@@ -47,7 +52,7 @@ if (isset($_POST['add_to_cart'])) {
     if ($product['status'] === 'sold') {
         $error = "This item has already been marked as sold.";
     } else {
-        $quantity = isset($_POST['quantity']) ? (int)$_POST['quantity'] : 1;
+        $quantity = isset($_POST['quantity']) ? (int) $_POST['quantity'] : 1;
 
         if ($quantity < 1) {
             $quantity = 1;
@@ -62,13 +67,12 @@ if (isset($_POST['add_to_cart'])) {
                 $newQty = (int)$existing['quantity'] + $quantity;
                 $cartId = (int)$existing['id'];
                 $conn->query("UPDATE cart SET quantity=$newQty WHERE id=$cartId");
-                $success = "Product quantity updated in cart.";
             } else {
                 $conn->query("INSERT INTO cart (user_id, product_id, quantity) VALUES ($userId, $productId, $quantity)");
-                $success = "Product added to cart successfully.";
             }
 
-            $showGoToCart = true;
+            header("Location: product_details.php?id=" . $productId . "&cart_added=1");
+            exit();
         } else {
             $error = "User not found.";
         }

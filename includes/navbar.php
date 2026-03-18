@@ -69,3 +69,18 @@ $firstLetter = $navUser ? strtoupper(substr($navUser['name'], 0, 1)) : "U";
         <?php endif; ?>
     </a>
 <?php endif; ?>
+<?php if ($navUser): ?>
+    <a
+        href="cart.php"
+        id="floatingCart"
+        class="floating-cart <?php echo ($navCartCount > 0) ? 'cart-active' : ''; ?>"
+        title="View Cart"
+    >
+        🛒
+        <?php if ($navCartCount > 0): ?>
+            <span class="cart-count-badge"><?php echo $navCartCount; ?></span>
+        <?php endif; ?>
+    </a>
+
+    <div id="cartAddedToast" class="cart-added-toast">Added to cart</div>
+<?php endif; ?>
