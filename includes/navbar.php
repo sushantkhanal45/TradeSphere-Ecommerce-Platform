@@ -21,7 +21,6 @@ if (isset($_SESSION['user'])) {
     }
 }
 
-$currentFile = basename($_SERVER['PHP_SELF']);
 $firstLetter = $navUser ? strtoupper(substr($navUser['name'], 0, 1)) : "U";
 ?>
 
@@ -36,10 +35,10 @@ $firstLetter = $navUser ? strtoupper(substr($navUser['name'], 0, 1)) : "U";
             <a href="index.php#categories">Categories</a>
             <a href="sell.php">Sell</a>
             <a href="index.php#about">About</a>
-        <a href="index.php#contact">Contact</a>
+            <a href="index.php#contact">Contact</a>
 
-        <?php if ($navUser): ?>
-            <div class="profile-menu">
+            <?php if ($navUser): ?>
+                <div class="profile-menu">
                     <button type="button" class="profile-toggle" id="profileToggle">
                         <span class="profile-avatar"><?php echo htmlspecialchars($firstLetter); ?></span>
                         <span class="profile-name"><?php echo htmlspecialchars($navUser['name']); ?></span>
@@ -61,14 +60,6 @@ $firstLetter = $navUser ? strtoupper(substr($navUser['name'], 0, 1)) : "U";
     </div>
 </nav>
 
-<?php if ($navUser): ?>
-    <a href="cart.php" class="floating-cart <?php echo ($navCartCount > 0) ? 'cart-active' : ''; ?>" title="View Cart">
-        🛒
-        <?php if ($navCartCount > 0): ?>
-            <span class="cart-count-badge"><?php echo $navCartCount; ?></span>
-        <?php endif; ?>
-    </a>
-<?php endif; ?>
 <?php if ($navUser): ?>
     <a
         href="cart.php"

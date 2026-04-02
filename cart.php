@@ -27,10 +27,26 @@ if (isset($_POST['update_quantity'])) {
         $quantity = 1;
     }
 
-    if ($conn->query("UPDATE cart SET quantity=$quantity WHERE id=$cartId AND user_id=$userId")) {
-        $success = "Cart quantity updated successfully.";
+    $checkCartItem = $conn->query("
+        SELECT p.status
+        FROM cart
+        INNER JOIN products p ON cart.product_id = p.id
+        WHERE cart.id = $cartId AND cart.user_id = $userId
+        LIMIT 1
+    ");
+
+    $cartItem = $checkCartItem ? $checkCartItem->fetch_assoc() : null;
+
+    if (!$cartItem) {
+        $error = "Cart item not found.";
+    } elseif ($cartItem['status'] === 'sold') {
+        $error = "This item is already sold and quantity cannot be updated.";
     } else {
-        $error = "Could not update quantity.";
+        if ($conn->query("UPDATE cart SET quantity=$quantity WHERE id=$cartId AND user_id=$userId")) {
+            $success = "Cart quantity updated successfully.";
+        } else {
+            $error = "Could not update quantity.";
+        }
     }
 }
 
@@ -53,7 +69,11 @@ if (isset($_POST['clear_cart'])) {
 }
 
 $items = $conn->query("
-    SELECT p.*, c.name AS category_name, cart.quantity, cart.id AS cart_id
+    SELECT 
+        p.*, 
+        c.name AS category_name, 
+        cart.quantity, 
+        cart.id AS cart_id
     FROM cart
     INNER JOIN products p ON cart.product_id = p.id
     LEFT JOIN categories c ON p.category_id = c.id
@@ -62,10 +82,15 @@ $items = $conn->query("
 ");
 
 $total = 0;
+$hasSoldItems = false;
 
 if ($items) {
     while ($row = $items->fetch_assoc()) {
-        $total += ((float)$row['price'] * (int)$row['quantity']);
+        if ($row['status'] !== 'sold') {
+            $total += ((float)$row['price'] * (int)$row['quantity']);
+        } else {
+            $hasSoldItems = true;
+        }
     }
     $items->data_seek(0);
 }
@@ -85,7 +110,9 @@ if ($items) {
 <div class="page-wrap">
     <div class="container">
         <h1 class="section-title">Your Cart</h1>
-        <p class="section-subtitle">Review your selected products, update quantity, remove items, or clear your full cart.</p>
+        <p class="section-subtitle">
+            Review your selected products, update quantity, remove items, or clear your full cart.
+        </p>
 
         <?php if ($success): ?>
             <div class="success-msg"><?php echo $success; ?></div>
@@ -93,6 +120,12 @@ if ($items) {
 
         <?php if ($error): ?>
             <div class="error-msg"><?php echo $error; ?></div>
+        <?php endif; ?>
+
+        <?php if ($hasSoldItems): ?>
+            <div class="cart-warning-box">
+                Some items in your cart are already sold and are no longer available for purchase.
+            </div>
         <?php endif; ?>
 
         <?php if ($items && $items->num_rows > 0): ?>
@@ -104,7 +137,9 @@ if ($items) {
 
             <div class="cart-list">
                 <?php while ($row = $items->fetch_assoc()): ?>
-                    <div class="cart-item">
+                    <?php $isSold = ($row['status'] === 'sold'); ?>
+
+                    <div class="cart-item <?php echo $isSold ? 'cart-item-sold' : ''; ?>">
                         <img src="uploads/<?php echo htmlspecialchars($row['image']); ?>" alt="Cart Product">
 
                         <div>
@@ -114,31 +149,55 @@ if ($items) {
                             <p class="meta">City: <?php echo htmlspecialchars($row['city']); ?></p>
                             <p class="meta">Seller: <?php echo htmlspecialchars($row['seller_email']); ?></p>
                             <p class="meta">Unit Price: Rs <?php echo htmlspecialchars($row['price']); ?></p>
-                            <p class="meta">Subtotal: Rs <?php echo ((float)$row['price'] * (int)$row['quantity']); ?></p>
+
+                            <?php if ($isSold): ?>
+                                <p class="meta">Status: <strong style="color:#b91c1c;">Sold</strong></p>
+                                <p class="meta">Subtotal: Not available</p>
+                                <div class="sold-cart-note">
+                                    This item has already been sold and is no longer available.
+                                </div>
+                            <?php else: ?>
+                                <p class="meta">Status: <strong style="color:#047857;">Available</strong></p>
+                                <p class="meta">Subtotal: Rs <?php echo ((float)$row['price'] * (int)$row['quantity']); ?></p>
+                            <?php endif; ?>
 
                             <form method="POST" style="margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
                                 <input type="hidden" name="cart_id" value="<?php echo (int)$row['cart_id']; ?>">
+
                                 <input
                                     type="number"
                                     name="quantity"
                                     min="1"
                                     value="<?php echo (int)$row['quantity']; ?>"
                                     style="width: 90px; padding: 10px; border: 1px solid #d1d5db; border-radius: 10px;"
+                                    <?php echo $isSold ? 'disabled' : ''; ?>
                                     required
                                 >
-                                <button type="submit" name="update_quantity" class="btn btn-primary">Update</button>
+
+                                <?php if ($isSold): ?>
+                                    <button type="button" class="btn disabled-btn">Unavailable</button>
+                                <?php else: ?>
+                                    <button type="submit" name="update_quantity" class="btn btn-primary">Update</button>
+                                <?php endif; ?>
+
                                 <button type="submit" name="remove_item" class="btn btn-dark">Remove</button>
                             </form>
                         </div>
 
-                        <div class="price">Qty: <?php echo (int)$row['quantity']; ?></div>
+                        <div class="price">
+                            <?php if ($isSold): ?>
+                                Sold
+                            <?php else: ?>
+                                Qty: <?php echo (int)$row['quantity']; ?>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 <?php endwhile; ?>
             </div>
 
             <div class="cart-total">
                 <h3>Total: Rs <?php echo $total; ?></h3>
-                <a href="#" class="btn btn-primary">Proceed to Checkout</a>
+                <span class="meta">Only available items are included in total.</span>
             </div>
         <?php else: ?>
             <p class="empty-state">Your cart is currently empty.</p>

@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const menuToggle = document.getElementById("menuToggle");
     const navLinks = document.getElementById("navLinks");
 
-    if (menuToggle) {
+    if (menuToggle && navLinks) {
         menuToggle.addEventListener("click", () => {
             navLinks.classList.toggle("active");
         });
@@ -14,10 +14,14 @@ document.addEventListener("DOMContentLoaded", function () {
     const profileToggle = document.getElementById("profileToggle");
     const profileDropdown = document.getElementById("profileDropdown");
 
-    if (profileToggle) {
+    if (profileToggle && profileDropdown) {
         profileToggle.addEventListener("click", function (e) {
             e.stopPropagation();
             profileDropdown.classList.toggle("show");
+        });
+
+        profileDropdown.addEventListener("click", function (e) {
+            e.stopPropagation();
         });
 
         document.addEventListener("click", function () {
@@ -36,28 +40,40 @@ document.addEventListener("DOMContentLoaded", function () {
                 headers: {
                     "Content-Type": "application/x-www-form-urlencoded"
                 },
-                body: "product_id=" + productId
+                body: "product_id=" + encodeURIComponent(productId)
             })
             .then(res => res.json())
             .then(data => {
 
                 if (data.status === "success") {
 
-                    // CART ANIMATION
-                    const cart = document.querySelector(".floating-cart");
+                    const cart = document.getElementById("floatingCart");
+                    const toast = document.getElementById("cartAddedToast");
 
                     if (cart) {
+                        cart.classList.add("cart-active");
                         cart.classList.add("cart-bounce");
+
                         setTimeout(() => {
                             cart.classList.remove("cart-bounce");
-                        }, 600);
+                        }, 700);
+
+                        updateCartBadge(data.cart_count);
                     }
 
-                    // TOAST
-                    showToast("Added to cart");
+                    if (toast) {
+                        toast.textContent = "Added to cart";
+                        toast.classList.add("show");
+
+                        setTimeout(() => {
+                            toast.classList.remove("show");
+                        }, 1800);
+                    } else {
+                        showToast("Added to cart");
+                    }
 
                 } else {
-                    showToast(data.message);
+                    showToast(data.message || "Could not add to cart");
                 }
 
             })
@@ -69,21 +85,56 @@ document.addEventListener("DOMContentLoaded", function () {
 
 });
 
+function updateCartBadge(count) {
+    const cart = document.getElementById("floatingCart");
+    if (!cart) return;
+
+    let badge = cart.querySelector(".cart-count-badge");
+
+    if (count > 0) {
+        if (!badge) {
+            badge = document.createElement("span");
+            badge.className = "cart-count-badge";
+            cart.appendChild(badge);
+        }
+
+        badge.textContent = count;
+        badge.classList.remove("badge-pop");
+        void badge.offsetWidth; // restart animation
+        badge.classList.add("badge-pop");
+    } else {
+        if (badge) {
+            badge.remove();
+        }
+        cart.classList.remove("cart-active");
+    }
+}
+
 // TOAST FUNCTION
 function showToast(message) {
-
     let toast = document.getElementById("cartToast");
 
     if (!toast) {
         toast = document.createElement("div");
         toast.id = "cartToast";
+        toast.style.position = "fixed";
+        toast.style.bottom = "20px";
+        toast.style.right = "20px";
+        toast.style.background = "#111827";
+        toast.style.color = "#ffffff";
+        toast.style.padding = "12px 16px";
+        toast.style.borderRadius = "10px";
+        toast.style.boxShadow = "0 10px 24px rgba(0,0,0,0.18)";
+        toast.style.zIndex = "9999";
+        toast.style.opacity = "0";
+        toast.style.transition = "0.3s ease";
         document.body.appendChild(toast);
     }
 
     toast.innerText = message;
-    toast.className = "toast show";
+    toast.style.opacity = "1";
 
     setTimeout(() => {
-        toast.className = "toast";
+        toast.style.opacity = "0";
     }, 2000);
 }

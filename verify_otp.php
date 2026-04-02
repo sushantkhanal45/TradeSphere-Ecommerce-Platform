@@ -16,28 +16,20 @@ $safeEmail = $conn->real_escape_string($email);
 
 /* VERIFY OTP */
 if (isset($_POST['verify_otp'])) {
-
     $otp = trim($_POST['otp']);
 
-    $result = $conn->query("SELECT * FROM users WHERE email='$safeEmail'");
-    $user = $result->fetch_assoc();
+    $result = $conn->query("SELECT * FROM users WHERE email='$safeEmail' LIMIT 1");
+    $user = $result ? $result->fetch_assoc() : null;
 
     if (!$user) {
         $error = "User not found.";
-    }
-
-    elseif (empty($user['otp_expires_at']) || strtotime($user['otp_expires_at']) < time()) {
+    } elseif (empty($user['otp_expires_at']) || strtotime($user['otp_expires_at']) < time()) {
         $error = "OTP has expired.";
-    }
-
-    elseif (!password_verify($otp, $user['email_otp'])) {
+    } elseif (empty($user['email_otp']) || !password_verify($otp, $user['email_otp'])) {
         $error = "Invalid OTP.";
-    }
-
-    else {
-
+    } else {
         $conn->query("
-            UPDATE users 
+            UPDATE users
             SET is_verified = 1,
                 email_otp = NULL,
                 otp_expires_at = NULL
@@ -45,7 +37,6 @@ if (isset($_POST['verify_otp'])) {
         ");
 
         unset($_SESSION['pending_email']);
-
         $_SESSION['login_success'] = "Email verified successfully. You can now login.";
 
         header("Location: login.php");
@@ -53,101 +44,78 @@ if (isset($_POST['verify_otp'])) {
     }
 }
 
-
 /* RESEND OTP */
 if (isset($_POST['resend_otp'])) {
+    $result = $conn->query("SELECT name FROM users WHERE email='$safeEmail' LIMIT 1");
+    $user = $result ? $result->fetch_assoc() : null;
 
-    $result = $conn->query("SELECT name FROM users WHERE email='$safeEmail'");
-    $user = $result->fetch_assoc();
+    if ($user) {
+        $otp = str_pad((string)random_int(0, 999999), 6, "0", STR_PAD_LEFT);
+        $otpHash = password_hash($otp, PASSWORD_DEFAULT);
+        $expiresAt = date("Y-m-d H:i:s", time() + 600);
 
-    $otp = str_pad((string)random_int(0,999999),6,"0",STR_PAD_LEFT);
-    $otpHash = password_hash($otp, PASSWORD_DEFAULT);
-    $expiresAt = date("Y-m-d H:i:s", time() + 600);
+        $conn->query("
+            UPDATE users
+            SET email_otp='$otpHash',
+                otp_expires_at='$expiresAt'
+            WHERE email='$safeEmail'
+        ");
 
-    $conn->query("
-        UPDATE users
-        SET email_otp='$otpHash',
-            otp_expires_at='$expiresAt'
-        WHERE email='$safeEmail'
-    ");
-
-    sendOtpEmail($email, $user['name'], $otp);
-
-    $success = "A new OTP has been sent to your email.";
+        sendOtpEmail($email, $user['name'], $otp);
+        $success = "A new OTP has been sent to your email.";
+    } else {
+        $error = "User not found.";
+    }
 }
 ?>
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-
-<title>Verify Email - TradeSphere</title>
-<link rel="stylesheet" href="css/style.css">
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email - TradeSphere</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
-
 <body>
 
 <div class="form-page">
+    <div class="form-card">
+        <h2>Email Verification</h2>
+        <p class="helper">Enter the OTP sent to your email.</p>
 
-<div class="form-card">
+        <?php if ($error): ?>
+            <div class="error-msg"><?php echo $error; ?></div>
+        <?php endif; ?>
 
-<h2>Email Verification</h2>
+        <?php if ($success): ?>
+            <div class="success-msg"><?php echo $success; ?></div>
+        <?php endif; ?>
 
-<p>Enter the OTP sent to your email.</p>
+        <form method="POST">
+            <div class="form-group">
+                <label>Enter OTP</label>
+                <input type="text" name="otp" maxlength="6" placeholder="6 digit OTP" required>
+            </div>
 
-<?php if($error): ?>
+            <button type="submit" name="verify_otp" class="btn btn-primary">
+                Verify OTP
+            </button>
+        </form>
 
-<div class="error-msg"><?php echo $error; ?></div>
+        <br>
 
-<?php endif; ?>
+        <form method="POST">
+            <button type="submit" name="resend_otp" class="btn">
+                Resend OTP
+            </button>
+        </form>
 
-<?php if($success): ?>
+        <br>
 
-<div class="success-msg"><?php echo $success; ?></div>
-
-<?php endif; ?>
-
-
-<form method="POST">
-
-<div class="form-group">
-
-<label>Enter OTP</label>
-
-<input type="text" name="otp" maxlength="6" placeholder="6 digit OTP" required>
-
-</div>
-
-
-<button type="submit" name="verify_otp" class="btn btn-primary">
-Verify OTP
-</button>
-
-</form>
-
-
-<br>
-
-
-<form method="POST">
-
-<button type="submit" name="resend_otp" class="btn">
-Resend OTP
-</button>
-
-</form>
-
-
-<br>
-
-
-<a href="register.php" class="btn btn-secondary">
-Back to Register
-</a>
-
-</div>
-
+        <a href="register.php" class="btn btn-secondary">
+            Back to Register
+        </a>
+    </div>
 </div>
 
 </body>
