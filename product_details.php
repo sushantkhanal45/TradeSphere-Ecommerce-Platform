@@ -115,7 +115,7 @@ if (isset($_POST['add_to_cart'])) {
                     <p><strong>Condition:</strong> <?php echo htmlspecialchars($product['product_condition']); ?></p>
                     <p><strong>City:</strong> <?php echo htmlspecialchars($product['city']); ?></p>
                     <p><strong>Seller Email:</strong> <?php echo htmlspecialchars($product['seller_email']); ?></p>
-                    <p><strong>Description:</strong> <?php echo nl2br(htmlspecialchars($product['description'])); ?></p>
+<p><strong>Contact Number:</strong> <?php echo htmlspecialchars($product['contact_number'] ?? 'Not provided'); ?></p>                    <p><strong>Description:</strong> <?php echo nl2br(htmlspecialchars($product['description'])); ?></p>
                     <p><strong>Status:</strong> <?php echo htmlspecialchars(ucfirst($product['status'])); ?></p>
                 </div>
 

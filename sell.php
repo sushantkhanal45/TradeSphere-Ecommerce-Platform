@@ -30,6 +30,7 @@ if (isset($_POST['submit'])) {
     $city = trim($_POST['city']);
     $description = trim($_POST['description']);
     $seller_email = $user['email'];
+    $contactNumber = trim($_POST['contact_number']);
 
     $image = $_FILES['image']['name'];
     $tmp = $_FILES['image']['tmp_name'];
@@ -41,7 +42,8 @@ if (isset($_POST['submit'])) {
         $price === "" ||
         $city === "" ||
         $description === "" ||
-        $image === ""
+        $image === "" ||
+        $contactNumber === ""
     ) {
         $error = "Please fill in all fields.";
     } else {
@@ -51,24 +53,26 @@ if (isset($_POST['submit'])) {
         $safeDescription = $conn->real_escape_string($description);
         $safeSeller = $conn->real_escape_string($seller_email);
         $safeCondition = $conn->real_escape_string($productCondition);
+        $safeContact = $conn->real_escape_string($contactNumber);
 
         $imageName = time() . "_" . basename($image);
         $target = "uploads/" . $imageName;
 
         if (move_uploaded_file($tmp, $target)) {
             $stmt = "
-                INSERT INTO products (
-                    user_id,
-                    name,
-                    category_id,
-                    price,
-                    city,
-                    seller_email,
-                    image,
-                    description,
-                    product_condition,
-                    status
-                )
+               INSERT INTO products (
+    user_id,
+    name,
+    category_id,
+    price,
+    city,
+    seller_email,
+    contact_number,
+    image,
+    description,
+    product_condition,
+    status
+)
                 VALUES (
                     '$userId',
                     '$safeName',
@@ -76,6 +80,7 @@ if (isset($_POST['submit'])) {
                     '$safePrice',
                     '$safeCity',
                     '$safeSeller',
+                    '$safeContact',
                     '$imageName',
                     '$safeDescription',
                     '$safeCondition',
@@ -176,6 +181,11 @@ if (isset($_POST['submit'])) {
                     <label>City</label>
                     <input type="text" name="city" placeholder="Enter city" required>
                 </div>
+
+                <div class="form-group">
+    <label>Contact Number</label>
+    <input type="text" name="contact_number" placeholder="Enter phone number" required>
+</div>
 
                 <div class="form-group">
                     <label>Description</label>
