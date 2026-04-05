@@ -199,6 +199,9 @@ if ($items) {
                 <h3>Total: Rs <?php echo $total; ?></h3>
                 <span class="meta">Only available items are included in total.</span>
             </div>
+            <div class="form-actions" style="margin-top: 15px;">
+    <a href="checkout.php" class="btn btn-primary">Proceed to Checkout</a>
+</div>
         <?php else: ?>
             <p class="empty-state">Your cart is currently empty.</p>
         <?php endif; ?>

@@ -99,8 +99,19 @@ $totalListings = $totalListingsRes ? (int)$totalListingsRes->fetch_assoc()['tota
 $soldListingsRes = $conn->query("SELECT COUNT(*) AS total FROM products WHERE user_id=$userId AND status='sold'");
 $soldListings = $soldListingsRes ? (int)$soldListingsRes->fetch_assoc()['total'] : 0;
 
+$completedSalesRes = $conn->query("
+    SELECT COUNT(*) AS total
+    FROM orders
+    WHERE seller_user_id = $userId
+    AND payment_status = 'paid'
+");
+$completedSales = $completedSalesRes ? (int)$completedSalesRes->fetch_assoc()['total'] : 0;
+
 $cartItemsRes = $conn->query("SELECT SUM(quantity) AS total FROM cart WHERE user_id=$userId");
 $cartItems = $cartItemsRes ? (int)($cartItemsRes->fetch_assoc()['total'] ?? 0) : 0;
+
+$totalPurchasesRes = $conn->query("SELECT COUNT(*) AS total FROM orders WHERE user_id=$userId AND payment_status='paid'");
+$totalPurchases = $totalPurchasesRes ? (int)$totalPurchasesRes->fetch_assoc()['total'] : 0;
 
 $myListings = $conn->query("
     SELECT p.*, c.name AS category_name
@@ -111,12 +122,37 @@ $myListings = $conn->query("
 ");
 
 $myPurchases = $conn->query("
-    SELECT p.*, c.name AS category_name, cart.quantity, cart.id AS cart_id
-    FROM cart
-    INNER JOIN products p ON cart.product_id = p.id
+    SELECT 
+        o.*,
+        p.name AS product_name,
+        p.image AS product_image,
+        p.seller_email,
+        p.contact_number,
+        p.city,
+        p.product_condition,
+        c.name AS category_name
+    FROM orders o
+    INNER JOIN products p ON o.product_id = p.id
     LEFT JOIN categories c ON p.category_id = c.id
-    WHERE cart.user_id = $userId
-    ORDER BY cart.id DESC
+    WHERE o.user_id = $userId
+    AND o.payment_status = 'paid'
+    ORDER BY o.created_at DESC
+");
+
+$mySales = $conn->query("
+    SELECT 
+        o.*,
+        p.name AS product_name,
+        p.image AS product_image,
+        p.city,
+        p.product_condition,
+        c.name AS category_name
+    FROM orders o
+    INNER JOIN products p ON o.product_id = p.id
+    LEFT JOIN categories c ON p.category_id = c.id
+    WHERE o.seller_user_id = $userId
+    AND o.payment_status = 'paid'
+    ORDER BY o.created_at DESC
 ");
 
 $firstLetter = strtoupper(substr($user['name'], 0, 1));
@@ -193,6 +229,29 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
         .menu-action-btn:hover{
             background: #f3f4f6;
         }
+
+        .purchase-badge{
+            display: inline-block;
+            margin-top: 8px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: #dcfce7;
+            color: #166534;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        @media (max-width: 992px){
+            .profile-grid{
+                grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+            }
+        }
+
+        @media (max-width: 768px){
+            .profile-grid{
+                grid-template-columns: 1fr !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -225,55 +284,102 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
         <div class="profile-section-card">
             <h2 class="section-title" style="text-align:left; margin-bottom:20px;">Account Overview</h2>
 
-            <div class="profile-grid">
+            <div class="profile-grid" style="grid-template-columns: repeat(5, minmax(0,1fr));">
                 <div class="profile-stat">
                     <h3>Total Listings</h3>
                     <p><?php echo $totalListings; ?></p>
                 </div>
 
                 <div class="profile-stat">
-                    <h3>Sold Listings</h3>
+                    <h3>Marked Sold</h3>
                     <p><?php echo $soldListings; ?></p>
+                </div>
+
+                <div class="profile-stat">
+                    <h3>Completed Sales</h3>
+                    <p><?php echo $completedSales; ?></p>
                 </div>
 
                 <div class="profile-stat">
                     <h3>Cart Items</h3>
                     <p><?php echo $cartItems; ?></p>
                 </div>
+
+                <div class="profile-stat">
+                    <h3>Paid Purchases</h3>
+                    <p><?php echo $totalPurchases; ?></p>
+                </div>
             </div>
         </div>
 
         <div class="profile-section-card" id="purchases">
-            <h2 class="section-title" style="text-align:left; margin-bottom:20px;">My Purchases / Cart Items</h2>
+            <h2 class="section-title" style="text-align:left; margin-bottom:20px;">My Purchases</h2>
 
             <?php if ($myPurchases && $myPurchases->num_rows > 0): ?>
                 <div class="products-grid">
                     <?php while ($row = $myPurchases->fetch_assoc()): ?>
                         <div class="product-card">
                             <div class="product-image-wrap">
-                                <img src="uploads/<?php echo htmlspecialchars($row['image']); ?>" alt="Product Image">
-                                <?php if ($row['status'] === 'sold'): ?>
-                                    <div class="sold-badge">SOLD</div>
-                                <?php endif; ?>
+                                <img src="uploads/<?php echo htmlspecialchars($row['product_image']); ?>" alt="Purchased Product">
                             </div>
 
                             <div class="product-body">
-                                <h3><?php echo htmlspecialchars($row['name']); ?></h3>
-                                <p class="price">Rs <?php echo htmlspecialchars($row['price']); ?></p>
+                                <h3><?php echo htmlspecialchars($row['product_name']); ?></h3>
+                                <p class="price">Rs <?php echo number_format((float)$row['amount'], 2); ?></p>
                                 <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category_name']); ?></p>
                                 <p class="meta"><strong>Condition:</strong> <?php echo htmlspecialchars($row['product_condition']); ?></p>
                                 <p class="meta"><strong>Qty:</strong> <?php echo (int)$row['quantity']; ?></p>
                                 <p class="meta"><strong>Seller:</strong> <?php echo htmlspecialchars($row['seller_email']); ?></p>
+                                <p class="meta"><strong>Seller Contact:</strong> <?php echo htmlspecialchars($row['contact_number'] ?? 'Not provided'); ?></p>
+                                <p class="meta"><strong>Payment:</strong> <?php echo htmlspecialchars(ucfirst($row['payment_status'])); ?></p>
+                                <p class="meta"><strong>Date:</strong> <?php echo htmlspecialchars($row['created_at']); ?></p>
+                                <span class="purchase-badge">PURCHASED</span>
 
                                 <div class="product-actions">
-                                    <a href="product_details.php?id=<?php echo $row['id']; ?>" class="small-btn primary">View Details</a>
+                                    <a href="product_details.php?id=<?php echo (int)$row['product_id']; ?>" class="small-btn primary">View Details</a>
+                                    <a href="generate_bill.php?order_id=<?php echo (int)$row['id']; ?>" class="small-btn">View Bill</a>
                                 </div>
                             </div>
                         </div>
                     <?php endwhile; ?>
                 </div>
             <?php else: ?>
-                <p class="inline-empty">No purchase/cart history available yet.</p>
+                <p class="inline-empty">No paid purchases available yet.</p>
+            <?php endif; ?>
+        </div>
+
+        <div class="profile-section-card" id="sales">
+            <h2 class="section-title" style="text-align:left; margin-bottom:20px;">Completed Sales</h2>
+
+            <?php if ($mySales && $mySales->num_rows > 0): ?>
+                <div class="products-grid">
+                    <?php while ($row = $mySales->fetch_assoc()): ?>
+                        <div class="product-card">
+                            <div class="product-image-wrap">
+                                <img src="uploads/<?php echo htmlspecialchars($row['product_image']); ?>" alt="Sold Product">
+                            </div>
+
+                            <div class="product-body">
+                                <h3><?php echo htmlspecialchars($row['product_name']); ?></h3>
+                                <p class="price">Rs <?php echo number_format((float)$row['amount'], 2); ?></p>
+                                <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category_name']); ?></p>
+                                <p class="meta"><strong>Condition:</strong> <?php echo htmlspecialchars($row['product_condition']); ?></p>
+                                <p class="meta"><strong>City:</strong> <?php echo htmlspecialchars($row['city']); ?></p>
+                                <p class="meta"><strong>Buyer:</strong> <?php echo htmlspecialchars($row['buyer_name']); ?></p>
+                                <p class="meta"><strong>Buyer Email:</strong> <?php echo htmlspecialchars($row['buyer_email']); ?></p>
+                                <p class="meta"><strong>Buyer Phone:</strong> <?php echo htmlspecialchars($row['buyer_phone']); ?></p>
+                                <p class="meta"><strong>Date:</strong> <?php echo htmlspecialchars($row['created_at']); ?></p>
+                                <span class="purchase-badge">SALE COMPLETED</span>
+
+                                <div class="product-actions">
+                                    <a href="product_details.php?id=<?php echo (int)$row['product_id']; ?>" class="small-btn primary">View Product</a>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endwhile; ?>
+                </div>
+            <?php else: ?>
+                <p class="inline-empty">No completed sales yet.</p>
             <?php endif; ?>
         </div>
 
