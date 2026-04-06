@@ -107,6 +107,13 @@ $completedSalesRes = $conn->query("
 ");
 $completedSales = $completedSalesRes ? (int)$completedSalesRes->fetch_assoc()['total'] : 0;
 
+$receivedOrdersCountRes = $conn->query("
+    SELECT COUNT(*) AS total
+    FROM orders
+    WHERE seller_user_id = $userId
+");
+$receivedOrdersCount = $receivedOrdersCountRes ? (int)$receivedOrdersCountRes->fetch_assoc()['total'] : 0;
+
 $cartItemsRes = $conn->query("SELECT SUM(quantity) AS total FROM cart WHERE user_id=$userId");
 $cartItems = $cartItemsRes ? (int)($cartItemsRes->fetch_assoc()['total'] ?? 0) : 0;
 
@@ -136,6 +143,21 @@ $myPurchases = $conn->query("
     LEFT JOIN categories c ON p.category_id = c.id
     WHERE o.user_id = $userId
     AND o.payment_status = 'paid'
+    ORDER BY o.created_at DESC
+");
+
+$receivedOrders = $conn->query("
+    SELECT 
+        o.*,
+        p.name AS product_name,
+        p.image AS product_image,
+        p.city,
+        p.product_condition,
+        c.name AS category_name
+    FROM orders o
+    INNER JOIN products p ON o.product_id = p.id
+    LEFT JOIN categories c ON p.category_id = c.id
+    WHERE o.seller_user_id = $userId
     ORDER BY o.created_at DESC
 ");
 
@@ -284,7 +306,7 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
         <div class="profile-section-card">
             <h2 class="section-title" style="text-align:left; margin-bottom:20px;">Account Overview</h2>
 
-            <div class="profile-grid" style="grid-template-columns: repeat(5, minmax(0,1fr));">
+            <div class="profile-grid" style="grid-template-columns: repeat(6, minmax(0,1fr));">
                 <div class="profile-stat">
                     <h3>Total Listings</h3>
                     <p><?php echo $totalListings; ?></p>
@@ -293,6 +315,11 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
                 <div class="profile-stat">
                     <h3>Marked Sold</h3>
                     <p><?php echo $soldListings; ?></p>
+                </div>
+
+                <div class="profile-stat">
+                    <h3>Received Orders</h3>
+                    <p><?php echo $receivedOrdersCount; ?></p>
                 </div>
 
                 <div class="profile-stat">
@@ -345,6 +372,47 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
                 </div>
             <?php else: ?>
                 <p class="inline-empty">No paid purchases available yet.</p>
+            <?php endif; ?>
+        </div>
+
+        <div class="profile-section-card" id="orders_received">
+            <h2 class="section-title" style="text-align:left; margin-bottom:20px;">Received Orders</h2>
+
+            <?php if ($receivedOrders && $receivedOrders->num_rows > 0): ?>
+                <div class="products-grid">
+                    <?php while ($row = $receivedOrders->fetch_assoc()): ?>
+                        <div class="product-card">
+                            <div class="product-image-wrap">
+                                <img src="uploads/<?php echo htmlspecialchars($row['product_image']); ?>" alt="Ordered Product">
+                            </div>
+
+                            <div class="product-body">
+                                <h3><?php echo htmlspecialchars($row['product_name']); ?></h3>
+                                <p class="price">Rs <?php echo number_format((float)$row['amount'], 2); ?></p>
+                                <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category_name']); ?></p>
+                                <p class="meta"><strong>Condition:</strong> <?php echo htmlspecialchars($row['product_condition']); ?></p>
+                                <p class="meta"><strong>City:</strong> <?php echo htmlspecialchars($row['city']); ?></p>
+                                <p class="meta"><strong>Buyer:</strong> <?php echo htmlspecialchars($row['buyer_name']); ?></p>
+                                <p class="meta"><strong>Buyer Email:</strong> <?php echo htmlspecialchars($row['buyer_email']); ?></p>
+                                <p class="meta"><strong>Buyer Phone:</strong> <?php echo htmlspecialchars($row['buyer_phone']); ?></p>
+
+                                <?php if (!empty($row['buyer_message'])): ?>
+                                    <p class="meta"><strong>Buyer Message:</strong> <?php echo htmlspecialchars($row['buyer_message']); ?></p>
+                                <?php endif; ?>
+
+                                <p class="meta"><strong>Payment:</strong> <?php echo htmlspecialchars(ucfirst($row['payment_status'])); ?></p>
+                                <p class="meta"><strong>Order Status:</strong> <?php echo htmlspecialchars(ucfirst($row['order_status'])); ?></p>
+                                <p class="meta"><strong>Date:</strong> <?php echo htmlspecialchars($row['created_at']); ?></p>
+
+                                <div class="product-actions">
+                                    <a href="product_details.php?id=<?php echo (int)$row['product_id']; ?>" class="small-btn primary">View Product</a>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endwhile; ?>
+                </div>
+            <?php else: ?>
+                <p class="inline-empty">No received orders yet.</p>
             <?php endif; ?>
         </div>
 

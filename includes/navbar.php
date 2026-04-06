@@ -45,13 +45,14 @@ $firstLetter = $navUser ? strtoupper(substr($navUser['name'], 0, 1)) : "U";
                         <span class="profile-caret">▾</span>
                     </button>
 
-                 <div class="profile-dropdown" id="profileDropdown">
-    <a href="profile.php">My Profile</a>
-    <a href="profile.php#purchases">My Purchases</a>
-    <a href="profile.php#sales">Completed Sales</a>
-    <a href="profile.php#listings">My Listings</a>
-    <a href="logout.php">Logout</a>
-</div>
+                    <div class="profile-dropdown" id="profileDropdown">
+                        <a href="profile.php">My Profile</a>
+                        <a href="profile.php#purchases">My Purchases</a>
+                        <a href="profile.php#orders_received">Received Orders</a>
+                        <a href="profile.php#sales">Completed Sales</a>
+                        <a href="profile.php#listings">My Listings</a>
+                        <a href="logout.php">Logout</a>
+                    </div>
                 </div>
             <?php else: ?>
                 <a href="login.php">Login</a>

@@ -6,6 +6,7 @@ $success = "";
 $error = "";
 $triggerCartAnimation = false;
 $userId = 0;
+$homeOrderNotice = [];
 
 if (isset($_SESSION['user'])) {
     $userEmail = $_SESSION['user'];
@@ -15,6 +16,28 @@ if (isset($_SESSION['user'])) {
 
     if ($userRow) {
         $userId = (int)$userRow['id'];
+
+        if (isset($_POST['clear_home_order_notice'])) {
+            $conn->query("UPDATE orders SET seller_cleared = 1 WHERE seller_user_id = $userId");
+        }
+
+        $noticeRes = $conn->query("
+            SELECT 
+                o.*,
+                p.name AS product_name
+            FROM orders o
+            INNER JOIN products p ON o.product_id = p.id
+            WHERE o.seller_user_id = $userId
+            AND o.seller_cleared = 0
+            ORDER BY o.created_at DESC
+            LIMIT 5
+        ");
+
+        if ($noticeRes) {
+            while ($n = $noticeRes->fetch_assoc()) {
+                $homeOrderNotice[] = $n;
+            }
+        }
     }
 }
 
@@ -74,7 +97,35 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
 
 <?php include "includes/navbar.php"; ?>
 
-<section class="hero" id="home">
+<?php if (!empty($homeOrderNotice)): ?>
+<section class="home-block alt" style="padding-top: 120px; padding-bottom: 20px;">
+    <div class="container">
+        <div class="profile-section-card" style="border:1px solid #fde68a; background:#fffbeb;">
+            <h3 style="margin-bottom:12px;">New Order Alerts</h3>
+
+            <?php foreach ($homeOrderNotice as $notice): ?>
+                <p style="margin:8px 0; color:#92400e; line-height:1.6;">
+                    <strong><?php echo htmlspecialchars($notice['product_name']); ?></strong>
+                    was ordered by
+                    <strong><?php echo htmlspecialchars($notice['buyer_name']); ?></strong>
+                    —
+                    Payment:
+                    <strong><?php echo htmlspecialchars(ucfirst($notice['payment_status'])); ?></strong>
+                </p>
+            <?php endforeach; ?>
+
+            <div class="form-actions" style="margin-top:14px;">
+                <a href="profile.php#orders_received" class="btn btn-primary">View Orders</a>
+                <form method="POST" style="display:inline;">
+                    <button type="submit" name="clear_home_order_notice" class="btn btn-dark">Clear from Home</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
+<section class="hero" id="home" <?php echo !empty($homeOrderNotice) ? 'style="min-height:auto; padding-top:60px;"' : ''; ?>>
     <div class="hero-content">
         <h1>Buy, Sell, and Discover Smarter with TradeSphere</h1>
         <p>
@@ -151,8 +202,8 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
 
                                 <?php if ($row['status'] !== 'sold'): ?>
                                     <button class="small-btn dark add-to-cart-btn" data-id="<?php echo $row['id']; ?>">
-    Add to Cart
-</button>
+                                        Add to Cart
+                                    </button>
                                 <?php else: ?>
                                     <button type="button" class="small-btn dark" disabled style="opacity:0.65; cursor:not-allowed;">Sold</button>
                                 <?php endif; ?>
