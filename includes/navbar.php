@@ -7,17 +7,45 @@ include_once __DIR__ . "/../config/db.php";
 
 $navUser = null;
 $navCartCount = 0;
+$sellerOrderCount = 0;
+$sellerNewOrderCount = 0;
 
 if (isset($_SESSION['user'])) {
-    $navEmail = $_SESSION['user'];
+    $navEmail = $conn->real_escape_string($_SESSION['user']);
     $navRes = $conn->query("SELECT id, name, email FROM users WHERE email='$navEmail' LIMIT 1");
     $navUser = $navRes ? $navRes->fetch_assoc() : null;
 
     if ($navUser) {
         $navUserId = (int)$navUser['id'];
-        $navCartRes = $conn->query("SELECT SUM(quantity) AS total_items FROM cart WHERE user_id=$navUserId");
+
+        $navCartRes = $conn->query("
+            SELECT SUM(quantity) AS total_items
+            FROM cart
+            WHERE user_id = $navUserId
+        ");
         $navCartRow = $navCartRes ? $navCartRes->fetch_assoc() : null;
         $navCartCount = ($navCartRow && $navCartRow['total_items']) ? (int)$navCartRow['total_items'] : 0;
+
+        /* Active seller orders = paid + not yet buyer confirmed */
+        $sellerOrderCountRes = $conn->query("
+            SELECT COUNT(*) AS total
+            FROM orders
+            WHERE seller_user_id = $navUserId
+            AND payment_status = 'paid'
+            AND buyer_received = 0
+        ");
+        $sellerOrderCount = $sellerOrderCountRes ? (int)$sellerOrderCountRes->fetch_assoc()['total'] : 0;
+
+        /* New uncleared seller alerts for home/profile awareness */
+        $sellerNewOrderCountRes = $conn->query("
+            SELECT COUNT(*) AS total
+            FROM orders
+            WHERE seller_user_id = $navUserId
+            AND payment_status = 'paid'
+            AND buyer_received = 0
+            AND seller_cleared = 0
+        ");
+        $sellerNewOrderCount = $sellerNewOrderCountRes ? (int)$sellerNewOrderCountRes->fetch_assoc()['total'] : 0;
     }
 }
 
@@ -48,7 +76,25 @@ $firstLetter = $navUser ? strtoupper(substr($navUser['name'], 0, 1)) : "U";
                     <div class="profile-dropdown" id="profileDropdown">
                         <a href="profile.php">My Profile</a>
                         <a href="profile.php#purchases">My Purchases</a>
-                        <a href="profile.php#orders_received">Received Orders</a>
+
+                        <a href="profile.php#orders_received" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                            <span>Received Orders</span>
+
+                            <span style="display:flex; align-items:center; gap:6px;">
+                                <?php if ($sellerNewOrderCount > 0): ?>
+                                    <span style="background:#ef4444;color:#fff;padding:2px 7px;border-radius:999px;font-size:11px;font-weight:700;">
+                                        New <?php echo $sellerNewOrderCount; ?>
+                                    </span>
+                                <?php endif; ?>
+
+                                <?php if ($sellerOrderCount > 0): ?>
+                                    <span style="background:#2563eb;color:#fff;padding:2px 7px;border-radius:999px;font-size:11px;font-weight:700;">
+                                        <?php echo $sellerOrderCount; ?>
+                                    </span>
+                                <?php endif; ?>
+                            </span>
+                        </a>
+
                         <a href="profile.php#sales">Completed Sales</a>
                         <a href="profile.php#listings">My Listings</a>
                         <a href="logout.php">Logout</a>

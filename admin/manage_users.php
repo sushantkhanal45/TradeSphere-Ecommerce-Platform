@@ -120,7 +120,8 @@ $users = $conn->query("SELECT id, name, email, role, is_verified FROM users ORDE
             <a href="dashboard.php">Dashboard</a>
             <a href="manage_users.php" class="active">Manage Users</a>
             <a href="manage_products.php">Manage Products</a>
-            <a href="signatures.php">RSA Signatures</a>
+            <a href="manage_orders.php">Manage Orders</a>
+            <a href="signature.php">RSA Signatures</a>
             <a href="admin_logout.php">Logout</a>
         </nav>
     </aside>

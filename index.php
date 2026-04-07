@@ -2,11 +2,7 @@
 session_start();
 include "config/db.php";
 
-$success = "";
-$error = "";
-$triggerCartAnimation = false;
 $userId = 0;
-$homeOrderNotice = [];
 
 if (isset($_SESSION['user'])) {
     $userEmail = $_SESSION['user'];
@@ -16,62 +12,6 @@ if (isset($_SESSION['user'])) {
 
     if ($userRow) {
         $userId = (int)$userRow['id'];
-
-        if (isset($_POST['clear_home_order_notice'])) {
-            $conn->query("UPDATE orders SET seller_cleared = 1 WHERE seller_user_id = $userId");
-        }
-
-        $noticeRes = $conn->query("
-            SELECT 
-                o.*,
-                p.name AS product_name
-            FROM orders o
-            INNER JOIN products p ON o.product_id = p.id
-            WHERE o.seller_user_id = $userId
-            AND o.seller_cleared = 0
-            ORDER BY o.created_at DESC
-            LIMIT 5
-        ");
-
-        if ($noticeRes) {
-            while ($n = $noticeRes->fetch_assoc()) {
-                $homeOrderNotice[] = $n;
-            }
-        }
-    }
-}
-
-/* Direct add to cart from homepage cards */
-if (isset($_POST['add_to_cart_card'])) {
-    if (!isset($_SESSION['user'])) {
-        header("Location: login.php");
-        exit();
-    }
-
-    $productId = (int)$_POST['product_id'];
-    $productCheck = $conn->query("SELECT * FROM products WHERE id=$productId LIMIT 1");
-    $productData = $productCheck ? $productCheck->fetch_assoc() : null;
-
-    if (!$productData) {
-        $error = "Product not found.";
-    } elseif ($productData['status'] === 'sold') {
-        $error = "This item has already been marked as sold.";
-    } elseif ($userId <= 0) {
-        $error = "User not found.";
-    } else {
-        $existingCheck = $conn->query("SELECT * FROM cart WHERE user_id=$userId AND product_id=$productId LIMIT 1");
-
-        if ($existingCheck && $existingCheck->num_rows > 0) {
-            $existing = $existingCheck->fetch_assoc();
-            $newQty = (int)$existing['quantity'] + 1;
-            $cartId = (int)$existing['id'];
-            $conn->query("UPDATE cart SET quantity=$newQty WHERE id=$cartId");
-        } else {
-            $conn->query("INSERT INTO cart (user_id, product_id, quantity) VALUES ($userId, $productId, 1)");
-        }
-
-        $success = "Product added to cart successfully.";
-        $triggerCartAnimation = true;
     }
 }
 
@@ -97,35 +37,7 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
 
 <?php include "includes/navbar.php"; ?>
 
-<?php if (!empty($homeOrderNotice)): ?>
-<section class="home-block alt" style="padding-top: 120px; padding-bottom: 20px;">
-    <div class="container">
-        <div class="profile-section-card" style="border:1px solid #fde68a; background:#fffbeb;">
-            <h3 style="margin-bottom:12px;">New Order Alerts</h3>
-
-            <?php foreach ($homeOrderNotice as $notice): ?>
-                <p style="margin:8px 0; color:#92400e; line-height:1.6;">
-                    <strong><?php echo htmlspecialchars($notice['product_name']); ?></strong>
-                    was ordered by
-                    <strong><?php echo htmlspecialchars($notice['buyer_name']); ?></strong>
-                    —
-                    Payment:
-                    <strong><?php echo htmlspecialchars(ucfirst($notice['payment_status'])); ?></strong>
-                </p>
-            <?php endforeach; ?>
-
-            <div class="form-actions" style="margin-top:14px;">
-                <a href="profile.php#orders_received" class="btn btn-primary">View Orders</a>
-                <form method="POST" style="display:inline;">
-                    <button type="submit" name="clear_home_order_notice" class="btn btn-dark">Clear from Home</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</section>
-<?php endif; ?>
-
-<section class="hero" id="home" <?php echo !empty($homeOrderNotice) ? 'style="min-height:auto; padding-top:60px;"' : ''; ?>>
+<section class="hero" id="home">
     <div class="hero-content">
         <h1>Buy, Sell, and Discover Smarter with TradeSphere</h1>
         <p>
@@ -170,20 +82,13 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
         <h2 class="section-title">Recently Listed Items</h2>
         <p class="section-subtitle">These are the latest products added to the TradeSphere marketplace.</p>
 
-        <?php if ($success): ?>
-            <div class="success-msg"><?php echo $success; ?></div>
-        <?php endif; ?>
-
-        <?php if ($error): ?>
-            <div class="error-msg"><?php echo $error; ?></div>
-        <?php endif; ?>
-
         <?php if ($recent && $recent->num_rows > 0): ?>
             <div class="products-grid">
                 <?php while ($row = $recent->fetch_assoc()): ?>
                     <div class="product-card">
                         <div class="product-image-wrap">
                             <img src="uploads/<?php echo htmlspecialchars($row['image']); ?>" alt="Product Image">
+
                             <?php if ($row['status'] === 'sold'): ?>
                                 <div class="sold-badge">SOLD</div>
                             <?php endif; ?>
@@ -191,21 +96,31 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
 
                         <div class="product-body">
                             <h3><?php echo htmlspecialchars($row['name']); ?></h3>
-                            <p class="price">Rs <?php echo htmlspecialchars($row['price']); ?></p>
+
+                            <p class="price">Rs <?php echo number_format((float)$row['price'], 2); ?></p>
+
                             <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category_name']); ?></p>
                             <p class="meta"><strong>Condition:</strong> <?php echo htmlspecialchars($row['product_condition']); ?></p>
                             <p class="meta"><strong>City:</strong> <?php echo htmlspecialchars($row['city']); ?></p>
-                            <p class="meta"><strong>Seller:</strong> <?php echo htmlspecialchars($row['seller_email']); ?></p>
+                            <p class="meta"><strong>Status:</strong> <?php echo htmlspecialchars(ucfirst($row['status'])); ?></p>
 
-                            <div class="product-actions" style="display:flex; gap:10px; flex-wrap:wrap;">
-                                <a href="product_details.php?id=<?php echo $row['id']; ?>" class="small-btn primary">View Details</a>
+                            <div class="product-actions">
+                                <a href="product_details.php?id=<?php echo (int)$row['id']; ?>" class="small-btn primary">
+                                    View Details
+                                </a>
 
                                 <?php if ($row['status'] !== 'sold'): ?>
-                                    <button class="small-btn dark add-to-cart-btn" data-id="<?php echo $row['id']; ?>">
+                                    <button
+                                        type="button"
+                                        class="small-btn dark add-to-cart-btn"
+                                        data-id="<?php echo (int)$row['id']; ?>"
+                                    >
                                         Add to Cart
                                     </button>
                                 <?php else: ?>
-                                    <button type="button" class="small-btn dark" disabled style="opacity:0.65; cursor:not-allowed;">Sold</button>
+                                    <button type="button" class="small-btn dark" disabled style="opacity:0.65; cursor:not-allowed;">
+                                        Sold
+                                    </button>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -263,28 +178,77 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
 
 <script src="js/script.js"></script>
 
-<?php if ($triggerCartAnimation): ?>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    const cart = document.getElementById("floatingCart");
-    const toast = document.getElementById("cartAddedToast");
+    const buttons = document.querySelectorAll(".add-to-cart-btn");
 
-    if (cart) {
-        cart.classList.add("cart-bounce");
-        setTimeout(() => {
-            cart.classList.remove("cart-bounce");
-        }, 800);
-    }
+    buttons.forEach(function (btn) {
+        btn.addEventListener("click", function (e) {
+            e.preventDefault();
 
-    if (toast) {
-        toast.classList.add("show");
-        setTimeout(() => {
-            toast.classList.remove("show");
-        }, 1800);
-    }
+            const productId = this.getAttribute("data-id");
+            const clickedButton = this;
+
+            clickedButton.disabled = true;
+
+            fetch("ajax_add_to_cart.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: "product_id=" + encodeURIComponent(productId)
+            })
+            .then(function (response) {
+                return response.json();
+            })
+            .then(function (data) {
+                clickedButton.disabled = false;
+
+                if (data.status === "success") {
+                    const cart = document.getElementById("floatingCart");
+                    const toast = document.getElementById("cartAddedToast");
+                    const badge = document.querySelector(".cart-count-badge");
+
+                    if (cart) {
+                        cart.classList.add("cart-active");
+                        cart.classList.add("cart-bounce");
+
+                        setTimeout(function () {
+                            cart.classList.remove("cart-bounce");
+                        }, 800);
+                    }
+
+                    if (toast) {
+                        toast.textContent = data.message || "Added to cart";
+                        toast.classList.add("show");
+
+                        setTimeout(function () {
+                            toast.classList.remove("show");
+                        }, 1800);
+                    }
+
+                    if (typeof data.cart_count !== "undefined") {
+                        if (badge) {
+                            badge.textContent = data.cart_count;
+                        } else if (cart) {
+                            const newBadge = document.createElement("span");
+                            newBadge.className = "cart-count-badge";
+                            newBadge.textContent = data.cart_count;
+                            cart.appendChild(newBadge);
+                        }
+                    }
+                } else {
+                    alert(data.message || "Could not add to cart.");
+                }
+            })
+            .catch(function () {
+                clickedButton.disabled = false;
+                alert("Something went wrong while adding to cart.");
+            });
+        });
+    });
 });
 </script>
-<?php endif; ?>
 
 </body>
 </html>

@@ -8,7 +8,7 @@ if (!isset($_SESSION['user'])) {
     exit();
 }
 
-$userEmail = $_SESSION['user'];
+$userEmail = $conn->real_escape_string($_SESSION['user']);
 $userRes = $conn->query("SELECT * FROM users WHERE email='$userEmail' LIMIT 1");
 $user = $userRes ? $userRes->fetch_assoc() : null;
 
@@ -19,6 +19,8 @@ if (!$user) {
 $userId = (int)$user['id'];
 $success = "";
 $error = "";
+$highlightOrderId = 0;
+$highlightMessage = "";
 
 /* Toggle product status */
 if (isset($_POST['toggle_status'])) {
@@ -93,6 +95,133 @@ if (isset($_POST['delete_product'])) {
     }
 }
 
+/* Seller delivery status update */
+if (isset($_POST['update_delivery_status'])) {
+    $orderId = (int)$_POST['order_id'];
+    $newDeliveryStatus = trim($_POST['seller_delivery_status']);
+
+    $allowedStatuses = ['pending', 'processing', 'out_for_delivery', 'delivered'];
+
+    if (!in_array($newDeliveryStatus, $allowedStatuses, true)) {
+        $error = "Invalid delivery status selected.";
+    } else {
+        $escapedStatus = $conn->real_escape_string($newDeliveryStatus);
+
+        $checkOrder = $conn->query("
+            SELECT o.*, p.name AS product_name
+            FROM orders o
+            INNER JOIN products p ON o.product_id = p.id
+            WHERE o.id = $orderId
+            AND o.seller_user_id = $userId
+            LIMIT 1
+        ");
+
+        $orderData = $checkOrder ? $checkOrder->fetch_assoc() : null;
+
+        if (!$orderData) {
+            $error = "Order not found or access denied.";
+        } else {
+            $deliveredAtSql = ($escapedStatus === 'delivered')
+                ? ", delivered_at = NOW()"
+                : ", delivered_at = NULL";
+
+            $newOrderStatus = ($escapedStatus === 'pending') ? 'pending' : 'processing';
+
+            $buyerReceivedResetSql = ($escapedStatus !== 'delivered')
+                ? ", buyer_received = 0, buyer_received_at = NULL"
+                : "";
+
+            $updateSql = "
+                UPDATE orders
+                SET seller_delivery_status = '$escapedStatus',
+                    order_status = '$newOrderStatus'
+                    $deliveredAtSql
+                    $buyerReceivedResetSql
+                WHERE id = $orderId
+                AND seller_user_id = $userId
+            ";
+
+            if ($conn->query($updateSql)) {
+                $actionData = json_encode([
+                    "user_id" => $userId,
+                    "order_id" => $orderId,
+                    "product_id" => $orderData['product_id'],
+                    "product_name" => $orderData['product_name'],
+                    "new_delivery_status" => $escapedStatus,
+                    "action" => "seller_delivery_status_update",
+                    "timestamp" => date("Y-m-d H:i:s")
+                ]);
+
+                $signature = signData($actionData);
+                if ($signature) {
+                    storeSignatureRecord($conn, $userId, "seller_delivery_status_update", $orderId, $actionData, $signature);
+                }
+
+                $success = "Seller delivery status updated successfully.";
+                $highlightOrderId = $orderId;
+                $highlightMessage = "Delivery status updated";
+            } else {
+                $error = "Could not update seller delivery status.";
+            }
+        }
+    }
+}
+
+/* Buyer confirms received */
+if (isset($_POST['confirm_received'])) {
+    $orderId = (int)$_POST['order_id'];
+
+    $checkOrder = $conn->query("
+        SELECT o.*, p.name AS product_name
+        FROM orders o
+        INNER JOIN products p ON o.product_id = p.id
+        WHERE o.id = $orderId
+        AND o.user_id = $userId
+        LIMIT 1
+    ");
+
+    $orderData = $checkOrder ? $checkOrder->fetch_assoc() : null;
+
+    if (!$orderData) {
+        $error = "Order not found or access denied.";
+    } elseif ($orderData['seller_delivery_status'] !== 'delivered') {
+        $error = "You can confirm received only after seller marks it as delivered.";
+    } elseif ((int)$orderData['buyer_received'] === 1) {
+        $error = "You have already confirmed this order as received.";
+    } else {
+        $updateSql = "
+            UPDATE orders
+            SET buyer_received = 1,
+                buyer_received_at = NOW(),
+                order_status = 'completed'
+            WHERE id = $orderId
+            AND user_id = $userId
+        ";
+
+        if ($conn->query($updateSql)) {
+            $actionData = json_encode([
+                "user_id" => $userId,
+                "order_id" => $orderId,
+                "product_id" => $orderData['product_id'],
+                "product_name" => $orderData['product_name'],
+                "action" => "buyer_confirmed_received",
+                "timestamp" => date("Y-m-d H:i:s")
+            ]);
+
+            $signature = signData($actionData);
+            if ($signature) {
+                storeSignatureRecord($conn, $userId, "buyer_confirmed_received", $orderId, $actionData, $signature);
+            }
+
+            $success = "Order marked as received successfully.";
+            $highlightOrderId = $orderId;
+            $highlightMessage = "Buyer confirmed received";
+        } else {
+            $error = "Could not confirm receipt for this order.";
+        }
+    }
+}
+
 $totalListingsRes = $conn->query("SELECT COUNT(*) AS total FROM products WHERE user_id=$userId");
 $totalListings = $totalListingsRes ? (int)$totalListingsRes->fetch_assoc()['total'] : 0;
 
@@ -103,7 +232,7 @@ $completedSalesRes = $conn->query("
     SELECT COUNT(*) AS total
     FROM orders
     WHERE seller_user_id = $userId
-    AND payment_status = 'paid'
+    AND buyer_received = 1
 ");
 $completedSales = $completedSalesRes ? (int)$completedSalesRes->fetch_assoc()['total'] : 0;
 
@@ -134,13 +263,9 @@ $myPurchases = $conn->query("
         p.name AS product_name,
         p.image AS product_image,
         p.seller_email,
-        p.contact_number,
-        p.city,
-        p.product_condition,
-        c.name AS category_name
+        p.contact_number
     FROM orders o
     INNER JOIN products p ON o.product_id = p.id
-    LEFT JOIN categories c ON p.category_id = c.id
     WHERE o.user_id = $userId
     AND o.payment_status = 'paid'
     ORDER BY o.created_at DESC
@@ -150,13 +275,9 @@ $receivedOrders = $conn->query("
     SELECT 
         o.*,
         p.name AS product_name,
-        p.image AS product_image,
-        p.city,
-        p.product_condition,
-        c.name AS category_name
+        p.image AS product_image
     FROM orders o
     INNER JOIN products p ON o.product_id = p.id
-    LEFT JOIN categories c ON p.category_id = c.id
     WHERE o.seller_user_id = $userId
     ORDER BY o.created_at DESC
 ");
@@ -165,16 +286,12 @@ $mySales = $conn->query("
     SELECT 
         o.*,
         p.name AS product_name,
-        p.image AS product_image,
-        p.city,
-        p.product_condition,
-        c.name AS category_name
+        p.image AS product_image
     FROM orders o
     INNER JOIN products p ON o.product_id = p.id
-    LEFT JOIN categories c ON p.category_id = c.id
     WHERE o.seller_user_id = $userId
-    AND o.payment_status = 'paid'
-    ORDER BY o.created_at DESC
+    AND o.buyer_received = 1
+    ORDER BY o.buyer_received_at DESC, o.created_at DESC
 ");
 
 $firstLetter = strtoupper(substr($user['name'], 0, 1));
@@ -263,6 +380,67 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
             font-weight: 700;
         }
 
+        .status-note{
+            display:inline-block;
+            margin-top:8px;
+            padding:6px 10px;
+            border-radius:999px;
+            background:#eff6ff;
+            color:#1d4ed8;
+            font-size:12px;
+            font-weight:700;
+        }
+
+        .tracked-order-card{
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .tracked-order-card.active-track{
+            border: 2px solid #2563eb;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12), 0 18px 35px rgba(37, 99, 235, 0.12);
+            transform: translateY(-2px);
+        }
+
+        .order-action-popup{
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            z-index: 20;
+            background: #2563eb;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.25);
+            animation: fadePop 2.4s ease forwards;
+        }
+
+        .order-action-popup.success-green{
+            background: #059669;
+            box-shadow: 0 10px 25px rgba(5, 150, 105, 0.25);
+        }
+
+        @keyframes fadePop {
+            0% {
+                opacity: 0;
+                transform: translateY(-8px) scale(0.96);
+            }
+            10% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            80% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-8px) scale(0.98);
+            }
+        }
+
         @media (max-width: 992px){
             .profile-grid{
                 grid-template-columns: repeat(2, minmax(0,1fr)) !important;
@@ -345,7 +523,16 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
             <?php if ($myPurchases && $myPurchases->num_rows > 0): ?>
                 <div class="products-grid">
                     <?php while ($row = $myPurchases->fetch_assoc()): ?>
-                        <div class="product-card">
+                        <div 
+                            class="product-card tracked-order-card <?php echo ($highlightOrderId === (int)$row['id']) ? 'active-track' : ''; ?>" 
+                            id="order-card-<?php echo (int)$row['id']; ?>"
+                        >
+                            <?php if ($highlightOrderId === (int)$row['id']): ?>
+                                <div class="order-action-popup success-green">
+                                    <?php echo htmlspecialchars($highlightMessage); ?>
+                                </div>
+                            <?php endif; ?>
+
                             <div class="product-image-wrap">
                                 <img src="uploads/<?php echo htmlspecialchars($row['product_image']); ?>" alt="Purchased Product">
                             </div>
@@ -353,18 +540,29 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
                             <div class="product-body">
                                 <h3><?php echo htmlspecialchars($row['product_name']); ?></h3>
                                 <p class="price">Rs <?php echo number_format((float)$row['amount'], 2); ?></p>
-                                <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category_name']); ?></p>
-                                <p class="meta"><strong>Condition:</strong> <?php echo htmlspecialchars($row['product_condition']); ?></p>
-                                <p class="meta"><strong>Qty:</strong> <?php echo (int)$row['quantity']; ?></p>
                                 <p class="meta"><strong>Seller:</strong> <?php echo htmlspecialchars($row['seller_email']); ?></p>
-                                <p class="meta"><strong>Seller Contact:</strong> <?php echo htmlspecialchars($row['contact_number'] ?? 'Not provided'); ?></p>
-                                <p class="meta"><strong>Payment:</strong> <?php echo htmlspecialchars(ucfirst($row['payment_status'])); ?></p>
-                                <p class="meta"><strong>Date:</strong> <?php echo htmlspecialchars($row['created_at']); ?></p>
-                                <span class="purchase-badge">PURCHASED</span>
+                                <p class="meta"><strong>Phone:</strong> <?php echo htmlspecialchars($row['contact_number'] ?? 'Not provided'); ?></p>
 
-                                <div class="product-actions">
+                                <?php if ((int)$row['buyer_received'] === 1): ?>
+                                    <span class="purchase-badge">RECEIVED CONFIRMED</span>
+                                <?php elseif ($row['seller_delivery_status'] === 'delivered'): ?>
+                                    <span class="status-note">Seller marked this as delivered</span>
+                                <?php else: ?>
+                                    <span class="status-note">Waiting for seller update</span>
+                                <?php endif; ?>
+
+                                <div class="product-actions" style="display:flex; flex-wrap:wrap; gap:10px;">
                                     <a href="product_details.php?id=<?php echo (int)$row['product_id']; ?>" class="small-btn primary">View Details</a>
                                     <a href="generate_bill.php?order_id=<?php echo (int)$row['id']; ?>" class="small-btn">View Bill</a>
+
+                                    <?php if ($row['seller_delivery_status'] === 'delivered' && (int)$row['buyer_received'] === 0): ?>
+                                        <form method="POST" style="margin:0;">
+                                            <input type="hidden" name="order_id" value="<?php echo (int)$row['id']; ?>">
+                                            <button type="submit" name="confirm_received" class="small-btn dark">
+                                                Confirm Received
+                                            </button>
+                                        </form>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -381,7 +579,16 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
             <?php if ($receivedOrders && $receivedOrders->num_rows > 0): ?>
                 <div class="products-grid">
                     <?php while ($row = $receivedOrders->fetch_assoc()): ?>
-                        <div class="product-card">
+                        <div 
+                            class="product-card tracked-order-card <?php echo ($highlightOrderId === (int)$row['id']) ? 'active-track' : ''; ?>" 
+                            id="order-card-<?php echo (int)$row['id']; ?>"
+                        >
+                            <?php if ($highlightOrderId === (int)$row['id']): ?>
+                                <div class="order-action-popup">
+                                    <?php echo htmlspecialchars($highlightMessage); ?>
+                                </div>
+                            <?php endif; ?>
+
                             <div class="product-image-wrap">
                                 <img src="uploads/<?php echo htmlspecialchars($row['product_image']); ?>" alt="Ordered Product">
                             </div>
@@ -389,23 +596,32 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
                             <div class="product-body">
                                 <h3><?php echo htmlspecialchars($row['product_name']); ?></h3>
                                 <p class="price">Rs <?php echo number_format((float)$row['amount'], 2); ?></p>
-                                <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category_name']); ?></p>
-                                <p class="meta"><strong>Condition:</strong> <?php echo htmlspecialchars($row['product_condition']); ?></p>
-                                <p class="meta"><strong>City:</strong> <?php echo htmlspecialchars($row['city']); ?></p>
                                 <p class="meta"><strong>Buyer:</strong> <?php echo htmlspecialchars($row['buyer_name']); ?></p>
-                                <p class="meta"><strong>Buyer Email:</strong> <?php echo htmlspecialchars($row['buyer_email']); ?></p>
-                                <p class="meta"><strong>Buyer Phone:</strong> <?php echo htmlspecialchars($row['buyer_phone']); ?></p>
+                                <p class="meta"><strong>Email:</strong> <?php echo htmlspecialchars($row['buyer_email']); ?></p>
+                                <p class="meta"><strong>Phone:</strong> <?php echo htmlspecialchars($row['buyer_phone']); ?></p>
+                                <p class="meta"><strong>Delivery:</strong> <?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $row['seller_delivery_status']))); ?></p>
 
-                                <?php if (!empty($row['buyer_message'])): ?>
-                                    <p class="meta"><strong>Buyer Message:</strong> <?php echo htmlspecialchars($row['buyer_message']); ?></p>
+                                <?php if ((int)$row['buyer_received'] === 1): ?>
+                                    <span class="purchase-badge">BUYER CONFIRMED</span>
                                 <?php endif; ?>
 
-                                <p class="meta"><strong>Payment:</strong> <?php echo htmlspecialchars(ucfirst($row['payment_status'])); ?></p>
-                                <p class="meta"><strong>Order Status:</strong> <?php echo htmlspecialchars(ucfirst($row['order_status'])); ?></p>
-                                <p class="meta"><strong>Date:</strong> <?php echo htmlspecialchars($row['created_at']); ?></p>
+                                <div class="product-actions" style="display:flex; flex-direction:column; gap:10px; align-items:stretch;">
+                                    <a href="product_details.php?id=<?php echo (int)$row['product_id']; ?>" class="small-btn primary">View Details</a>
 
-                                <div class="product-actions">
-                                    <a href="product_details.php?id=<?php echo (int)$row['product_id']; ?>" class="small-btn primary">View Product</a>
+                                    <form method="POST" style="margin:0;">
+                                        <input type="hidden" name="order_id" value="<?php echo (int)$row['id']; ?>">
+
+                                        <select name="seller_delivery_status" style="width:100%; padding:10px; border-radius:10px; border:1px solid #d1d5db; margin-bottom:10px;">
+                                            <option value="pending" <?php echo ($row['seller_delivery_status'] === 'pending') ? 'selected' : ''; ?>>Pending</option>
+                                            <option value="processing" <?php echo ($row['seller_delivery_status'] === 'processing') ? 'selected' : ''; ?>>Processing</option>
+                                            <option value="out_for_delivery" <?php echo ($row['seller_delivery_status'] === 'out_for_delivery') ? 'selected' : ''; ?>>Out for Delivery</option>
+                                            <option value="delivered" <?php echo ($row['seller_delivery_status'] === 'delivered') ? 'selected' : ''; ?>>Delivered</option>
+                                        </select>
+
+                                        <button type="submit" name="update_delivery_status" class="small-btn dark" style="width:100%;">
+                                            Update Delivery Status
+                                        </button>
+                                    </form>
                                 </div>
                             </div>
                         </div>
@@ -430,17 +646,13 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
                             <div class="product-body">
                                 <h3><?php echo htmlspecialchars($row['product_name']); ?></h3>
                                 <p class="price">Rs <?php echo number_format((float)$row['amount'], 2); ?></p>
-                                <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category_name']); ?></p>
-                                <p class="meta"><strong>Condition:</strong> <?php echo htmlspecialchars($row['product_condition']); ?></p>
-                                <p class="meta"><strong>City:</strong> <?php echo htmlspecialchars($row['city']); ?></p>
                                 <p class="meta"><strong>Buyer:</strong> <?php echo htmlspecialchars($row['buyer_name']); ?></p>
-                                <p class="meta"><strong>Buyer Email:</strong> <?php echo htmlspecialchars($row['buyer_email']); ?></p>
-                                <p class="meta"><strong>Buyer Phone:</strong> <?php echo htmlspecialchars($row['buyer_phone']); ?></p>
-                                <p class="meta"><strong>Date:</strong> <?php echo htmlspecialchars($row['created_at']); ?></p>
+                                <p class="meta"><strong>Email:</strong> <?php echo htmlspecialchars($row['buyer_email']); ?></p>
+
                                 <span class="purchase-badge">SALE COMPLETED</span>
 
                                 <div class="product-actions">
-                                    <a href="product_details.php?id=<?php echo (int)$row['product_id']; ?>" class="small-btn primary">View Product</a>
+                                    <a href="product_details.php?id=<?php echo (int)$row['product_id']; ?>" class="small-btn primary">View Details</a>
                                 </div>
                             </div>
                         </div>
@@ -530,5 +742,20 @@ window.addEventListener("click", function(e) {
     }
 });
 </script>
+
+<?php if ($highlightOrderId > 0): ?>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const card = document.getElementById("order-card-<?php echo (int)$highlightOrderId; ?>");
+    if (card) {
+        card.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+        });
+    }
+});
+</script>
+<?php endif; ?>
+
 </body>
 </html>

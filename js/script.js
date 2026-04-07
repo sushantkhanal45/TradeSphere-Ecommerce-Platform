@@ -29,59 +29,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // ADD TO CART (AJAX)
-    document.querySelectorAll(".add-to-cart-btn").forEach(button => {
-        button.addEventListener("click", function () {
-
-            const productId = this.getAttribute("data-id");
-
-            fetch("ajax_add_to_cart.php", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded"
-                },
-                body: "product_id=" + encodeURIComponent(productId)
-            })
-            .then(res => res.json())
-            .then(data => {
-
-                if (data.status === "success") {
-
-                    const cart = document.getElementById("floatingCart");
-                    const toast = document.getElementById("cartAddedToast");
-
-                    if (cart) {
-                        cart.classList.add("cart-active");
-                        cart.classList.add("cart-bounce");
-
-                        setTimeout(() => {
-                            cart.classList.remove("cart-bounce");
-                        }, 700);
-
-                        updateCartBadge(data.cart_count);
-                    }
-
-                    if (toast) {
-                        toast.textContent = "Added to cart";
-                        toast.classList.add("show");
-
-                        setTimeout(() => {
-                            toast.classList.remove("show");
-                        }, 1800);
-                    } else {
-                        showToast("Added to cart");
-                    }
-
-                } else {
-                    showToast(data.message || "Could not add to cart");
-                }
-
-            })
-            .catch(() => {
-                showToast("Something went wrong");
-            });
-        });
-    });
+   
 
 });
 

@@ -8,7 +8,6 @@ if ($productId <= 0) {
     die("Invalid product.");
 }
 
-/* Fetch product */
 $res = $conn->query("
     SELECT p.*, c.name AS category_name
     FROM products p
@@ -24,51 +23,55 @@ if (!$product) {
 }
 
 $showGoToCart = false;
+$success = "";
+$error = "";
 
-/* Add to cart */
 if (isset($_POST['add_to_cart'])) {
     if (!isset($_SESSION['user'])) {
         header("Location: login.php");
         exit();
     }
 
-    $userEmail = $_SESSION['user'];
+    $userEmail = $conn->real_escape_string($_SESSION['user']);
     $userRes = $conn->query("SELECT id FROM users WHERE email='$userEmail' LIMIT 1");
     $user = $userRes ? $userRes->fetch_assoc() : null;
 
     if (!$user) {
-        die("User not found.");
-    }
-
-    $userId = (int)$user['id'];
-    $qty = max(1, (int)($_POST['quantity'] ?? 1));
-
-    if ($product['status'] === 'sold') {
-        $error = "This product is already sold.";
+        $error = "User not found.";
     } else {
-        $check = $conn->query("
-            SELECT id, quantity 
-            FROM cart 
-            WHERE user_id=$userId AND product_id=$productId
-        ");
+        $userId = (int)$user['id'];
+        $qty = max(1, (int)($_POST['quantity'] ?? 1));
 
-        if ($check && $check->num_rows > 0) {
-            $row = $check->fetch_assoc();
-            $newQty = $row['quantity'] + $qty;
-
-            $conn->query("
-                UPDATE cart 
-                SET quantity=$newQty 
-                WHERE id=" . (int)$row['id']
-            );
+        if ($product['status'] === 'sold') {
+            $error = "This product is already sold.";
         } else {
-            $conn->query("
-                INSERT INTO cart (user_id, product_id, quantity)
-                VALUES ($userId, $productId, $qty)
+            $check = $conn->query("
+                SELECT id, quantity
+                FROM cart
+                WHERE user_id = $userId AND product_id = $productId
+                LIMIT 1
             ");
-        }
 
-        $showGoToCart = true;
+            if ($check && $check->num_rows > 0) {
+                $row = $check->fetch_assoc();
+                $newQty = (int)$row['quantity'] + $qty;
+                $cartId = (int)$row['id'];
+
+                $conn->query("
+                    UPDATE cart
+                    SET quantity = $newQty
+                    WHERE id = $cartId
+                ");
+            } else {
+                $conn->query("
+                    INSERT INTO cart (user_id, product_id, quantity)
+                    VALUES ($userId, $productId, $qty)
+                ");
+            }
+
+            $success = "Product added to cart successfully.";
+            $showGoToCart = true;
+        }
     }
 }
 ?>
@@ -79,97 +82,218 @@ if (isset($_POST['add_to_cart'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($product['name']); ?> - TradeSphere</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .product-detail-wrap{
+            max-width: 980px;
+            margin: 0 auto;
+        }
+
+        .product-detail-card{
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+            border: 1px solid #eef2f7;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 0;
+        }
+
+        .product-detail-left{
+            background: #f8fafc;
+            padding: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .product-detail-left .image-box{
+            width: 100%;
+            position: relative;
+        }
+
+        .product-detail-left img{
+            width: 100%;
+            height: 320px;
+            object-fit: cover;
+            border-radius: 14px;
+            display: block;
+            border: 1px solid #e5e7eb;
+            background: #fff;
+        }
+
+        .product-detail-right{
+            padding: 24px 26px;
+        }
+
+        .product-detail-title{
+            margin: 0 0 10px 0;
+            font-size: 28px;
+            color: #0f172a;
+        }
+
+        .product-detail-price{
+            font-size: 30px;
+            font-weight: 700;
+            color: #2563eb;
+            margin-bottom: 16px;
+        }
+
+        .detail-meta{
+            margin: 8px 0;
+            color: #475569;
+            line-height: 1.65;
+            font-size: 15px;
+        }
+
+        .detail-section-title{
+            margin: 18px 0 8px 0;
+            font-size: 16px;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .detail-description{
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .qty-row{
+            margin-top: 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .qty-row label{
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .qty-row input{
+            width: 100px;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .detail-actions{
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .back-top{
+            margin-bottom: 18px;
+        }
+
+        @media (max-width: 900px){
+            .product-detail-card{
+                grid-template-columns: 1fr;
+            }
+
+            .product-detail-left img{
+                height: 260px;
+            }
+
+            .product-detail-title{
+                font-size: 24px;
+            }
+
+            .product-detail-price{
+                font-size: 26px;
+            }
+        }
+    </style>
 </head>
 <body>
 
 <?php include "includes/navbar.php"; ?>
 
 <div class="page-wrap">
-    <div class="container">
+    <div class="container product-detail-wrap">
 
-        <!-- BACK BUTTON -->
-        <div style="margin-bottom: 20px;">
-            <button onclick="window.history.back()" class="btn btn-dark">← Back</button>
-        </div>
+       
 
-        <div class="detail-card">
-            <div class="detail-image-wrap">
-                <img src="uploads/<?php echo htmlspecialchars($product['image']); ?>" alt="Product Image">
+        <?php if ($success): ?>
+            <div class="success-msg"><?php echo $success; ?></div>
+        <?php endif; ?>
 
-                <?php if ($product['status'] === 'sold'): ?>
-                    <div class="sold-badge">SOLD</div>
-                <?php endif; ?>
+        <?php if ($error): ?>
+            <div class="error-msg"><?php echo $error; ?></div>
+        <?php endif; ?>
+
+        <div class="product-detail-card">
+            <div class="product-detail-left">
+                <div class="image-box">
+                    <img src="uploads/<?php echo htmlspecialchars($product['image']); ?>" alt="Product Image">
+
+                    <?php if ($product['status'] === 'sold'): ?>
+                        <div class="sold-badge">SOLD</div>
+                    <?php endif; ?>
+                </div>
             </div>
 
-            <div class="detail-content">
-                <h2><?php echo htmlspecialchars($product['name']); ?></h2>
+            <div class="product-detail-right">
+                <h2 class="product-detail-title"><?php echo htmlspecialchars($product['name']); ?></h2>
 
-                <p class="price">Rs <?php echo number_format((float)$product['price'], 2); ?></p>
+                <div class="product-detail-price">
+                    Rs <?php echo number_format((float)$product['price'], 2); ?>
+                </div>
 
-                <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($product['category_name']); ?></p>
-                <p class="meta"><strong>Condition:</strong> <?php echo htmlspecialchars($product['product_condition']); ?></p>
-                <p class="meta"><strong>City:</strong> <?php echo htmlspecialchars($product['city']); ?></p>
-                <p class="meta"><strong>Status:</strong> <?php echo htmlspecialchars(ucfirst($product['status'])); ?></p>
+                <p class="detail-meta"><strong>Category:</strong> <?php echo htmlspecialchars($product['category_name']); ?></p>
+                <p class="detail-meta"><strong>Condition:</strong> <?php echo htmlspecialchars($product['product_condition']); ?></p>
+                <p class="detail-meta"><strong>City:</strong> <?php echo htmlspecialchars($product['city']); ?></p>
+                <p class="detail-meta"><strong>Status:</strong> <?php echo htmlspecialchars(ucfirst($product['status'])); ?></p>
 
-                <hr style="margin: 16px 0;">
+                <div class="detail-section-title">Seller Contact</div>
+                <p class="detail-meta"><strong>Email:</strong> <?php echo htmlspecialchars($product['seller_email']); ?></p>
+                <p class="detail-meta"><strong>Phone:</strong> <?php echo htmlspecialchars($product['contact_number'] ?? 'Not provided'); ?></p>
 
-                <!-- SELLER INFO (ONLY HERE) -->
-                <h4>Seller Contact</h4>
-                <p class="meta"><strong>Email:</strong> <?php echo htmlspecialchars($product['seller_email']); ?></p>
-                <p class="meta"><strong>Phone:</strong> <?php echo htmlspecialchars($product['contact_number'] ?? 'Not provided'); ?></p>
+                <?php if (!empty($product['description'])): ?>
+                    <div class="detail-description">
+                        <div class="detail-section-title" style="margin-top:0;">Description</div>
+                        <p class="detail-meta"><?php echo nl2br(htmlspecialchars($product['description'])); ?></p>
+                    </div>
+                <?php endif; ?>
 
-                <hr style="margin: 16px 0;">
-
-                <!-- ACTIONS -->
                 <?php if (isset($_SESSION['user'])): ?>
-
                     <?php if ($product['status'] !== 'sold'): ?>
-
                         <form method="POST">
-                            <div class="form-group" style="max-width: 140px;">
-                                <label>Quantity</label>
-                                <input type="number" name="quantity" min="1" value="1" required>
+                            <div class="qty-row">
+                                <label for="quantity">Quantity</label>
+                                <input type="number" id="quantity" name="quantity" min="1" value="1" required>
                             </div>
 
-                            <div class="detail-action-row" style="margin-top: 14px;">
-                                <button type="submit" name="add_to_cart" class="btn btn-primary">Add to Cart</button>
+                            <div class="detail-actions">
+                                <button type="submit" name="add_to_cart" class="small-btn dark">Add to Cart</button>
 
                                 <?php if ($showGoToCart): ?>
-                                    <a href="cart.php" class="btn btn-dark">Go to Cart</a>
+                                    <a href="cart.php" class="small-btn primary">Go to Cart</a>
                                 <?php endif; ?>
 
-                                <button type="button" onclick="window.history.back()" class="btn btn-secondary">Back</button>
+                                <button type="button" onclick="window.history.back()" class="small-btn">Back</button>
                             </div>
                         </form>
-
-                        <?php if ($showGoToCart): ?>
-                            <div class="cart-hint-box">
-                                <strong>Item added to cart.</strong><br>
-                                You can go to your cart or continue browsing.
-                            </div>
-                        <?php endif; ?>
-
                     <?php else: ?>
-
-                        <div class="error-msg">This item has already been marked as sold.</div>
-
-                        <div class="detail-action-row" style="margin-top: 14px;">
-                            <button onclick="window.history.back()" class="btn btn-secondary">Back</button>
+                        <div class="detail-actions">
+                            <button type="button" class="small-btn dark" disabled style="opacity:0.7; cursor:not-allowed;">Sold</button>
+                            <button type="button" onclick="window.history.back()" class="small-btn">Back</button>
                         </div>
-
                     <?php endif; ?>
-
                 <?php else: ?>
-
-                    <div class="detail-action-row">
-                        <a href="login.php" class="btn btn-dark">Login to Buy</a>
-                        <button onclick="window.history.back()" class="btn btn-secondary">Back</button>
+                    <div class="detail-actions">
+                        <a href="login.php" class="small-btn dark">Login to Buy</a>
+                        <button type="button" onclick="window.history.back()" class="small-btn">Back</button>
                     </div>
-
                 <?php endif; ?>
-
             </div>
         </div>
+
     </div>
 </div>
 

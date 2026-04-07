@@ -18,28 +18,51 @@ if (!$adminUser) {
     exit();
 }
 
-$totalUsersRes = $conn->query("SELECT COUNT(*) AS total FROM users");
-$totalUsers = $totalUsersRes ? $totalUsersRes->fetch_assoc()['total'] : 0;
+$totalUsersRes = $conn->query("SELECT COUNT(*) AS total FROM users WHERE role='user'");
+$totalUsers = $totalUsersRes ? (int)$totalUsersRes->fetch_assoc()['total'] : 0;
 
 $totalProductsRes = $conn->query("SELECT COUNT(*) AS total FROM products");
-$totalProducts = $totalProductsRes ? $totalProductsRes->fetch_assoc()['total'] : 0;
-
-$soldProductsRes = $conn->query("SELECT COUNT(*) AS total FROM products WHERE status='sold'");
-$soldProducts = $soldProductsRes ? $soldProductsRes->fetch_assoc()['total'] : 0;
+$totalProducts = $totalProductsRes ? (int)$totalProductsRes->fetch_assoc()['total'] : 0;
 
 $availableProductsRes = $conn->query("SELECT COUNT(*) AS total FROM products WHERE status='available'");
-$availableProducts = $availableProductsRes ? $availableProductsRes->fetch_assoc()['total'] : 0;
+$availableProducts = $availableProductsRes ? (int)$availableProductsRes->fetch_assoc()['total'] : 0;
 
-$totalSignaturesRes = $conn->query("SELECT COUNT(*) AS total FROM signatures");
-$totalSignatures = $totalSignaturesRes ? $totalSignaturesRes->fetch_assoc()['total'] : 0;
+$soldProductsRes = $conn->query("SELECT COUNT(*) AS total FROM products WHERE status='sold'");
+$soldProducts = $soldProductsRes ? (int)$soldProductsRes->fetch_assoc()['total'] : 0;
 
-$users = $conn->query("SELECT id, name, email, role, is_verified FROM users ORDER BY id DESC LIMIT 5");
+$totalOrdersRes = $conn->query("SELECT COUNT(*) AS total FROM orders");
+$totalOrders = $totalOrdersRes ? (int)$totalOrdersRes->fetch_assoc()['total'] : 0;
 
-$products = $conn->query("
-    SELECT p.*, c.name AS category_name
-    FROM products p
-    LEFT JOIN categories c ON p.category_id = c.id
-    ORDER BY p.id DESC
+$paidOrdersRes = $conn->query("SELECT COUNT(*) AS total FROM orders WHERE payment_status='paid'");
+$paidOrders = $paidOrdersRes ? (int)$paidOrdersRes->fetch_assoc()['total'] : 0;
+
+$deliveredOrdersRes = $conn->query("SELECT COUNT(*) AS total FROM orders WHERE seller_delivery_status='delivered'");
+$deliveredOrders = $deliveredOrdersRes ? (int)$deliveredOrdersRes->fetch_assoc()['total'] : 0;
+
+$buyerConfirmedRes = $conn->query("SELECT COUNT(*) AS total FROM orders WHERE buyer_received=1");
+$buyerConfirmed = $buyerConfirmedRes ? (int)$buyerConfirmedRes->fetch_assoc()['total'] : 0;
+
+$recentOrders = $conn->query("
+    SELECT 
+        o.*,
+        p.name AS product_name
+    FROM orders o
+    LEFT JOIN products p ON o.product_id = p.id
+    ORDER BY o.created_at DESC, o.id DESC
+    LIMIT 8
+");
+
+$recentUsers = $conn->query("
+    SELECT id, name, email, role
+    FROM users
+    ORDER BY id DESC
+    LIMIT 5
+");
+
+$recentProducts = $conn->query("
+    SELECT id, name, price, status, image
+    FROM products
+    ORDER BY id DESC
     LIMIT 5
 ");
 ?>
@@ -86,7 +109,6 @@ $products = $conn->query("
 
         .admin-user-box{
             background:rgba(255,255,255,0.08);
-            border:1px solid rgba(255,255,255,0.08);
             border-radius:16px;
             padding:16px;
             margin-bottom:28px;
@@ -116,7 +138,6 @@ $products = $conn->query("
             padding:12px 14px;
             border-radius:12px;
             font-size:15px;
-            transition:0.2s ease;
         }
 
         .admin-menu a:hover,
@@ -133,13 +154,12 @@ $products = $conn->query("
         }
 
         .admin-header{
-            margin-bottom:26px;
+            margin-bottom:24px;
         }
 
         .admin-header h1{
             margin:0 0 8px 0;
             font-size:34px;
-            color:#111827;
         }
 
         .admin-header p{
@@ -147,47 +167,50 @@ $products = $conn->query("
             color:#6b7280;
         }
 
-        .admin-grid{
+        .stats-grid{
             display:grid;
-            grid-template-columns:repeat(5, minmax(0,1fr));
-            gap:20px;
-            margin-bottom:28px;
+            grid-template-columns:repeat(4, minmax(0, 1fr));
+            gap:18px;
+            margin-bottom:26px;
         }
 
-        .admin-stat{
+        .stat-card{
             background:white;
             border-radius:20px;
+            padding:22px;
             box-shadow:0 10px 30px rgba(0,0,0,0.08);
-            padding:24px;
         }
 
-        .admin-stat h3{
+        .stat-card h3{
             margin:0 0 10px 0;
-            color:#6b7280;
             font-size:15px;
+            color:#6b7280;
             font-weight:600;
         }
 
-        .admin-stat p{
+        .stat-card p{
             margin:0;
             font-size:32px;
             font-weight:700;
             color:#111827;
         }
 
-        .admin-card{
+        .panel-grid{
+            display:grid;
+            grid-template-columns:2fr 1fr;
+            gap:20px;
+        }
+
+        .panel-card{
             background:white;
             border-radius:20px;
             box-shadow:0 10px 30px rgba(0,0,0,0.08);
-            padding:24px;
-            margin-bottom:24px;
-            overflow-x:auto;
+            padding:22px;
         }
 
-        .admin-card h2{
+        .panel-card h2{
             margin:0 0 18px 0;
             font-size:22px;
-            color:#111827;
         }
 
         .admin-table{
@@ -197,34 +220,75 @@ $products = $conn->query("
 
         .admin-table th,
         .admin-table td{
-            padding:14px 12px;
-            border-bottom:1px solid #e5e7eb;
             text-align:left;
+            padding:12px 10px;
+            border-bottom:1px solid #e5e7eb;
             font-size:14px;
             vertical-align:top;
         }
 
         .admin-table th{
             background:#f8fafc;
-            color:#374151;
         }
 
-        .admin-badge{
+        .mini-list{
+            display:flex;
+            flex-direction:column;
+            gap:12px;
+        }
+
+        .mini-item{
+            padding:14px;
+            border:1px solid #e5e7eb;
+            border-radius:14px;
+            background:#fafafa;
+        }
+
+        .mini-item strong{
+            display:block;
+            margin-bottom:6px;
+        }
+
+        .badge{
+            display:inline-block;
             padding:6px 10px;
             border-radius:999px;
             font-size:12px;
-            font-weight:600;
-            display:inline-block;
+            font-weight:700;
         }
 
         .badge-green{background:#dcfce7;color:#166534;}
-        .badge-red{background:#fee2e2;color:#991b1b;}
         .badge-blue{background:#dbeafe;color:#1d4ed8;}
+        .badge-yellow{background:#fef3c7;color:#92400e;}
         .badge-gray{background:#e5e7eb;color:#374151;}
 
-        @media (max-width: 1200px){
-            .admin-grid{
-                grid-template-columns:repeat(3, minmax(0,1fr));
+        .quick-links{
+            display:flex;
+            gap:12px;
+            flex-wrap:wrap;
+            margin-top:16px;
+        }
+
+        .quick-links a{
+            text-decoration:none;
+            background:#2563eb;
+            color:white;
+            padding:10px 14px;
+            border-radius:12px;
+            font-weight:600;
+        }
+
+        .quick-links a:hover{
+            background:#1d4ed8;
+        }
+
+        @media (max-width: 1100px){
+            .stats-grid{
+                grid-template-columns:repeat(2, minmax(0,1fr));
+            }
+
+            .panel-grid{
+                grid-template-columns:1fr;
             }
         }
 
@@ -246,19 +310,9 @@ $products = $conn->query("
             }
         }
 
-        @media (max-width: 700px){
-            .admin-grid{
-                grid-template-columns:repeat(2, minmax(0,1fr));
-            }
-        }
-
-        @media (max-width: 500px){
-            .admin-grid{
+        @media (max-width: 640px){
+            .stats-grid{
                 grid-template-columns:1fr;
-            }
-
-            .admin-header h1{
-                font-size:28px;
             }
         }
     </style>
@@ -267,9 +321,7 @@ $products = $conn->query("
 
 <div class="admin-layout">
     <aside class="admin-sidebar">
-        <div class="admin-brand">
-            <a href="dashboard.php">TradeSphere</a>
-        </div>
+        <div class="admin-brand"><a href="dashboard.php">TradeSphere</a></div>
 
         <div class="admin-user-box">
             <h3><?php echo htmlspecialchars($adminUser['name']); ?></h3>
@@ -280,7 +332,8 @@ $products = $conn->query("
             <a href="dashboard.php" class="active">Dashboard</a>
             <a href="manage_users.php">Manage Users</a>
             <a href="manage_products.php">Manage Products</a>
-            <a href="signatures.php">RSA Signatures</a>
+            <a href="manage_orders.php">Manage Orders</a>
+            <a href="signature.php">RSA Signatures</a>
             <a href="admin_logout.php">Logout</a>
         </nav>
     </aside>
@@ -288,102 +341,146 @@ $products = $conn->query("
     <main class="admin-main">
         <div class="admin-header">
             <h1>Admin Dashboard</h1>
-            <p>Welcome back. Here is your marketplace overview.</p>
+            <p>Overview of users, products, and order activity.</p>
         </div>
 
-        <div class="admin-grid">
-            <div class="admin-stat">
+        <div class="stats-grid">
+            <div class="stat-card">
                 <h3>Total Users</h3>
                 <p><?php echo $totalUsers; ?></p>
             </div>
 
-            <div class="admin-stat">
+            <div class="stat-card">
                 <h3>Total Products</h3>
                 <p><?php echo $totalProducts; ?></p>
             </div>
 
-            <div class="admin-stat">
-                <h3>Sold Products</h3>
-                <p><?php echo $soldProducts; ?></p>
-            </div>
-
-            <div class="admin-stat">
+            <div class="stat-card">
                 <h3>Available Products</h3>
                 <p><?php echo $availableProducts; ?></p>
             </div>
 
-            <div class="admin-stat">
-                <h3>Signed Actions</h3>
-                <p><?php echo $totalSignatures; ?></p>
+            <div class="stat-card">
+                <h3>Sold Products</h3>
+                <p><?php echo $soldProducts; ?></p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Total Orders</h3>
+                <p><?php echo $totalOrders; ?></p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Paid Orders</h3>
+                <p><?php echo $paidOrders; ?></p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Delivered Orders</h3>
+                <p><?php echo $deliveredOrders; ?></p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Buyer Confirmed</h3>
+                <p><?php echo $buyerConfirmed; ?></p>
             </div>
         </div>
 
-        <div class="admin-card">
-            <h2>Recent Users</h2>
-            <table class="admin-table">
-                <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Verified</th>
-                </tr>
-                <?php if ($users && $users->num_rows > 0): ?>
-                    <?php while ($row = $users->fetch_assoc()): ?>
-                        <tr>
-                            <td><?php echo $row['id']; ?></td>
-                            <td><?php echo htmlspecialchars($row['name']); ?></td>
-                            <td><?php echo htmlspecialchars($row['email']); ?></td>
-                            <td>
-                                <?php if ($row['role'] === 'admin'): ?>
-                                    <span class="admin-badge badge-blue">Admin</span>
-                                <?php else: ?>
-                                    <span class="admin-badge badge-gray">User</span>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <?php if ((int)$row['is_verified'] === 1): ?>
-                                    <span class="admin-badge badge-green">Verified</span>
-                                <?php else: ?>
-                                    <span class="admin-badge badge-red">Not Verified</span>
-                                <?php endif; ?>
-                            </td>
-                        </tr>
-                    <?php endwhile; ?>
-                <?php endif; ?>
-            </table>
-        </div>
+        <div class="panel-grid">
+            <div class="panel-card">
+                <h2>Recent Orders</h2>
 
-        <div class="admin-card">
-            <h2>Recent Products</h2>
-            <table class="admin-table">
-                <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Category</th>
-                    <th>Condition</th>
-                    <th>Price</th>
-                    <th>Status</th>
-                </tr>
-                <?php if ($products && $products->num_rows > 0): ?>
-                    <?php while ($row = $products->fetch_assoc()): ?>
+                <table class="admin-table">
+                    <tr>
+                        <th>ID</th>
+                        <th>Product</th>
+                        <th>Buyer</th>
+                        <th>Amount</th>
+                        <th>Payment</th>
+                        <th>Delivery</th>
+                        <th>Confirmed</th>
+                    </tr>
+
+                    <?php if ($recentOrders && $recentOrders->num_rows > 0): ?>
+                        <?php while ($row = $recentOrders->fetch_assoc()): ?>
+                            <tr>
+                                <td><?php echo (int)$row['id']; ?></td>
+                                <td><?php echo htmlspecialchars($row['product_name'] ?? 'Deleted Product'); ?></td>
+                                <td>
+                                    <?php echo htmlspecialchars($row['buyer_name']); ?><br>
+                                    <small><?php echo htmlspecialchars($row['buyer_email']); ?></small>
+                                </td>
+                                <td>Rs <?php echo number_format((float)$row['amount'], 2); ?></td>
+                                <td>
+                                    <?php if ($row['payment_status'] === 'paid'): ?>
+                                        <span class="badge badge-green">Paid</span>
+                                    <?php elseif ($row['payment_status'] === 'pending'): ?>
+                                        <span class="badge badge-yellow">Pending</span>
+                                    <?php else: ?>
+                                        <span class="badge badge-gray"><?php echo htmlspecialchars(ucfirst($row['payment_status'])); ?></span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <span class="badge badge-blue">
+                                        <?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $row['seller_delivery_status']))); ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <?php if ((int)$row['buyer_received'] === 1): ?>
+                                        <span class="badge badge-green">Yes</span>
+                                    <?php else: ?>
+                                        <span class="badge badge-gray">No</span>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endwhile; ?>
+                    <?php else: ?>
                         <tr>
-                            <td><?php echo $row['id']; ?></td>
-                            <td><?php echo htmlspecialchars($row['name']); ?></td>
-                            <td><?php echo htmlspecialchars($row['category_name']); ?></td>
-                            <td><?php echo htmlspecialchars($row['product_condition']); ?></td>
-                            <td>Rs <?php echo htmlspecialchars($row['price']); ?></td>
-                            <td>
-                                <?php if ($row['status'] === 'sold'): ?>
-                                    <span class="admin-badge badge-red">Sold</span>
-                                <?php else: ?>
-                                    <span class="admin-badge badge-blue">Available</span>
-                                <?php endif; ?>
-                            </td>
+                            <td colspan="7">No recent orders found.</td>
                         </tr>
-                    <?php endwhile; ?>
-                <?php endif; ?>
-            </table>
+                    <?php endif; ?>
+                </table>
+
+                <div class="quick-links">
+                    <a href="manage_orders.php">Open Manage Orders</a>
+                    <a href="manage_products.php">Open Manage Products</a>
+                    <a href="manage_users.php">Open Manage Users</a>
+                </div>
+            </div>
+
+            <div class="panel-card">
+                <h2>Recent Users</h2>
+
+                <div class="mini-list">
+                    <?php if ($recentUsers && $recentUsers->num_rows > 0): ?>
+                        <?php while ($u = $recentUsers->fetch_assoc()): ?>
+                            <div class="mini-item">
+                                <strong><?php echo htmlspecialchars($u['name']); ?></strong>
+                                <div><?php echo htmlspecialchars($u['email']); ?></div>
+                                <small><?php echo htmlspecialchars(ucfirst($u['role'])); ?></small>
+                            </div>
+                        <?php endwhile; ?>
+                    <?php else: ?>
+                        <p>No users found.</p>
+                    <?php endif; ?>
+                </div>
+
+                <h2 style="margin-top:24px;">Recent Products</h2>
+
+                <div class="mini-list">
+                    <?php if ($recentProducts && $recentProducts->num_rows > 0): ?>
+                        <?php while ($p = $recentProducts->fetch_assoc()): ?>
+                            <div class="mini-item">
+                                <strong><?php echo htmlspecialchars($p['name']); ?></strong>
+                                <div>Rs <?php echo number_format((float)$p['price'], 2); ?></div>
+                                <small>Status: <?php echo htmlspecialchars(ucfirst($p['status'])); ?></small>
+                            </div>
+                        <?php endwhile; ?>
+                    <?php else: ?>
+                        <p>No products found.</p>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
     </main>
 </div>
