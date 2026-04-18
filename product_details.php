@@ -1,6 +1,7 @@
 <?php
 session_start();
 include "config/db.php";
+include "includes/recommendation_helper.php";
 
 $productId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
@@ -21,6 +22,44 @@ $product = $res ? $res->fetch_assoc() : null;
 if (!$product) {
     die("Product not found.");
 }
+
+if (isset($_SESSION['user'])) {
+    $userEmail = $conn->real_escape_string($_SESSION['user']);
+    $viewerRes = $conn->query("SELECT id FROM users WHERE email='$userEmail' LIMIT 1");
+    $viewer = $viewerRes ? $viewerRes->fetch_assoc() : null;
+
+    if ($viewer) {
+        $viewerId = (int)$viewer['id'];
+        $viewedCategoryId = (int)($product['category_id'] ?? 0);
+
+        $recentViewCheck = $conn->query("
+            SELECT id
+            FROM product_views
+            WHERE user_id = $viewerId
+              AND product_id = $productId
+            ORDER BY viewed_at DESC
+            LIMIT 1
+        ");
+
+        if ($recentViewCheck && $recentViewCheck->num_rows > 0) {
+            $row = $recentViewCheck->fetch_assoc();
+            $viewId = (int)$row['id'];
+
+            $conn->query("
+                UPDATE product_views
+                SET viewed_at = NOW(), category_id = $viewedCategoryId
+                WHERE id = $viewId
+            ");
+        } else {
+            $conn->query("
+                INSERT INTO product_views (user_id, product_id, category_id)
+                VALUES ($viewerId, $productId, $viewedCategoryId)
+            ");
+        }
+    }
+}
+
+$similarProducts = getSimilarProducts($conn, $productId, 4);
 
 $showGoToCart = false;
 $success = "";
@@ -187,8 +226,53 @@ if (isset($_POST['add_to_cart'])) {
             margin-top: 18px;
         }
 
-        .back-top{
-            margin-bottom: 18px;
+        .recommend-section{
+            margin-top: 28px;
+        }
+
+        .recommend-grid{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 18px;
+            margin-top: 14px;
+        }
+
+        .recommend-card{
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+        }
+
+        .recommend-card img{
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .recommend-body{
+            padding: 14px;
+        }
+
+        .recommend-body h4{
+            margin: 0 0 8px 0;
+            font-size: 16px;
+            color: #0f172a;
+        }
+
+        .recommend-meta{
+            font-size: 14px;
+            color: #475569;
+            margin: 6px 0;
+        }
+
+        .recommend-price{
+            font-size: 18px;
+            font-weight: 700;
+            color: #2563eb;
+            margin: 8px 0 10px 0;
         }
 
         @media (max-width: 900px){
@@ -216,8 +300,6 @@ if (isset($_POST['add_to_cart'])) {
 
 <div class="page-wrap">
     <div class="container product-detail-wrap">
-
-       
 
         <?php if ($success): ?>
             <div class="success-msg"><?php echo $success; ?></div>
@@ -293,6 +375,39 @@ if (isset($_POST['add_to_cart'])) {
                 <?php endif; ?>
             </div>
         </div>
+
+        <?php if (!empty($similarProducts)): ?>
+            <div class="recommend-section">
+                <h3 class="detail-section-title" style="font-size:22px; margin-top:28px;">Similar Products</h3>
+
+                <div class="recommend-grid">
+                    <?php foreach ($similarProducts as $item): ?>
+                        <div class="recommend-card">
+                            <img src="uploads/<?php echo htmlspecialchars($item['image']); ?>" alt="Product Image">
+
+                            <div class="recommend-body">
+                                <h4><?php echo htmlspecialchars($item['name']); ?></h4>
+                                <div class="recommend-price">Rs <?php echo number_format((float)$item['price'], 2); ?></div>
+
+                                <?php if (!empty($item['recommendation_reason'])): ?>
+                                    <p class="recommend-meta" style="color:#2563eb; font-weight:600;">
+                                        <?php echo htmlspecialchars($item['recommendation_reason']); ?>
+                                    </p>
+                                <?php endif; ?>
+
+                                <p class="recommend-meta"><strong>Category:</strong> <?php echo htmlspecialchars($item['category_name']); ?></p>
+                                <p class="recommend-meta"><strong>Condition:</strong> <?php echo htmlspecialchars($item['product_condition']); ?></p>
+                                <p class="recommend-meta"><strong>City:</strong> <?php echo htmlspecialchars($item['city']); ?></p>
+
+                                <a href="product_details.php?id=<?php echo (int)$item['id']; ?>" class="small-btn primary">
+                                    View Details
+                                </a>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endif; ?>
 
     </div>
 </div>

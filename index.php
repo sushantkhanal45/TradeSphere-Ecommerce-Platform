@@ -1,6 +1,7 @@
 <?php
 session_start();
 include "config/db.php";
+include "includes/recommendation_helper.php";
 
 $userId = 0;
 
@@ -14,6 +15,8 @@ if (isset($_SESSION['user'])) {
         $userId = (int)$userRow['id'];
     }
 }
+
+$recommendedProducts = getUserRecommendedProducts($conn, $userId, 6);
 
 $recent = $conn->query("
     SELECT p.*, c.name AS category_name
@@ -53,6 +56,70 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
                 <a href="register.php" class="btn btn-secondary">Join TradeSphere</a>
             <?php endif; ?>
         </div>
+    </div>
+</section>
+
+<section class="home-block alt">
+    <div class="container">
+        <h2 class="section-title">Recommended for You</h2>
+        <p class="section-subtitle">
+            Personalized suggestions based on your browsing, cart activity, and past orders.
+        </p>
+
+        <?php if (!empty($recommendedProducts)): ?>
+            <div class="products-grid">
+                <?php foreach ($recommendedProducts as $row): ?>
+                    <div class="product-card">
+                        <div class="product-image-wrap">
+                            <img src="uploads/<?php echo htmlspecialchars($row['image']); ?>" alt="Product Image">
+
+                            <?php if ($row['status'] === 'sold'): ?>
+                                <div class="sold-badge">SOLD</div>
+                            <?php endif; ?>
+                        </div>
+
+                        <div class="product-body">
+                            <h3><?php echo htmlspecialchars($row['name']); ?></h3>
+
+                            <p class="price">Rs <?php echo number_format((float)$row['price'], 2); ?></p>
+
+                            <?php if (!empty($row['recommendation_reason'])): ?>
+                                <p class="meta" style="color:#2563eb; font-weight:600;">
+                                    <?php echo htmlspecialchars($row['recommendation_reason']); ?>
+                                </p>
+                            <?php endif; ?>
+
+                            <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category_name']); ?></p>
+                            <p class="meta"><strong>Condition:</strong> <?php echo htmlspecialchars($row['product_condition']); ?></p>
+                            <p class="meta"><strong>City:</strong> <?php echo htmlspecialchars($row['city']); ?></p>
+                            <p class="meta"><strong>Status:</strong> <?php echo htmlspecialchars(ucfirst($row['status'])); ?></p>
+
+                            <div class="product-actions">
+                                <a href="product_details.php?id=<?php echo (int)$row['id']; ?>" class="small-btn primary">
+                                    View Details
+                                </a>
+
+                                <?php if ($row['status'] !== 'sold'): ?>
+                                    <button
+                                        type="button"
+                                        class="small-btn dark add-to-cart-btn"
+                                        data-id="<?php echo (int)$row['id']; ?>"
+                                    >
+                                        Add to Cart
+                                    </button>
+                                <?php else: ?>
+                                    <button type="button" class="small-btn dark" disabled style="opacity:0.65; cursor:not-allowed;">
+                                        Sold
+                                    </button>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <p class="empty-state">No recommendations available yet.</p>
+        <?php endif; ?>
     </div>
 </section>
 
@@ -138,7 +205,7 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
         <h2 class="section-title">About TradeSphere</h2>
         <p class="section-subtitle">
             TradeSphere is an intelligent digital marketplace project developed to combine modern UI design,
-            structured marketplace features, and future-ready recommendation functionality.
+            structured marketplace features, and recommendation functionality.
         </p>
 
         <div class="feature-grid">
@@ -149,12 +216,12 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
 
             <div class="feature-card">
                 <h3>Marketplace Workflow</h3>
-                <p>Users can discover products from the home page, browse all listings, and sell their own items after login.</p>
+                <p>Users can discover products, browse listings, receive recommendations, and sell their own items after login.</p>
             </div>
 
             <div class="feature-card">
-                <h3>Final Year Project Goal</h3>
-                <p>This project demonstrates a full-stack marketplace system with intelligent recommendation and secure design concepts.</p>
+                <h3>Smart Recommendations</h3>
+                <p>The system suggests products using category, description, condition, browsing activity, cart history, and past orders.</p>
             </div>
         </div>
     </div>
