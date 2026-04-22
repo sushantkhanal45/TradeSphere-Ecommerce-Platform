@@ -101,12 +101,12 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
 
                                 <?php if ($row['status'] !== 'sold'): ?>
                                     <button
-                                        type="button"
-                                        class="small-btn dark add-to-cart-btn"
-                                        data-id="<?php echo (int)$row['id']; ?>"
-                                    >
-                                        Add to Cart
-                                    </button>
+    type="button"
+    class="small-btn dark"
+    onclick="addToCartFromHome(<?php echo (int)$row['id']; ?>)"
+>
+    Add to Cart
+</button>
                                 <?php else: ?>
                                     <button type="button" class="small-btn dark" disabled style="opacity:0.65; cursor:not-allowed;">
                                         Sold
@@ -178,12 +178,12 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
 
                                 <?php if ($row['status'] !== 'sold'): ?>
                                     <button
-                                        type="button"
-                                        class="small-btn dark add-to-cart-btn"
-                                        data-id="<?php echo (int)$row['id']; ?>"
-                                    >
-                                        Add to Cart
-                                    </button>
+    type="button"
+    class="small-btn dark"
+    onclick="addToCartFromHome(<?php echo (int)$row['id']; ?>)"
+>
+    Add to Cart
+</button>
                                 <?php else: ?>
                                     <button type="button" class="small-btn dark" disabled style="opacity:0.65; cursor:not-allowed;">
                                         Sold
@@ -246,75 +246,60 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
 <script src="js/script.js"></script>
 
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-    const buttons = document.querySelectorAll(".add-to-cart-btn");
+function addToCartFromHome(productId) {
+    fetch("ajax_add_to_cart.php", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: "product_id=" + encodeURIComponent(productId)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === "success") {
+            const cart = document.getElementById("floatingCart");
+            const toast = document.getElementById("cartAddedToast");
 
-    buttons.forEach(function (btn) {
-        btn.addEventListener("click", function (e) {
-            e.preventDefault();
+            if (cart) {
+                let badge = cart.querySelector(".cart-count-badge");
 
-            const productId = this.getAttribute("data-id");
-            const clickedButton = this;
+                cart.classList.add("cart-active");
+                cart.classList.add("cart-bounce");
 
-            clickedButton.disabled = true;
+                setTimeout(() => {
+                    cart.classList.remove("cart-bounce");
+                }, 800);
 
-            fetch("ajax_add_to_cart.php", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded"
-                },
-                body: "product_id=" + encodeURIComponent(productId)
-            })
-            .then(function (response) {
-                return response.json();
-            })
-            .then(function (data) {
-                clickedButton.disabled = false;
-
-                if (data.status === "success") {
-                    const cart = document.getElementById("floatingCart");
-                    const toast = document.getElementById("cartAddedToast");
-                    const badge = document.querySelector(".cart-count-badge");
-
-                    if (cart) {
-                        cart.classList.add("cart-active");
-                        cart.classList.add("cart-bounce");
-
-                        setTimeout(function () {
-                            cart.classList.remove("cart-bounce");
-                        }, 800);
+                if (typeof data.cart_count !== "undefined") {
+                    if (badge) {
+                        badge.textContent = data.cart_count;
+                    } else {
+                        badge = document.createElement("span");
+                        badge.className = "cart-count-badge";
+                        badge.textContent = data.cart_count;
+                        cart.appendChild(badge);
                     }
-
-                    if (toast) {
-                        toast.textContent = data.message || "Added to cart";
-                        toast.classList.add("show");
-
-                        setTimeout(function () {
-                            toast.classList.remove("show");
-                        }, 1800);
-                    }
-
-                    if (typeof data.cart_count !== "undefined") {
-                        if (badge) {
-                            badge.textContent = data.cart_count;
-                        } else if (cart) {
-                            const newBadge = document.createElement("span");
-                            newBadge.className = "cart-count-badge";
-                            newBadge.textContent = data.cart_count;
-                            cart.appendChild(newBadge);
-                        }
-                    }
-                } else {
-                    alert(data.message || "Could not add to cart.");
                 }
-            })
-            .catch(function () {
-                clickedButton.disabled = false;
-                alert("Something went wrong while adding to cart.");
-            });
-        });
+            }
+
+            if (toast) {
+                toast.textContent = data.message || "Added to cart";
+                toast.classList.add("show");
+
+                setTimeout(() => {
+                    toast.classList.remove("show");
+                }, 1800);
+            } else {
+                alert(data.message || "Added to cart");
+            }
+        } else {
+            alert(data.message || "Could not add to cart.");
+        }
+    })
+    .catch(() => {
+        alert("Something went wrong while adding to cart.");
     });
-});
+}
 </script>
 
 </body>

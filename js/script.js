@@ -29,69 +29,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // ADD TO CART (ALL PAGES)
-    document.addEventListener("click", function (e) {
-        const button = e.target.closest(".add-to-cart-btn");
-
-        if (!button) return;
-
-        e.preventDefault();
-
-        const productId = button.getAttribute("data-id");
-
-        if (!productId) {
-            showToast("Invalid product");
-            return;
-        }
-
-        button.disabled = true;
-
-        fetch("ajax_add_to_cart.php", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded"
-            },
-            body: "product_id=" + encodeURIComponent(productId)
-        })
-        .then(res => res.json())
-        .then(data => {
-            button.disabled = false;
-
-            if (data.status === "success") {
-                const cart = document.getElementById("floatingCart");
-                const toast = document.getElementById("cartAddedToast");
-
-                if (cart) {
-                    cart.classList.add("cart-active");
-                    cart.classList.add("cart-bounce");
-
-                    setTimeout(() => {
-                        cart.classList.remove("cart-bounce");
-                    }, 700);
-
-                    updateCartBadge(data.cart_count);
-                }
-
-                if (toast) {
-                    toast.textContent = data.message || "Added to cart";
-                    toast.classList.add("show");
-
-                    setTimeout(() => {
-                        toast.classList.remove("show");
-                    }, 1800);
-                } else {
-                    showToast(data.message || "Added to cart");
-                }
-            } else {
-                showToast(data.message || "Could not add to cart");
-            }
-        })
-        .catch(() => {
-            button.disabled = false;
-            showToast("Something went wrong");
-        });
-    });
-
 });
 
 function updateCartBadge(count) {
