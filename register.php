@@ -134,6 +134,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <div class="form-group">
                 <label>Email Address</label>
                 <input type="email" name="email" placeholder="Enter your email" required>
+                 <small class="helper">
+                    Please enter your active email address. A verification OTP will be sent to this email after registration.
+                </small>
             </div>
 
             <div class="form-group">
