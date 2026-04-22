@@ -1,59 +1,10 @@
 <?php
 session_start();
 include "config/db.php";
+include "includes/search_helper.php";
 
 $search = isset($_GET['search']) ? trim($_GET['search']) : "";
 $categoryId = isset($_GET['category_id']) ? (int)$_GET['category_id'] : 0;
-
-$success = "";
-$error = "";
-$triggerCartAnimation = false;
-$userId = 0;
-
-if (isset($_SESSION['user'])) {
-    $userEmail = $_SESSION['user'];
-    $safeEmail = $conn->real_escape_string($userEmail);
-    $userRes = $conn->query("SELECT id FROM users WHERE email='$safeEmail' LIMIT 1");
-    $userRow = $userRes ? $userRes->fetch_assoc() : null;
-
-    if ($userRow) {
-        $userId = (int)$userRow['id'];
-    }
-}
-
-/* Direct add to cart from product card */
-if (isset($_POST['add_to_cart_card'])) {
-    if (!isset($_SESSION['user'])) {
-        header("Location: login.php");
-        exit();
-    }
-
-    $productId = (int)$_POST['product_id'];
-    $productCheck = $conn->query("SELECT * FROM products WHERE id=$productId LIMIT 1");
-    $productData = $productCheck ? $productCheck->fetch_assoc() : null;
-
-    if (!$productData) {
-        $error = "Product not found.";
-    } elseif ($productData['status'] === 'sold') {
-        $error = "This item has already been marked as sold.";
-    } elseif ($userId <= 0) {
-        $error = "User not found.";
-    } else {
-        $existingCheck = $conn->query("SELECT * FROM cart WHERE user_id=$userId AND product_id=$productId LIMIT 1");
-
-        if ($existingCheck && $existingCheck->num_rows > 0) {
-            $existing = $existingCheck->fetch_assoc();
-            $newQty = (int)$existing['quantity'] + 1;
-            $cartId = (int)$existing['id'];
-            $conn->query("UPDATE cart SET quantity=$newQty WHERE id=$cartId");
-        } else {
-            $conn->query("INSERT INTO cart (user_id, product_id, quantity) VALUES ($userId, $productId, 1)");
-        }
-
-        $success = "Product added to cart successfully.";
-        $triggerCartAnimation = true;
-    }
-}
 
 $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
 
@@ -64,24 +15,31 @@ $sql = "
     WHERE 1=1
 ";
 
-if ($search !== "") {
-    $safeSearch = $conn->real_escape_string($search);
-    $sql .= " AND (
-        p.name LIKE '%$safeSearch%' OR
-        p.city LIKE '%$safeSearch%' OR
-        c.name LIKE '%$safeSearch%' OR
-        p.seller_email LIKE '%$safeSearch%' OR
-        p.description LIKE '%$safeSearch%' OR
-        p.product_condition LIKE '%$safeSearch%'
-    )";
-}
-
 if ($categoryId > 0) {
     $sql .= " AND p.category_id = $categoryId";
 }
 
 $sql .= " ORDER BY p.id DESC";
+
 $result = $conn->query($sql);
+
+$products = [];
+
+if ($result) {
+    while ($row = $result->fetch_assoc()) {
+        $products[] = $row;
+    }
+}
+
+if ($search !== "") {
+    $products = sortProductsBySearchScore($search, $products);
+
+    $products = array_filter($products, function ($product) {
+        return ($product['search_score'] ?? 0) >= 15;
+    });
+
+    $products = array_values($products);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -90,6 +48,40 @@ $result = $conn->query($sql);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Products - TradeSphere</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .search-box-wrap{
+            position: relative;
+            width: 100%;
+        }
+
+        .search-suggestions{
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1px solid #d1d5db;
+            border-radius: 14px;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.10);
+            z-index: 999;
+            display: none;
+            overflow: hidden;
+        }
+
+        .suggestion-item{
+            display: block;
+            padding: 12px 14px;
+            text-decoration: none;
+            color: #111827;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .suggestion-item:last-child{ border-bottom:none; }
+        .suggestion-item:hover{ background:#f8fafc; }
+        .suggestion-item strong{ display:block; margin-bottom:4px; }
+        .suggestion-item small{ color:#64748b; }
+        .no-suggestion{ padding:12px 14px; color:#64748b; }
+    </style>
 </head>
 <body>
 
@@ -99,26 +91,23 @@ $result = $conn->query($sql);
     <div class="container">
         <h1 class="section-title">Explore Products</h1>
         <p class="section-subtitle">
-            Search products by name, city, category, seller, description, or condition.
+            Search by product name, description, category, city, condition, or seller information.
         </p>
 
-        <?php if ($success): ?>
-            <div class="success-msg"><?php echo $success; ?></div>
-        <?php endif; ?>
-
-        <?php if ($error): ?>
-            <div class="error-msg"><?php echo $error; ?></div>
-        <?php endif; ?>
-
         <div class="search-filter-box">
-            <form method="GET" action="products.php" class="search-form">
+            <form method="GET" action="products.php" class="search-form" id="browseSearchForm">
                 <div class="search-group">
-                    <input
-                        type="text"
-                        name="search"
-                        placeholder="Search products, city, seller, or category..."
-                        value="<?php echo htmlspecialchars($search); ?>"
-                    >
+                    <div class="search-box-wrap">
+                        <input
+                            type="text"
+                            id="searchInput"
+                            name="search"
+                            placeholder="Search products..."
+                            value="<?php echo htmlspecialchars($search); ?>"
+                            autocomplete="off"
+                        >
+                        <div id="searchSuggestions" class="search-suggestions"></div>
+                    </div>
                 </div>
 
                 <div class="search-group">
@@ -139,9 +128,9 @@ $result = $conn->query($sql);
             </form>
         </div>
 
-        <?php if ($result && $result->num_rows > 0): ?>
+        <?php if (!empty($products)): ?>
             <div class="products-grid">
-                <?php while ($row = $result->fetch_assoc()): ?>
+                <?php foreach ($products as $row): ?>
                     <div class="product-card">
                         <div class="product-image-wrap">
                             <img src="uploads/<?php echo htmlspecialchars($row['image']); ?>" alt="Product Image">
@@ -152,34 +141,30 @@ $result = $conn->query($sql);
 
                         <div class="product-body">
                             <h3><?php echo htmlspecialchars($row['name']); ?></h3>
-                            <p class="price">Rs <?php echo htmlspecialchars($row['price']); ?></p>
+                            <p class="price">Rs <?php echo number_format((float)$row['price'], 2); ?></p>
                             <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category_name']); ?></p>
                             <p class="meta"><strong>Condition:</strong> <?php echo htmlspecialchars($row['product_condition']); ?></p>
                             <p class="meta"><strong>City:</strong> <?php echo htmlspecialchars($row['city']); ?></p>
-                            <p class="meta"><strong>Seller:</strong> <?php echo htmlspecialchars($row['seller_email']); ?></p>
-
-                            <?php
-                            $desc = $row['description'];
-                            if (strlen($desc) > 70) {
-                                $desc = substr($desc, 0, 70) . "...";
-                            }
-                            ?>
-                            <p class="meta"><strong>Description:</strong> <?php echo htmlspecialchars($desc); ?></p>
+                            <p class="meta"><strong>Status:</strong> <?php echo htmlspecialchars(ucfirst($row['status'])); ?></p>
 
                             <div class="product-actions" style="display:flex; gap:10px; flex-wrap:wrap;">
-                                <a href="product_details.php?id=<?php echo $row['id']; ?>" class="small-btn primary">View Details</a>
+                                <a href="product_details.php?id=<?php echo (int)$row['id']; ?>" class="small-btn primary">View Details</a>
 
                                 <?php if ($row['status'] !== 'sold'): ?>
-                                   <button class="small-btn dark add-to-cart-btn" data-id="<?php echo $row['id']; ?>">
-    Add to Cart
-</button>
-                                <?php else: ?>
-                                    <button type="button" class="small-btn dark" disabled style="opacity:0.65; cursor:not-allowed;">Sold</button>
-                                <?php endif; ?>
+    <button
+        type="button"
+        class="small-btn dark"
+        onclick="addToCartFromBrowse(<?php echo (int)$row['id']; ?>)"
+    >
+        Add to Cart
+    </button>
+<?php else: ?>
+    <button type="button" class="small-btn dark" disabled style="opacity:0.65; cursor:not-allowed;">Sold</button>
+<?php endif; ?>
                             </div>
                         </div>
                     </div>
-                <?php endwhile; ?>
+                <?php endforeach; ?>
             </div>
         <?php else: ?>
             <p class="empty-state">No matching products found.</p>
@@ -191,28 +176,121 @@ $result = $conn->query($sql);
 
 <script src="js/script.js"></script>
 
-<?php if ($triggerCartAnimation): ?>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    const cart = document.getElementById("floatingCart");
-    const toast = document.getElementById("cartAddedToast");
+    const input = document.getElementById("searchInput");
+    const suggestionsBox = document.getElementById("searchSuggestions");
+    const form = document.getElementById("browseSearchForm");
 
-    if (cart) {
-        cart.classList.add("cart-bounce");
-        setTimeout(() => {
-            cart.classList.remove("cart-bounce");
-        }, 800);
-    }
+    if (!input || !suggestionsBox) return;
 
-    if (toast) {
-        toast.classList.add("show");
-        setTimeout(() => {
-            toast.classList.remove("show");
-        }, 1800);
-    }
+    input.addEventListener("keyup", function () {
+        const term = input.value.trim();
+
+        if (term.length === 0) {
+            suggestionsBox.innerHTML = "";
+            suggestionsBox.style.display = "none";
+            return;
+        }
+
+        fetch("ajax_search_suggestions.php?term=" + encodeURIComponent(term))
+            .then(response => response.json())
+            .then(data => {
+                if (!Array.isArray(data) || data.length === 0) {
+                    suggestionsBox.innerHTML = "<div class='no-suggestion'>No suggestions found</div>";
+                    suggestionsBox.style.display = "block";
+                    return;
+                }
+
+                let html = "";
+
+                data.forEach(item => {
+                    html += `
+                        <a href="products.php?search=${encodeURIComponent(item.name)}" class="suggestion-item">
+                            <strong>${item.name}</strong>
+                            <small>${item.category ? item.category : "Suggested result"}</small>
+                        </a>
+                    `;
+                });
+
+                suggestionsBox.innerHTML = html;
+                suggestionsBox.style.display = "block";
+            })
+            .catch(() => {
+                suggestionsBox.innerHTML = "";
+                suggestionsBox.style.display = "none";
+            });
+    });
+
+    input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+            suggestionsBox.style.display = "none";
+            form.submit();
+        }
+    });
+
+    document.addEventListener("click", function (e) {
+        if (!e.target.closest(".search-box-wrap")) {
+            suggestionsBox.style.display = "none";
+        }
+    });
 });
 </script>
-<?php endif; ?>
+<script>
+function addToCartFromBrowse(productId) {
+    fetch("ajax_add_to_cart.php", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: "product_id=" + encodeURIComponent(productId)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === "success") {
+            const cart = document.getElementById("floatingCart");
+            const toast = document.getElementById("cartAddedToast");
 
+            if (cart) {
+                let badge = cart.querySelector(".cart-count-badge");
+
+                cart.classList.add("cart-active");
+                cart.classList.add("cart-bounce");
+
+                setTimeout(() => {
+                    cart.classList.remove("cart-bounce");
+                }, 800);
+
+                if (typeof data.cart_count !== "undefined") {
+                    if (badge) {
+                        badge.textContent = data.cart_count;
+                    } else {
+                        badge = document.createElement("span");
+                        badge.className = "cart-count-badge";
+                        badge.textContent = data.cart_count;
+                        cart.appendChild(badge);
+                    }
+                }
+            }
+
+            if (toast) {
+                toast.textContent = data.message || "Added to cart";
+                toast.classList.add("show");
+
+                setTimeout(() => {
+                    toast.classList.remove("show");
+                }, 1800);
+            } else {
+                alert(data.message || "Added to cart");
+            }
+        } else {
+            alert(data.message || "Could not add to cart.");
+        }
+    })
+    .catch(() => {
+        alert("Something went wrong while adding to cart.");
+    });
+}
+</script>
 </body>
 </html>
