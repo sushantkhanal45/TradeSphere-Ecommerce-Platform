@@ -1128,3 +1128,119 @@ footer{
     font-size: 14px;
     line-height: 1.5;
 }
+
+.wishlist-btn{
+    border: none;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    display: inline-block;
+    cursor: pointer;
+    background: #fee2e2;
+    color: #b91c1c;
+    transition: 0.2s ease;
+}
+
+.wishlist-btn:hover{
+    background: #fecaca;
+}
+
+.wishlist-btn.active{
+    background: #ef4444;
+    color: #fff;
+}
+
+.floating-wishlist{
+    position: fixed;
+    top: 180px;
+    right: 24px;
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    background: #7f1d1d;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-size: 28px;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.25);
+    z-index: 1200;
+    transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+
+.floating-wishlist:hover{
+    transform: translateY(-3px) scale(1.06);
+    background: #991b1b;
+    color: white;
+}
+
+.wishlist-count-badge{
+    position: absolute;
+    top: -8px;
+    right: -6px;
+    min-width: 30px;
+    height: 30px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: #ef4444;
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+    box-shadow: 0 8px 18px rgba(239,68,68,0.35);
+}
+
+.floating-wishlist.wishlist-active{
+    box-shadow:
+        0 0 0 6px rgba(127, 29, 29, 0.10),
+        0 0 22px rgba(239,68,68,0.22),
+        0 16px 38px rgba(0,0,0,0.30);
+}
+
+.wishlist-toast{
+    position: fixed;
+    top: 258px;
+    right: 24px;
+    background: #111827;
+    color: white;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+    z-index: 1201;
+    opacity: 0;
+    transform: translateY(-8px);
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.wishlist-toast.show{
+    opacity: 1;
+    transform: translateY(0);
+}
+
+@media (max-width: 768px){
+    .floating-wishlist{
+        top: 170px;
+        right: 14px;
+        width: 66px;
+        height: 66px;
+        font-size: 28px;
+    }
+
+    .wishlist-count-badge{
+        min-width: 24px;
+        height: 24px;
+        font-size: 11px;
+    }
+
+    .wishlist-toast{
+        top: 246px;
+        right: 14px;
+    }
+}

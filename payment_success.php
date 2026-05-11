@@ -46,6 +46,21 @@ if (!$user) {
 
 $userId = (int)$user['id'];
 
+/* If page is refreshed and session order IDs are missing, recover orders from payment_logs */
+if (empty($orderIds)) {
+    $logRes = $conn->query("
+        SELECT order_id
+        FROM payment_logs
+        WHERE transaction_uuid = '" . $conn->real_escape_string($transactionUuid) . "'
+    ");
+
+    if ($logRes) {
+        while ($logRow = $logRes->fetch_assoc()) {
+            $orderIds[] = (int)$logRow['order_id'];
+        }
+    }
+}
+
 $receiptItems = [];
 $grandTotal = 0;
 $buyerName = '';
@@ -90,15 +105,25 @@ if (!empty($orderIds)) {
             WHERE id=$orderId AND user_id=$userId
         ");
 
-        $conn->query("
-            INSERT INTO payment_logs (order_id, transaction_uuid, status, raw_response)
-            VALUES (
-                $orderId,
-                '" . $conn->real_escape_string($transactionUuid) . "',
-                'paid',
-                '" . $conn->real_escape_string($decodedJson) . "'
-            )
+        $existingLog = $conn->query("
+            SELECT id
+            FROM payment_logs
+            WHERE order_id = $orderId
+            AND transaction_uuid = '" . $conn->real_escape_string($transactionUuid) . "'
+            LIMIT 1
         ");
+
+        if (!$existingLog || $existingLog->num_rows === 0) {
+            $conn->query("
+                INSERT INTO payment_logs (order_id, transaction_uuid, status, raw_response)
+                VALUES (
+                    $orderId,
+                    '" . $conn->real_escape_string($transactionUuid) . "',
+                    'paid',
+                    '" . $conn->real_escape_string($decodedJson) . "'
+                )
+            ");
+        }
 
         $conn->query("
             DELETE FROM cart
@@ -121,6 +146,7 @@ if (!empty($orderIds)) {
             AND o.user_id = $userId
             LIMIT 1
         ");
+
         $updatedRow = $updatedRes ? $updatedRes->fetch_assoc() : null;
 
         if ($updatedRow) {
@@ -139,7 +165,11 @@ if (!empty($orderIds)) {
 
 $receiptNumber = "TS-" . strtoupper(substr(md5($transactionUuid), 0, 10));
 
-unset($_SESSION['checkout_order_ids'], $_SESSION['checkout_transaction_uuid'], $_SESSION['checkout_total_amount']);
+/*
+Do not unset immediately, because refreshing payment_success.php can make buyer details disappear.
+You can clear this later if needed.
+*/
+// unset($_SESSION['checkout_order_ids'], $_SESSION['checkout_transaction_uuid'], $_SESSION['checkout_total_amount']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -223,6 +253,7 @@ unset($_SESSION['checkout_order_ids'], $_SESSION['checkout_transaction_uuid'], $
     </style>
 </head>
 <body>
+
 <?php include "includes/navbar.php"; ?>
 
 <div class="page-wrap">
@@ -314,5 +345,7 @@ unset($_SESSION['checkout_order_ids'], $_SESSION['checkout_transaction_uuid'], $
 </div>
 
 <footer>© 2026 TradeSphere. All rights reserved.</footer>
+
+<script src="js/script.js"></script>
 </body>
 </html>

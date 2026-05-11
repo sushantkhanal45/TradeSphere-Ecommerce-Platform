@@ -12,7 +12,17 @@ if (!isset($_SESSION['user'])) {
     exit();
 }
 
+if (!isset($_POST['product_id'])) {
+    echo json_encode([
+        "status" => "error",
+        "message" => "Product ID missing."
+    ]);
+    exit();
+}
+
+$productId = (int)$_POST['product_id'];
 $userEmail = $conn->real_escape_string($_SESSION['user']);
+
 $userRes = $conn->query("SELECT id FROM users WHERE email='$userEmail' LIMIT 1");
 $user = $userRes ? $userRes->fetch_assoc() : null;
 
@@ -25,23 +35,27 @@ if (!$user) {
 }
 
 $userId = (int)$user['id'];
-$productId = isset($_POST['product_id']) ? (int)$_POST['product_id'] : 0;
 
-if ($productId <= 0) {
-    echo json_encode([
-        "status" => "error",
-        "message" => "Invalid product."
-    ]);
-    exit();
-}
-
-$productRes = $conn->query("SELECT * FROM products WHERE id = $productId LIMIT 1");
+$productRes = $conn->query("
+    SELECT id, user_id, status
+    FROM products
+    WHERE id = $productId
+    LIMIT 1
+");
 $product = $productRes ? $productRes->fetch_assoc() : null;
 
 if (!$product) {
     echo json_encode([
         "status" => "error",
         "message" => "Product not found."
+    ]);
+    exit();
+}
+
+if ((int)$product['user_id'] === $userId) {
+    echo json_encode([
+        "status" => "error",
+        "message" => "You cannot buy your own listing."
     ]);
     exit();
 }
@@ -57,7 +71,8 @@ if ($product['status'] === 'sold') {
 $cartCheck = $conn->query("
     SELECT id, quantity
     FROM cart
-    WHERE user_id = $userId AND product_id = $productId
+    WHERE user_id = $userId
+    AND product_id = $productId
     LIMIT 1
 ");
 
@@ -66,40 +81,28 @@ if ($cartCheck && $cartCheck->num_rows > 0) {
     $cartId = (int)$cartRow['id'];
     $newQty = (int)$cartRow['quantity'] + 1;
 
-    $updated = $conn->query("UPDATE cart SET quantity = $newQty WHERE id = $cartId");
-
-    if (!$updated) {
-        echo json_encode([
-            "status" => "error",
-            "message" => "Could not update cart."
-        ]);
-        exit();
-    }
+    $conn->query("
+        UPDATE cart
+        SET quantity = $newQty
+        WHERE id = $cartId
+    ");
 } else {
-    $inserted = $conn->query("
+    $conn->query("
         INSERT INTO cart (user_id, product_id, quantity)
         VALUES ($userId, $productId, 1)
     ");
-
-    if (!$inserted) {
-        echo json_encode([
-            "status" => "error",
-            "message" => "Could not add product to cart."
-        ]);
-        exit();
-    }
 }
 
-$totalCartRes = $conn->query("
-    SELECT COALESCE(SUM(quantity), 0) AS total_items
+$countRes = $conn->query("
+    SELECT SUM(quantity) AS total_items
     FROM cart
     WHERE user_id = $userId
 ");
-$totalCart = $totalCartRes ? (int)$totalCartRes->fetch_assoc()['total_items'] : 0;
+$countRow = $countRes ? $countRes->fetch_assoc() : ['total_items' => 0];
 
 echo json_encode([
     "status" => "success",
-    "message" => "Product added to cart.",
-    "cart_count" => $totalCart
+    "message" => "Added to cart",
+    "cart_count" => (int)($countRow['total_items'] ?? 0)
 ]);
 exit();

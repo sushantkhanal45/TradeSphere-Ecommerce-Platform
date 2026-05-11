@@ -1,495 +1,407 @@
 <?php
 
-if (!function_exists('ts_clean_text')) {
-    function ts_clean_text($text) {
-        $text = strtolower((string)$text);
-        $text = preg_replace('/[^a-z0-9\s]+/i', ' ', $text);
-        $text = preg_replace('/\s+/', ' ', $text);
-        return trim($text);
+function cleanWords($text) {
+    $text = strtolower($text);
+    $text = preg_replace('/[^a-z0-9\s]/', ' ', $text);
+    $words = explode(" ", $text);
+
+    $stopWords = [
+        "the", "and", "for", "with", "this", "that", "from", "you", "your",
+        "new", "old", "good", "very", "best", "item", "product", "used"
+    ];
+
+    $finalWords = [];
+
+    foreach ($words as $word) {
+        $word = trim($word);
+
+        if (strlen($word) >= 3 && !in_array($word, $stopWords)) {
+            $finalWords[] = $word;
+        }
     }
+
+    return array_unique($finalWords);
 }
 
-if (!function_exists('ts_tokenize')) {
-    function ts_tokenize($text) {
-        $text = ts_clean_text($text);
+function keywordSimilarityScore($baseText, $candidateText) {
+    $baseWords = cleanWords($baseText);
+    $candidateWords = cleanWords($candidateText);
 
-        if ($text === '') {
-            return [];
-        }
-
-        $stopWords = [
-            'the', 'and', 'for', 'with', 'this', 'that', 'from', 'have', 'has', 'had',
-            'are', 'was', 'were', 'you', 'your', 'our', 'their', 'its', 'in', 'on',
-            'at', 'to', 'of', 'a', 'an', 'is', 'it', 'be', 'as', 'by', 'or', 'if',
-            'but', 'not', 'new', 'old', 'very', 'good', 'nice', 'used'
-        ];
-
-        $parts = explode(' ', $text);
-        $tokens = [];
-
-        foreach ($parts as $word) {
-            $word = trim($word);
-
-            if ($word === '' || strlen($word) < 2) {
-                continue;
-            }
-
-            if (in_array($word, $stopWords, true)) {
-                continue;
-            }
-
-            $tokens[] = $word;
-        }
-
-        return $tokens;
+    if (empty($baseWords) || empty($candidateWords)) {
+        return 0;
     }
+
+    $matchCount = 0;
+
+    foreach ($baseWords as $word) {
+        if (in_array($word, $candidateWords)) {
+            $matchCount++;
+        }
+    }
+
+    return $matchCount * 10;
 }
 
-if (!function_exists('ts_build_product_text')) {
-    function ts_build_product_text($product) {
-        return implode(' ', [
-            $product['name'] ?? '',
-            $product['category_name'] ?? '',
-            $product['description'] ?? '',
-            $product['product_condition'] ?? '',
-            $product['city'] ?? ''
-        ]);
+function getPopularityData($conn) {
+    $wishlistCounts = [];
+    $orderCounts = [];
+
+    $wishlistRes = $conn->query("
+        SELECT product_id, COUNT(*) AS total
+        FROM wishlist
+        GROUP BY product_id
+    ");
+
+    if ($wishlistRes) {
+        while ($row = $wishlistRes->fetch_assoc()) {
+            $wishlistCounts[(int)$row['product_id']] = (int)$row['total'];
+        }
     }
+
+    $orderRes = $conn->query("
+        SELECT product_id, COUNT(*) AS total
+        FROM orders
+        WHERE payment_status = 'paid'
+        GROUP BY product_id
+    ");
+
+    if ($orderRes) {
+        while ($row = $orderRes->fetch_assoc()) {
+            $orderCounts[(int)$row['product_id']] = (int)$row['total'];
+        }
+    }
+
+    return [
+        "wishlist" => $wishlistCounts,
+        "orders" => $orderCounts
+    ];
 }
 
-if (!function_exists('ts_build_term_frequency')) {
-    function ts_build_term_frequency($tokens) {
-        $freq = [];
+function calculateRecommendationScore($baseProduct, $candidateProduct, $popularityData) {
+    $score = 0;
 
-        foreach ($tokens as $token) {
-            if (!isset($freq[$token])) {
-                $freq[$token] = 0;
-            }
+    $baseText = ($baseProduct['name'] ?? '') . " " . ($baseProduct['description'] ?? '');
+    $candidateText = ($candidateProduct['name'] ?? '') . " " . ($candidateProduct['description'] ?? '');
 
-            $freq[$token]++;
-        }
+    // 1. Keyword similarity
+    $score += keywordSimilarityScore($baseText, $candidateText);
 
-        return $freq;
+    // 2. Same category
+    if (
+        isset($baseProduct['category_id'], $candidateProduct['category_id']) &&
+        (int)$baseProduct['category_id'] === (int)$candidateProduct['category_id']
+    ) {
+        $score += 35;
     }
+
+    // 3. Same condition
+    if (
+        !empty($baseProduct['product_condition']) &&
+        !empty($candidateProduct['product_condition']) &&
+        strtolower($baseProduct['product_condition']) === strtolower($candidateProduct['product_condition'])
+    ) {
+        $score += 10;
+    }
+
+    // 4. Same city
+    if (
+        !empty($baseProduct['city']) &&
+        !empty($candidateProduct['city']) &&
+        strtolower($baseProduct['city']) === strtolower($candidateProduct['city'])
+    ) {
+        $score += 8;
+    }
+
+    // 5. Rating boost
+    $averageRating = isset($candidateProduct['average_rating']) ? (float)$candidateProduct['average_rating'] : 0;
+    $ratingCount = isset($candidateProduct['rating_count']) ? (int)$candidateProduct['rating_count'] : 0;
+
+    if ($ratingCount > 0) {
+        $score += ($averageRating * 6);
+        $score += min($ratingCount, 20);
+    }
+
+    // 6. Wishlist popularity
+    $candidateId = (int)$candidateProduct['id'];
+
+    if (isset($popularityData['wishlist'][$candidateId])) {
+        $score += min($popularityData['wishlist'][$candidateId], 10) * 2;
+    }
+
+    // 7. Purchase popularity
+    if (isset($popularityData['orders'][$candidateId])) {
+        $score += min($popularityData['orders'][$candidateId], 10) * 3;
+    }
+
+    return $score;
 }
 
-if (!function_exists('ts_build_document_frequency')) {
-    function ts_build_document_frequency($documents) {
-        $docFreq = [];
+function getRecommendationReason($baseProduct, $candidateProduct, $popularityData) {
+    $baseText = ($baseProduct['name'] ?? '') . " " . ($baseProduct['description'] ?? '');
+    $candidateText = ($candidateProduct['name'] ?? '') . " " . ($candidateProduct['description'] ?? '');
 
-        foreach ($documents as $docText) {
-            $tokens = array_unique(ts_tokenize($docText));
-
-            foreach ($tokens as $token) {
-                if (!isset($docFreq[$token])) {
-                    $docFreq[$token] = 0;
-                }
-
-                $docFreq[$token]++;
-            }
-        }
-
-        return $docFreq;
+    if (keywordSimilarityScore($baseText, $candidateText) >= 10) {
+        return "Similar to products you viewed";
     }
+
+    if (
+        isset($baseProduct['category_id'], $candidateProduct['category_id']) &&
+        (int)$baseProduct['category_id'] === (int)$candidateProduct['category_id']
+    ) {
+        return "Matches your preferred category";
+    }
+
+    if ((int)($candidateProduct['rating_count'] ?? 0) > 0) {
+        return "Recommended because of good ratings";
+    }
+
+    $candidateId = (int)$candidateProduct['id'];
+
+    if (isset($popularityData['wishlist'][$candidateId]) && $popularityData['wishlist'][$candidateId] > 0) {
+        return "Popular in wishlists";
+    }
+
+    if (isset($popularityData['orders'][$candidateId]) && $popularityData['orders'][$candidateId] > 0) {
+        return "Popular among buyers";
+    }
+
+    return "Recommended for you";
 }
 
-if (!function_exists('ts_build_tfidf_vector')) {
-    function ts_build_tfidf_vector($text, $documentFrequency, $totalDocuments) {
-        $tokens = ts_tokenize($text);
+function getUserRecommendedProducts($conn, $userId, $limit = 6) {
+    $userId = (int)$userId;
+    $seedProducts = [];
+    $seenProductIds = [];
 
-        if (empty($tokens)) {
-            return [];
-        }
-
-        $termFreq = ts_build_term_frequency($tokens);
-        $vector = [];
-
-        foreach ($termFreq as $term => $tf) {
-            $df = $documentFrequency[$term] ?? 0;
-            $idf = log(($totalDocuments + 1) / ($df + 1)) + 1;
-            $vector[$term] = $tf * $idf;
-        }
-
-        return $vector;
-    }
-}
-
-if (!function_exists('ts_cosine_similarity_vectors')) {
-    function ts_cosine_similarity_vectors($vecA, $vecB) {
-        if (empty($vecA) || empty($vecB)) {
-            return 0;
-        }
-
-        $allTerms = array_unique(array_merge(array_keys($vecA), array_keys($vecB)));
-
-        $dotProduct = 0;
-        $magA = 0;
-        $magB = 0;
-
-        foreach ($allTerms as $term) {
-            $a = $vecA[$term] ?? 0;
-            $b = $vecB[$term] ?? 0;
-
-            $dotProduct += ($a * $b);
-            $magA += ($a * $a);
-            $magB += ($b * $b);
-        }
-
-        if ($magA <= 0 || $magB <= 0) {
-            return 0;
-        }
-
-        return $dotProduct / (sqrt($magA) * sqrt($magB));
-    }
-}
-
-if (!function_exists('ts_fetch_all_available_products')) {
-    function ts_fetch_all_available_products($conn, $excludeProductIds = []) {
-        $excludeSql = '';
-
-        if (!empty($excludeProductIds)) {
-            $safeIds = array_map('intval', $excludeProductIds);
-            $excludeSql = " AND p.id NOT IN (" . implode(',', $safeIds) . ")";
-        }
-
-        $sql = "
+    // Viewed products
+    if ($userId > 0) {
+        $viewRes = $conn->query("
             SELECT p.*, c.name AS category_name
-            FROM products p
+            FROM product_views pv
+            INNER JOIN products p ON pv.product_id = p.id
             LEFT JOIN categories c ON p.category_id = c.id
-            WHERE p.status != 'sold'
-            $excludeSql
-            ORDER BY p.id DESC
-        ";
-
-        $result = $conn->query($sql);
-        $products = [];
-
-        if ($result) {
-            while ($row = $result->fetch_assoc()) {
-                $products[] = $row;
-            }
-        }
-
-        return $products;
-    }
-}
-
-if (!function_exists('ts_get_recommendation_reason')) {
-    function ts_get_recommendation_reason($baseProduct, $candidateProduct, $context = 'similar', $preferredCategoryScores = []) {
-        $baseCategory = (int)($baseProduct['category_id'] ?? 0);
-        $candidateCategory = (int)($candidateProduct['category_id'] ?? 0);
-
-        $baseCondition = strtolower(trim((string)($baseProduct['product_condition'] ?? '')));
-        $candidateCondition = strtolower(trim((string)($candidateProduct['product_condition'] ?? '')));
-
-        $baseCity = strtolower(trim((string)($baseProduct['city'] ?? '')));
-        $candidateCity = strtolower(trim((string)($candidateProduct['city'] ?? '')));
-
-        if ($context === 'home' && $candidateCategory > 0 && isset($preferredCategoryScores[$candidateCategory])) {
-            return "Because you viewed this category recently";
-        }
-
-        if ($baseCategory > 0 && $baseCategory === $candidateCategory && $baseCondition !== '' && $baseCondition === $candidateCondition) {
-            return "Similar category and condition";
-        }
-
-        if ($baseCategory > 0 && $baseCategory === $candidateCategory && $baseCity !== '' && $baseCity === $candidateCity) {
-            return "Similar category in your preferred location";
-        }
-
-        if ($baseCategory > 0 && $baseCategory === $candidateCategory) {
-            return "Similar category and description";
-        }
-
-        if ($baseCondition !== '' && $baseCondition === $candidateCondition) {
-            return "Matches your recent browsing";
-        }
-
-        if ($context === 'home') {
-            return "Based on your cart and order activity";
-        }
-
-        return "Similar to this product";
-    }
-}
-
-if (!function_exists('ts_similarity_score')) {
-    function ts_similarity_score($baseProduct, $candidateProduct, $documentFrequency = [], $totalDocuments = 1) {
-        $score = 0;
-
-        $baseCategory = (int)($baseProduct['category_id'] ?? 0);
-        $candCategory = (int)($candidateProduct['category_id'] ?? 0);
-
-        $baseCondition = strtolower(trim((string)($baseProduct['product_condition'] ?? '')));
-        $candCondition = strtolower(trim((string)($candidateProduct['product_condition'] ?? '')));
-
-        $baseCity = strtolower(trim((string)($baseProduct['city'] ?? '')));
-        $candCity = strtolower(trim((string)($candidateProduct['city'] ?? '')));
-
-        if ($baseCategory > 0 && $baseCategory === $candCategory) {
-            $score += 5;
-        }
-
-        if ($baseCondition !== '' && $baseCondition === $candCondition) {
-            $score += 2;
-        }
-
-        if ($baseCity !== '' && $baseCity === $candCity) {
-            $score += 1;
-        }
-
-        $baseText = ts_build_product_text($baseProduct);
-        $candidateText = ts_build_product_text($candidateProduct);
-
-        $baseVector = ts_build_tfidf_vector($baseText, $documentFrequency, $totalDocuments);
-        $candidateVector = ts_build_tfidf_vector($candidateText, $documentFrequency, $totalDocuments);
-
-        $cosine = ts_cosine_similarity_vectors($baseVector, $candidateVector);
-
-        $score += ($cosine * 12);
-
-        return $score;
-    }
-}
-
-if (!function_exists('getSimilarProducts')) {
-    function getSimilarProducts($conn, $productId, $limit = 4) {
-        $productId = (int)$productId;
-
-        $targetRes = $conn->query("
-            SELECT p.*, c.name AS category_name
-            FROM products p
-            LEFT JOIN categories c ON p.category_id = c.id
-            WHERE p.id = $productId
-            LIMIT 1
+            WHERE pv.user_id = $userId
+            ORDER BY pv.viewed_at DESC
+            LIMIT 8
         ");
 
-        if (!$targetRes || $targetRes->num_rows === 0) {
-            return [];
-        }
-
-        $targetProduct = $targetRes->fetch_assoc();
-        $allProducts = ts_fetch_all_available_products($conn, [$productId]);
-
-        $documents = [ts_build_product_text($targetProduct)];
-        foreach ($allProducts as $candidate) {
-            $documents[] = ts_build_product_text($candidate);
-        }
-
-        $documentFrequency = ts_build_document_frequency($documents);
-        $totalDocuments = count($documents);
-
-        $scored = [];
-
-        foreach ($allProducts as $candidate) {
-            $score = ts_similarity_score($targetProduct, $candidate, $documentFrequency, $totalDocuments);
-
-            if ($score > 0) {
-                $candidate['recommendation_score'] = $score;
-                $candidate['recommendation_reason'] = ts_get_recommendation_reason($targetProduct, $candidate, 'similar');
-                $scored[] = $candidate;
+        if ($viewRes) {
+            while ($row = $viewRes->fetch_assoc()) {
+                $seedProducts[] = $row;
+                $seenProductIds[] = (int)$row['id'];
             }
         }
 
-        usort($scored, function ($a, $b) {
-            if ($a['recommendation_score'] == $b['recommendation_score']) {
-                return (int)$b['id'] <=> (int)$a['id'];
-            }
-
-            return $b['recommendation_score'] <=> $a['recommendation_score'];
-        });
-
-        return array_slice($scored, 0, $limit);
-    }
-}
-
-if (!function_exists('getUserRecommendedProducts')) {
-    function getUserRecommendedProducts($conn, $userId, $limit = 6) {
-        $userId = (int)$userId;
-
-        if ($userId <= 0) {
-            $products = array_slice(ts_fetch_all_available_products($conn), 0, $limit);
-
-            foreach ($products as &$product) {
-                $product['recommendation_reason'] = "Popular available product";
-            }
-
-            return $products;
-        }
-
-        $seedProductIds = [];
-        $seenProductIds = [];
-        $preferredCategoryScores = [];
-
-        $orderRes = $conn->query("
-            SELECT product_id
-            FROM orders
-            WHERE user_id = $userId
-            ORDER BY id DESC
-            LIMIT 5
-        ");
-
-        if ($orderRes) {
-            while ($row = $orderRes->fetch_assoc()) {
-                $pid = (int)$row['product_id'];
-
-                if ($pid > 0) {
-                    $seedProductIds[] = $pid;
-                    $seenProductIds[] = $pid;
-                }
-            }
-        }
-
+        // Cart products
         $cartRes = $conn->query("
-            SELECT product_id
-            FROM cart
-            WHERE user_id = $userId
-            ORDER BY id DESC
+            SELECT p.*, c.name AS category_name
+            FROM cart ca
+            INNER JOIN products p ON ca.product_id = p.id
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE ca.user_id = $userId
+            ORDER BY ca.id DESC
             LIMIT 5
         ");
 
         if ($cartRes) {
             while ($row = $cartRes->fetch_assoc()) {
-                $pid = (int)$row['product_id'];
-
-                if ($pid > 0) {
-                    $seedProductIds[] = $pid;
-                    $seenProductIds[] = $pid;
-                }
+                $seedProducts[] = $row;
+                $seenProductIds[] = (int)$row['id'];
             }
         }
 
-        $viewRes = $conn->query("
-            SELECT product_id, category_id
-            FROM product_views
-            WHERE user_id = $userId
-            ORDER BY viewed_at DESC
-            LIMIT 10
+        // Ordered products
+        $orderRes = $conn->query("
+            SELECT p.*, c.name AS category_name
+            FROM orders o
+            INNER JOIN products p ON o.product_id = p.id
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE o.user_id = $userId
+            ORDER BY o.created_at DESC
+            LIMIT 5
         ");
 
-        if ($viewRes) {
-            $rank = 0;
-
-            while ($row = $viewRes->fetch_assoc()) {
-                $pid = (int)$row['product_id'];
-                $cid = (int)$row['category_id'];
-
-                if ($pid > 0) {
-                    $seedProductIds[] = $pid;
-                    $seenProductIds[] = $pid;
-                }
-
-                if ($cid > 0) {
-                    $weight = max(1, 5 - $rank);
-
-                    if (!isset($preferredCategoryScores[$cid])) {
-                        $preferredCategoryScores[$cid] = 0;
-                    }
-
-                    $preferredCategoryScores[$cid] += $weight;
-                }
-
-                $rank++;
+        if ($orderRes) {
+            while ($row = $orderRes->fetch_assoc()) {
+                $seedProducts[] = $row;
+                $seenProductIds[] = (int)$row['id'];
             }
         }
 
-        $seedProductIds = array_values(array_unique($seedProductIds));
-        $seenProductIds = array_values(array_unique($seenProductIds));
+        // Wishlist products
+        $wishRes = $conn->query("
+            SELECT p.*, c.name AS category_name
+            FROM wishlist w
+            INNER JOIN products p ON w.product_id = p.id
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE w.user_id = $userId
+            ORDER BY w.created_at DESC
+            LIMIT 5
+        ");
 
-        if (empty($seedProductIds) && empty($preferredCategoryScores)) {
-            $products = array_slice(ts_fetch_all_available_products($conn), 0, $limit);
-
-            foreach ($products as &$product) {
-                $product['recommendation_reason'] = "Recently available product";
-            }
-
-            return $products;
-        }
-
-        $seedProducts = [];
-
-        foreach ($seedProductIds as $seedId) {
-            $seedRes = $conn->query("
-                SELECT p.*, c.name AS category_name
-                FROM products p
-                LEFT JOIN categories c ON p.category_id = c.id
-                WHERE p.id = " . (int)$seedId . "
-                LIMIT 1
-            ");
-
-            if ($seedRes && $seedRes->num_rows > 0) {
-                $seedProducts[] = $seedRes->fetch_assoc();
+        if ($wishRes) {
+            while ($row = $wishRes->fetch_assoc()) {
+                $seedProducts[] = $row;
+                $seenProductIds[] = (int)$row['id'];
             }
         }
-
-        $candidates = ts_fetch_all_available_products($conn, $seenProductIds);
-
-        $documents = [];
-        foreach ($seedProducts as $seedProduct) {
-            $documents[] = ts_build_product_text($seedProduct);
-        }
-        foreach ($candidates as $candidate) {
-            $documents[] = ts_build_product_text($candidate);
-        }
-
-        $documentFrequency = ts_build_document_frequency($documents);
-        $totalDocuments = max(1, count($documents));
-
-        $scoredMap = [];
-
-        foreach ($candidates as $candidate) {
-            $totalScore = 0;
-            $candidateCategoryId = (int)($candidate['category_id'] ?? 0);
-            $bestSeedProduct = null;
-            $bestSeedScore = -1;
-
-            foreach ($seedProducts as $seedProduct) {
-                $seedScore = ts_similarity_score($seedProduct, $candidate, $documentFrequency, $totalDocuments);
-                $totalScore += $seedScore;
-
-                if ($seedScore > $bestSeedScore) {
-                    $bestSeedScore = $seedScore;
-                    $bestSeedProduct = $seedProduct;
-                }
-            }
-
-            if ($candidateCategoryId > 0 && isset($preferredCategoryScores[$candidateCategoryId])) {
-                $totalScore += $preferredCategoryScores[$candidateCategoryId];
-            }
-
-            if ($totalScore > 0) {
-                $candidate['recommendation_score'] = $totalScore;
-                $candidate['recommendation_reason'] = ts_get_recommendation_reason(
-                    $bestSeedProduct ?? [],
-                    $candidate,
-                    'home',
-                    $preferredCategoryScores
-                );
-                $scoredMap[$candidate['id']] = $candidate;
-            }
-        }
-
-        $scored = array_values($scoredMap);
-
-        usort($scored, function ($a, $b) {
-            if ($a['recommendation_score'] == $b['recommendation_score']) {
-                return (int)$b['id'] <=> (int)$a['id'];
-            }
-
-            return $b['recommendation_score'] <=> $a['recommendation_score'];
-        });
-
-        if (empty($scored)) {
-            $products = array_slice(ts_fetch_all_available_products($conn, $seenProductIds), 0, $limit);
-
-            foreach ($products as &$product) {
-                $product['recommendation_reason'] = "Recently available product";
-            }
-
-            return $products;
-        }
-
-        return array_slice($scored, 0, $limit);
     }
+
+    $excludeSql = "";
+
+    if (!empty($seenProductIds)) {
+        $safeIds = array_map('intval', array_unique($seenProductIds));
+        $excludeSql = " AND p.id NOT IN (" . implode(",", $safeIds) . ")";
+    }
+
+    if ($userId > 0) {
+        $excludeSql .= " AND p.user_id != $userId";
+    }
+
+    $candidateRes = $conn->query("
+        SELECT p.*, c.name AS category_name
+        FROM products p
+        LEFT JOIN categories c ON p.category_id = c.id
+        WHERE p.status != 'sold'
+        $excludeSql
+        ORDER BY p.id DESC
+    ");
+
+    $candidates = [];
+
+    if ($candidateRes) {
+        while ($row = $candidateRes->fetch_assoc()) {
+            $candidates[] = $row;
+        }
+    }
+
+    $popularityData = getPopularityData($conn);
+    $recommended = [];
+
+    // If user has no history, recommend by rating/popularity
+    if (empty($seedProducts)) {
+        foreach ($candidates as $candidate) {
+            $candidateId = (int)$candidate['id'];
+
+            $score = 0;
+
+            $avgRating = isset($candidate['average_rating']) ? (float)$candidate['average_rating'] : 0;
+            $ratingCount = isset($candidate['rating_count']) ? (int)$candidate['rating_count'] : 0;
+
+            if ($ratingCount > 0) {
+                $score += ($avgRating * 8);
+                $score += min($ratingCount, 20);
+            }
+
+            if (isset($popularityData['wishlist'][$candidateId])) {
+                $score += min($popularityData['wishlist'][$candidateId], 10) * 2;
+            }
+
+            if (isset($popularityData['orders'][$candidateId])) {
+                $score += min($popularityData['orders'][$candidateId], 10) * 3;
+            }
+
+            $score += 1;
+
+            $candidate['recommendation_score'] = $score;
+            $candidate['recommendation_reason'] = "Popular and highly rated product";
+
+            $recommended[] = $candidate;
+        }
+    } else {
+        foreach ($candidates as $candidate) {
+            $bestScore = 0;
+            $bestBaseProduct = null;
+
+            foreach ($seedProducts as $baseProduct) {
+                $score = calculateRecommendationScore($baseProduct, $candidate, $popularityData);
+
+                if ($score > $bestScore) {
+                    $bestScore = $score;
+                    $bestBaseProduct = $baseProduct;
+                }
+            }
+
+            if ($bestScore > 0) {
+                $candidate['recommendation_score'] = $bestScore;
+                $candidate['recommendation_reason'] = getRecommendationReason(
+                    $bestBaseProduct,
+                    $candidate,
+                    $popularityData
+                );
+
+                $recommended[] = $candidate;
+            }
+        }
+    }
+
+    usort($recommended, function ($a, $b) {
+        if ($a['recommendation_score'] == $b['recommendation_score']) {
+            return (int)$b['id'] <=> (int)$a['id'];
+        }
+
+        return $b['recommendation_score'] <=> $a['recommendation_score'];
+    });
+
+    return array_slice($recommended, 0, $limit);
+}
+
+function getSimilarProducts($conn, $productId, $limit = 4) {
+    $productId = (int)$productId;
+
+    $targetRes = $conn->query("
+        SELECT p.*, c.name AS category_name
+        FROM products p
+        LEFT JOIN categories c ON p.category_id = c.id
+        WHERE p.id = $productId
+        LIMIT 1
+    ");
+
+    if (!$targetRes || $targetRes->num_rows === 0) {
+        return [];
+    }
+
+    $targetProduct = $targetRes->fetch_assoc();
+
+    $candidateRes = $conn->query("
+        SELECT p.*, c.name AS category_name
+        FROM products p
+        LEFT JOIN categories c ON p.category_id = c.id
+        WHERE p.status != 'sold'
+        AND p.id != $productId
+        AND p.user_id != " . (int)$targetProduct['user_id'] . "
+        ORDER BY p.id DESC
+    ");
+
+    $candidates = [];
+
+    if ($candidateRes) {
+        while ($row = $candidateRes->fetch_assoc()) {
+            $candidates[] = $row;
+        }
+    }
+
+    $popularityData = getPopularityData($conn);
+    $similar = [];
+
+    foreach ($candidates as $candidate) {
+        $score = calculateRecommendationScore($targetProduct, $candidate, $popularityData);
+
+        if ($score > 0) {
+            $candidate['recommendation_score'] = $score;
+            $candidate['recommendation_reason'] = getRecommendationReason($targetProduct, $candidate, $popularityData);
+            $similar[] = $candidate;
+        }
+    }
+
+    usort($similar, function ($a, $b) {
+        if ($a['recommendation_score'] == $b['recommendation_score']) {
+            return (int)$b['id'] <=> (int)$a['id'];
+        }
+
+        return $b['recommendation_score'] <=> $a['recommendation_score'];
+    });
+
+    return array_slice($similar, 0, $limit);
 }
 ?>

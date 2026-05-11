@@ -26,7 +26,6 @@ if (isset($_SESSION['user'])) {
         $navCartRow = $navCartRes ? $navCartRes->fetch_assoc() : null;
         $navCartCount = ($navCartRow && $navCartRow['total_items']) ? (int)$navCartRow['total_items'] : 0;
 
-        /* Active seller orders = paid + not yet buyer confirmed */
         $sellerOrderCountRes = $conn->query("
             SELECT COUNT(*) AS total
             FROM orders
@@ -36,7 +35,6 @@ if (isset($_SESSION['user'])) {
         ");
         $sellerOrderCount = $sellerOrderCountRes ? (int)$sellerOrderCountRes->fetch_assoc()['total'] : 0;
 
-        /* New uncleared seller alerts for home/profile awareness */
         $sellerNewOrderCountRes = $conn->query("
             SELECT COUNT(*) AS total
             FROM orders
@@ -75,6 +73,7 @@ $firstLetter = $navUser ? strtoupper(substr($navUser['name'], 0, 1)) : "U";
 
                     <div class="profile-dropdown" id="profileDropdown">
                         <a href="profile.php">My Profile</a>
+                        <a href="profile.php#wishlist">My Wishlist</a>
                         <a href="profile.php#purchases">My Purchases</a>
 
                         <a href="profile.php#orders_received" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">

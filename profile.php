@@ -21,6 +21,30 @@ $success = "";
 $error = "";
 $highlightOrderId = 0;
 $highlightMessage = "";
+$openRatingModalOrderId = 0;
+
+/* Clear all wishlist items */
+if (isset($_POST['clear_all_wishlist'])) {
+    $clearWishlist = $conn->query("DELETE FROM wishlist WHERE user_id = $userId");
+
+    if ($clearWishlist) {
+        header("Location: profile.php#wishlist");
+        exit();
+    } else {
+        $error = "Could not clear wishlist.";
+    }
+}
+
+/* Remove wishlist item */
+if (isset($_POST['remove_wishlist_item'])) {
+    $productId = (int)$_POST['product_id'];
+
+    if ($conn->query("DELETE FROM wishlist WHERE user_id = $userId AND product_id = $productId")) {
+        $success = "Item removed from wishlist.";
+    } else {
+        $error = "Could not remove item from wishlist.";
+    }
+}
 
 /* Toggle product status */
 if (isset($_POST['toggle_status'])) {
@@ -216,6 +240,7 @@ if (isset($_POST['confirm_received'])) {
             $success = "Order marked as received successfully.";
             $highlightOrderId = $orderId;
             $highlightMessage = "Buyer confirmed received";
+            $openRatingModalOrderId = $orderId;
         } else {
             $error = "Could not confirm receipt for this order.";
         }
@@ -249,6 +274,30 @@ $cartItems = $cartItemsRes ? (int)($cartItemsRes->fetch_assoc()['total'] ?? 0) :
 $totalPurchasesRes = $conn->query("SELECT COUNT(*) AS total FROM orders WHERE user_id=$userId AND payment_status='paid'");
 $totalPurchases = $totalPurchasesRes ? (int)$totalPurchasesRes->fetch_assoc()['total'] : 0;
 
+$wishlistCountRes = $conn->query("SELECT COUNT(*) AS total FROM wishlist WHERE user_id = $userId");
+$wishlistCount = $wishlistCountRes ? (int)$wishlistCountRes->fetch_assoc()['total'] : 0;
+
+$myRatings = [];
+$ratingRes = $conn->query("
+    SELECT order_id, rating, review_text
+    FROM product_ratings
+    WHERE buyer_user_id = $userId
+");
+if ($ratingRes) {
+    while ($r = $ratingRes->fetch_assoc()) {
+        $myRatings[(int)$r['order_id']] = $r;
+    }
+}
+
+$myWishlist = $conn->query("
+    SELECT p.*, c.name AS category_name
+    FROM wishlist w
+    INNER JOIN products p ON w.product_id = p.id
+    LEFT JOIN categories c ON p.category_id = c.id
+    WHERE w.user_id = $userId
+    ORDER BY w.created_at DESC
+");
+
 $myListings = $conn->query("
     SELECT p.*, c.name AS category_name
     FROM products p
@@ -263,7 +312,9 @@ $myPurchases = $conn->query("
         p.name AS product_name,
         p.image AS product_image,
         p.seller_email,
-        p.contact_number
+        p.contact_number,
+        p.average_rating,
+        p.rating_count
     FROM orders o
     INNER JOIN products p ON o.product_id = p.id
     WHERE o.user_id = $userId
@@ -304,21 +355,9 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
     <title>My Profile - TradeSphere</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        .seller-card{
-            position: relative;
-        }
-
-        .seller-card .product-image-wrap{
-            position: relative;
-            overflow: visible;
-        }
-
-        .card-menu{
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            z-index: 999;
-        }
+        .seller-card{ position: relative; }
+        .seller-card .product-image-wrap{ position: relative; overflow: visible; }
+        .card-menu{ position: absolute; top: 12px; right: 12px; z-index: 999; }
 
         .card-menu-btn{
             width: 40px;
@@ -332,10 +371,7 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
             box-shadow: 0 8px 20px rgba(0,0,0,0.18);
         }
 
-        .card-menu-btn:hover{
-            background: #38bdf8;
-            color: #062033;
-        }
+        .card-menu-btn:hover{ background: #38bdf8; color: #062033; }
 
         .card-menu-dropdown{
             display: none;
@@ -365,9 +401,7 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
         }
 
         .card-menu-dropdown a:hover,
-        .menu-action-btn:hover{
-            background: #f3f4f6;
-        }
+        .menu-action-btn:hover{ background: #f3f4f6; }
 
         .purchase-badge{
             display: inline-block;
@@ -422,34 +456,156 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
             box-shadow: 0 10px 25px rgba(5, 150, 105, 0.25);
         }
 
+        .wishlist-heading-row{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .clear-wishlist-btn{
+            border: none;
+            padding: 10px 16px;
+            border-radius: 10px;
+            background: #dc2626;
+            color: white;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .clear-wishlist-btn:hover{ background: #b91c1c; }
+
+        .wishlist-remove-btn{
+            border: none;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .wishlist-remove-btn:hover{ background: #fecaca; }
+
+        .rating-box{
+            margin-top: 14px;
+            padding: 14px;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            background: #fafafa;
+        }
+
+        .rating-stars-line{
+            color:#f59e0b;
+            font-weight:700;
+            margin-bottom:6px;
+        }
+
+        .rating-modal-overlay{
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.65);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            padding: 20px;
+        }
+
+        .rating-modal-overlay.show{ display: flex; }
+
+        .rating-modal{
+            width: 100%;
+            max-width: 430px;
+            background: white;
+            border-radius: 22px;
+            padding: 28px;
+            position: relative;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.28);
+            animation: modalPop 0.25s ease;
+        }
+
+        .rating-modal h2{
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .rating-modal-product{
+            text-align: center;
+            color: #6b7280;
+            margin-bottom: 18px;
+        }
+
+        .rating-modal-close{
+            position: absolute;
+            top: 12px;
+            right: 14px;
+            border: none;
+            background: #f3f4f6;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            font-size: 22px;
+            cursor: pointer;
+        }
+
+        .star-select{
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 18px;
+        }
+
+        .star-select button{
+            border: none;
+            background: transparent;
+            font-size: 36px;
+            color: #d1d5db;
+            cursor: pointer;
+            transition: 0.2s ease;
+        }
+
+        .star-select button.active,
+        .star-select button:hover{
+            color: #f59e0b;
+            transform: scale(1.08);
+        }
+
+        .rating-modal textarea{
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid #d1d5db;
+            resize: vertical;
+        }
+
         @keyframes fadePop {
-            0% {
-                opacity: 0;
-                transform: translateY(-8px) scale(0.96);
-            }
-            10% {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-            80% {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-            100% {
-                opacity: 0;
-                transform: translateY(-8px) scale(0.98);
-            }
+            0% { opacity: 0; transform: translateY(-8px) scale(0.96); }
+            10% { opacity: 1; transform: translateY(0) scale(1); }
+            80% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-8px) scale(0.98); }
+        }
+
+        @keyframes modalPop{
+            from{ opacity: 0; transform: translateY(12px) scale(0.96); }
+            to{ opacity: 1; transform: translateY(0) scale(1); }
         }
 
         @media (max-width: 992px){
-            .profile-grid{
-                grid-template-columns: repeat(2, minmax(0,1fr)) !important;
-            }
+            .profile-grid{ grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
         }
 
         @media (max-width: 768px){
-            .profile-grid{
-                grid-template-columns: 1fr !important;
+            .profile-grid{ grid-template-columns: 1fr !important; }
+        }
+
+        @media (max-width: 600px){
+            .wishlist-heading-row{
+                align-items: flex-start;
+                flex-direction: column;
             }
         }
     </style>
@@ -484,40 +640,87 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
         <div class="profile-section-card">
             <h2 class="section-title" style="text-align:left; margin-bottom:20px;">Account Overview</h2>
 
-            <div class="profile-grid" style="grid-template-columns: repeat(6, minmax(0,1fr));">
-                <div class="profile-stat">
-                    <h3>Total Listings</h3>
-                    <p><?php echo $totalListings; ?></p>
-                </div>
-
-                <div class="profile-stat">
-                    <h3>Marked Sold</h3>
-                    <p><?php echo $soldListings; ?></p>
-                </div>
-
-                <div class="profile-stat">
-                    <h3>Received Orders</h3>
-                    <p><?php echo $receivedOrdersCount; ?></p>
-                </div>
-
-                <div class="profile-stat">
-                    <h3>Completed Sales</h3>
-                    <p><?php echo $completedSales; ?></p>
-                </div>
-
-                <div class="profile-stat">
-                    <h3>Cart Items</h3>
-                    <p><?php echo $cartItems; ?></p>
-                </div>
-
-                <div class="profile-stat">
-                    <h3>Paid Purchases</h3>
-                    <p><?php echo $totalPurchases; ?></p>
-                </div>
+            <div class="profile-grid" style="grid-template-columns: repeat(7, minmax(0,1fr));">
+                <div class="profile-stat"><h3>Total Listings</h3><p><?php echo $totalListings; ?></p></div>
+                <div class="profile-stat"><h3>Marked Sold</h3><p><?php echo $soldListings; ?></p></div>
+                <div class="profile-stat"><h3>Received Orders</h3><p><?php echo $receivedOrdersCount; ?></p></div>
+                <div class="profile-stat"><h3>Completed Sales</h3><p><?php echo $completedSales; ?></p></div>
+                <div class="profile-stat"><h3>Cart Items</h3><p><?php echo $cartItems; ?></p></div>
+                <div class="profile-stat"><h3>Paid Purchases</h3><p><?php echo $totalPurchases; ?></p></div>
+                <div class="profile-stat"><h3>Wishlist Items</h3><p><?php echo $wishlistCount; ?></p></div>
             </div>
         </div>
 
-        <div class="profile-section-card" id="purchases">
+        <div class="profile-section-card" id="wishlist">
+            <div class="wishlist-heading-row">
+                <h2 class="section-title" style="text-align:left; margin-bottom:0;">My Wishlist</h2>
+
+                <?php if ($myWishlist && $myWishlist->num_rows > 0): ?>
+                    <form 
+                        method="POST" 
+                        action="profile.php#wishlist" 
+                        onsubmit="return confirm('Are you sure you want to clear all wishlist items?');"
+                        style="margin:0;"
+                    >
+                        <button type="submit" name="clear_all_wishlist" value="1" class="clear-wishlist-btn">
+                            Clear All
+                        </button>
+                    </form>
+                <?php endif; ?>
+            </div>
+
+            <?php if ($myWishlist && $myWishlist->num_rows > 0): ?>
+                <div class="products-grid">
+                    <?php while ($row = $myWishlist->fetch_assoc()): ?>
+                        <div class="product-card">
+                            <div class="product-image-wrap">
+                                <img src="uploads/<?php echo htmlspecialchars($row['image']); ?>" alt="Wishlist Product">
+
+                                <?php if ($row['status'] === 'sold'): ?>
+                                    <div class="sold-badge">SOLD</div>
+                                <?php endif; ?>
+                            </div>
+
+                            <div class="product-body">
+                                <h3><?php echo htmlspecialchars($row['name']); ?></h3>
+                                <p class="price">Rs <?php echo number_format((float)$row['price'], 2); ?></p>
+
+                                <?php if ((int)($row['rating_count'] ?? 0) > 0): ?>
+                                    <p class="rating-stars-line">
+                                        <?php
+                                            $rounded = (int) round((float)$row['average_rating']);
+                                            echo str_repeat("★", $rounded) . str_repeat("☆", 5 - $rounded);
+                                        ?>
+                                        <?php echo number_format((float)$row['average_rating'], 1); ?>
+                                        (<?php echo (int)$row['rating_count']; ?>)
+                                    </p>
+                                <?php else: ?>
+                                    <p class="meta">No ratings yet</p>
+                                <?php endif; ?>
+
+                                <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category_name']); ?></p>
+                                <p class="meta"><strong>Condition:</strong> <?php echo htmlspecialchars($row['product_condition']); ?></p>
+                                <p class="meta"><strong>City:</strong> <?php echo htmlspecialchars($row['city']); ?></p>
+                                <p class="meta"><strong>Status:</strong> <?php echo htmlspecialchars(ucfirst($row['status'])); ?></p>
+
+                                <div class="product-actions" style="display:flex; gap:10px; flex-wrap:wrap;">
+                                    <a href="product_details.php?id=<?php echo (int)$row['id']; ?>" class="small-btn primary">View Details</a>
+
+                                    <form method="POST" style="margin:0;">
+                                        <input type="hidden" name="product_id" value="<?php echo (int)$row['id']; ?>">
+                                        <button type="submit" name="remove_wishlist_item" class="wishlist-remove-btn">Remove</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endwhile; ?>
+                </div>
+            <?php else: ?>
+                <p class="inline-empty">No items in your wishlist yet.</p>
+            <?php endif; ?>
+        </div>
+
+                <div class="profile-section-card" id="purchases">
             <h2 class="section-title" style="text-align:left; margin-bottom:20px;">My Purchases</h2>
 
             <?php if ($myPurchases && $myPurchases->num_rows > 0): ?>
@@ -540,16 +743,41 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
                             <div class="product-body">
                                 <h3><?php echo htmlspecialchars($row['product_name']); ?></h3>
                                 <p class="price">Rs <?php echo number_format((float)$row['amount'], 2); ?></p>
+
+                                <?php if ((int)($row['rating_count'] ?? 0) > 0): ?>
+                                    <p class="rating-stars-line">
+                                        <?php
+                                            $rounded = (int) round((float)$row['average_rating']);
+                                            echo str_repeat("★", $rounded) . str_repeat("☆", 5 - $rounded);
+                                        ?>
+                                        <?php echo number_format((float)$row['average_rating'], 1); ?>
+                                        (<?php echo (int)$row['rating_count']; ?>)
+                                    </p>
+                                <?php else: ?>
+                                    <p class="meta">No ratings yet</p>
+                                <?php endif; ?>
+
                                 <p class="meta"><strong>Seller:</strong> <?php echo htmlspecialchars($row['seller_email']); ?></p>
                                 <p class="meta"><strong>Phone:</strong> <?php echo htmlspecialchars($row['contact_number'] ?? 'Not provided'); ?></p>
 
                                 <?php if ((int)$row['buyer_received'] === 1): ?>
-                                    <span class="purchase-badge">RECEIVED CONFIRMED</span>
-                                <?php elseif ($row['seller_delivery_status'] === 'delivered'): ?>
-                                    <span class="status-note">Seller marked this as delivered</span>
-                                <?php else: ?>
-                                    <span class="status-note">Waiting for seller update</span>
-                                <?php endif; ?>
+    <span class="purchase-badge">RECEIVED CONFIRMED</span>
+
+<?php elseif ($row['seller_delivery_status'] === 'delivered'): ?>
+    <span class="status-note">Seller marked this as delivered</span>
+
+<?php elseif ($row['seller_delivery_status'] === 'out_for_delivery'): ?>
+    <span class="status-note">Your order is out for delivery</span>
+
+<?php elseif ($row['seller_delivery_status'] === 'processing'): ?>
+    <span class="status-note">Seller is processing your order</span>
+
+<?php elseif ($row['seller_delivery_status'] === 'pending'): ?>
+    <span class="status-note">Order is pending seller confirmation</span>
+
+<?php else: ?>
+    <span class="status-note">Waiting for seller update</span>
+<?php endif; ?>
 
                                 <div class="product-actions" style="display:flex; flex-wrap:wrap; gap:10px;">
                                     <a href="product_details.php?id=<?php echo (int)$row['product_id']; ?>" class="small-btn primary">View Details</a>
@@ -564,6 +792,38 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
                                         </form>
                                     <?php endif; ?>
                                 </div>
+
+                                <?php if ((int)$row['buyer_received'] === 1): ?>
+                                    <?php if (!isset($myRatings[(int)$row['id']])): ?>
+                                        <button
+                                            type="button"
+                                            class="small-btn dark"
+                                            onclick="openRatingModal(
+                                                <?php echo (int)$row['id']; ?>,
+                                                '<?php echo htmlspecialchars(addslashes($row['product_name'])); ?>'
+                                            )"
+                                            style="margin-top:12px;"
+                                        >
+                                            Rate Product
+                                        </button>
+                                    <?php else: ?>
+                                        <div class="rating-box">
+                                            <p style="margin:0 0 8px 0; font-weight:700;">Your Rating</p>
+                                            <p class="rating-stars-line">
+                                                <?php
+                                                    $given = (int)$myRatings[(int)$row['id']]['rating'];
+                                                    echo str_repeat("★", $given) . str_repeat("☆", 5 - $given);
+                                                ?>
+                                            </p>
+
+                                            <?php if (!empty($myRatings[(int)$row['id']]['review_text'])): ?>
+                                                <p style="margin:0; color:#4b5563;">
+                                                    <?php echo htmlspecialchars($myRatings[(int)$row['id']]['review_text']); ?>
+                                                </p>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                <?php endif; ?>
                             </div>
                         </div>
                     <?php endwhile; ?>
@@ -702,6 +962,20 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
                             <div class="product-body">
                                 <h3><?php echo htmlspecialchars($row['name']); ?></h3>
                                 <p class="price">Rs <?php echo htmlspecialchars($row['price']); ?></p>
+
+                                <?php if ((int)($row['rating_count'] ?? 0) > 0): ?>
+                                    <p class="rating-stars-line">
+                                        <?php
+                                            $rounded = (int) round((float)$row['average_rating']);
+                                            echo str_repeat("★", $rounded) . str_repeat("☆", 5 - $rounded);
+                                        ?>
+                                        <?php echo number_format((float)$row['average_rating'], 1); ?>
+                                        (<?php echo (int)$row['rating_count']; ?>)
+                                    </p>
+                                <?php else: ?>
+                                    <p class="meta">No ratings yet</p>
+                                <?php endif; ?>
+
                                 <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category_name']); ?></p>
                                 <p class="meta"><strong>Condition:</strong> <?php echo htmlspecialchars($row['product_condition']); ?></p>
                                 <p class="meta"><strong>City:</strong> <?php echo htmlspecialchars($row['city']); ?></p>
@@ -719,7 +993,43 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
 
 <footer>© 2026 TradeSphere. All rights reserved.</footer>
 
+<div id="ratingModal" class="rating-modal-overlay">
+    <div class="rating-modal">
+        <button type="button" class="rating-modal-close" onclick="closeRatingModal()">×</button>
+
+        <h2>Rate Product</h2>
+        <p id="ratingProductName" class="rating-modal-product">How was your experience?</p>
+
+        <form id="ratingModalForm">
+            <input type="hidden" name="order_id" id="ratingOrderId">
+
+            <div class="star-select" id="starSelect">
+                <button type="button" data-value="1">★</button>
+                <button type="button" data-value="2">★</button>
+                <button type="button" data-value="3">★</button>
+                <button type="button" data-value="4">★</button>
+                <button type="button" data-value="5">★</button>
+            </div>
+
+            <input type="hidden" name="rating" id="ratingValue" required>
+
+            <textarea
+                name="review_text"
+                rows="4"
+                placeholder="Write a short review (optional)"
+            ></textarea>
+
+            <button type="submit" class="small-btn dark" style="width:100%; margin-top:12px;">
+                Submit Rating
+            </button>
+        </form>
+    </div>
+</div>
+
+<div id="ratingToast" class="cart-added-toast">Rating submitted</div>
+
 <script src="js/script.js"></script>
+
 <script>
 function toggleListingMenu(id) {
     const menu = document.getElementById("listing-menu-" + id);
@@ -741,10 +1051,91 @@ window.addEventListener("click", function(e) {
         });
     }
 });
-</script>
+
+function openRatingModal(orderId, productName) {
+    const modal = document.getElementById("ratingModal");
+    const orderInput = document.getElementById("ratingOrderId");
+    const productText = document.getElementById("ratingProductName");
+    const ratingValue = document.getElementById("ratingValue");
+
+    orderInput.value = orderId;
+    productText.textContent = productName || "How was your experience?";
+    ratingValue.value = "";
+
+    document.querySelectorAll("#starSelect button").forEach(btn => {
+        btn.classList.remove("active");
+    });
+
+    modal.classList.add("show");
+}
+
+function closeRatingModal() {
+    document.getElementById("ratingModal").classList.remove("show");
+}
+
+document.querySelectorAll("#starSelect button").forEach(button => {
+    button.addEventListener("click", function () {
+        const value = parseInt(this.getAttribute("data-value"));
+        document.getElementById("ratingValue").value = value;
+
+        document.querySelectorAll("#starSelect button").forEach(btn => {
+            const btnValue = parseInt(btn.getAttribute("data-value"));
+            btn.classList.toggle("active", btnValue <= value);
+        });
+    });
+});
+
+document.getElementById("ratingModalForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+    const toast = document.getElementById("ratingToast");
+
+    if (!formData.get("rating")) {
+        toast.textContent = "Please select a rating.";
+        toast.classList.add("show");
+        setTimeout(() => toast.classList.remove("show"), 1800);
+        return;
+    }
+
+    fetch("ajax_submit_rating.php", {
+        method: "POST",
+        body: new URLSearchParams(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        toast.textContent = data.message || "Rating submitted";
+        toast.classList.add("show");
+
+        setTimeout(() => {
+            toast.classList.remove("show");
+        }, 1800);
+
+        if (data.status === "success") {
+            closeRatingModal();
+
+            setTimeout(() => {
+                window.location.reload();
+            }, 700);
+        }
+    })
+    .catch(() => {
+        toast.textContent = "Could not submit rating.";
+        toast.classList.add("show");
+
+        setTimeout(() => {
+            toast.classList.remove("show");
+        }, 1800);
+    });
+});
+
+document.getElementById("ratingModal").addEventListener("click", function (e) {
+    if (e.target === this) {
+        closeRatingModal();
+    }
+});
 
 <?php if ($highlightOrderId > 0): ?>
-<script>
 document.addEventListener("DOMContentLoaded", function () {
     const card = document.getElementById("order-card-<?php echo (int)$highlightOrderId; ?>");
     if (card) {
@@ -754,8 +1145,17 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 });
-</script>
 <?php endif; ?>
+
+<?php if ($openRatingModalOrderId > 0): ?>
+document.addEventListener("DOMContentLoaded", function () {
+    openRatingModal(
+        <?php echo (int)$openRatingModalOrderId; ?>,
+        "Your purchased product"
+    );
+});
+<?php endif; ?>
+</script>
 
 </body>
 </html>

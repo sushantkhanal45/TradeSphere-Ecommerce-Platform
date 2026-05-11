@@ -4,6 +4,7 @@ include "config/db.php";
 include "includes/recommendation_helper.php";
 
 $userId = 0;
+$wishlistIds = [];
 
 if (isset($_SESSION['user'])) {
     $userEmail = $_SESSION['user'];
@@ -13,7 +14,28 @@ if (isset($_SESSION['user'])) {
 
     if ($userRow) {
         $userId = (int)$userRow['id'];
+
+        $wishlistRes = $conn->query("
+            SELECT product_id
+            FROM wishlist
+            WHERE user_id = $userId
+        ");
+
+        if ($wishlistRes) {
+            while ($wish = $wishlistRes->fetch_assoc()) {
+                $wishlistIds[] = (int)$wish['product_id'];
+            }
+        }
     }
+}
+
+function isWishlistedIndex($productId, $wishlistIds) {
+    return in_array((int)$productId, $wishlistIds, true);
+}
+
+function renderCardStarsIndex($avgRating) {
+    $rounded = (int) round((float)$avgRating);
+    return str_repeat("★", $rounded) . str_repeat("☆", 5 - $rounded);
 }
 
 $recommendedProducts = getUserRecommendedProducts($conn, $userId, 6);
@@ -35,6 +57,74 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TradeSphere</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .wishlist-icon-btn{
+            width: 42px;
+            height: 42px;
+            border: none;
+            border-radius: 12px;
+            background: #fff1f2;
+            color: #e11d48;
+            font-size: 22px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s ease;
+        }
+
+        .wishlist-icon-btn:hover{
+            background: #ffe4e6;
+            transform: translateY(-1px);
+        }
+
+        .wishlist-icon-btn.active{
+            background: #ef4444;
+            color: white;
+        }
+
+        .wishlist-toast{
+            position: fixed;
+            top: 178px;
+            right: 24px;
+            background: #111827;
+            color: white;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+            z-index: 1201;
+            opacity: 0;
+            transform: translateY(-8px);
+            pointer-events: none;
+            transition: opacity 0.25s ease, transform 0.25s ease;
+        }
+
+        .wishlist-toast.show{
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .rating-line{
+            color: #f59e0b;
+            font-weight: 700;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+
+        .rating-line.empty{
+            color: #9ca3af;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px){
+            .wishlist-toast{
+                top: 170px;
+                right: 14px;
+            }
+        }
+    </style>
 </head>
 <body>
 
@@ -63,7 +153,7 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
     <div class="container">
         <h2 class="section-title">Recommended for You</h2>
         <p class="section-subtitle">
-            Personalized suggestions based on your browsing, cart activity, and past orders.
+            Personalized suggestions based on your browsing, cart activity, past orders, and better-rated listings.
         </p>
 
         <?php if (!empty($recommendedProducts)): ?>
@@ -83,6 +173,16 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
 
                             <p class="price">Rs <?php echo number_format((float)$row['price'], 2); ?></p>
 
+                            <?php if ((int)($row['rating_count'] ?? 0) > 0): ?>
+                                <p class="rating-line">
+                                    <?php echo renderCardStarsIndex($row['average_rating'] ?? 0); ?>
+                                    <?php echo number_format((float)($row['average_rating'] ?? 0), 1); ?>
+                                    (<?php echo (int)$row['rating_count']; ?>)
+                                </p>
+                            <?php else: ?>
+                                <p class="rating-line empty">No ratings yet</p>
+                            <?php endif; ?>
+
                             <?php if (!empty($row['recommendation_reason'])): ?>
                                 <p class="meta" style="color:#2563eb; font-weight:600;">
                                     <?php echo htmlspecialchars($row['recommendation_reason']); ?>
@@ -99,17 +199,32 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
                                     View Details
                                 </a>
 
-                                <?php if ($row['status'] !== 'sold'): ?>
+                                <?php if ($userId > 0 && (int)$row['user_id'] === $userId): ?>
+                                    <button type="button" class="small-btn dark disabled-btn" disabled title="This is your own listing">
+                                        Your Listing
+                                    </button>
+                                <?php elseif ($row['status'] !== 'sold'): ?>
                                     <button
-    type="button"
-    class="small-btn dark"
-    onclick="addToCartFromHome(<?php echo (int)$row['id']; ?>)"
->
-    Add to Cart
-</button>
+                                        type="button"
+                                        class="small-btn dark"
+                                        onclick="addToCartFromHome(<?php echo (int)$row['id']; ?>)"
+                                    >
+                                        Add to Cart
+                                    </button>
                                 <?php else: ?>
                                     <button type="button" class="small-btn dark" disabled style="opacity:0.65; cursor:not-allowed;">
                                         Sold
+                                    </button>
+                                <?php endif; ?>
+
+                                <?php if ($userId > 0 && (int)$row['user_id'] !== $userId): ?>
+                                    <button
+                                        type="button"
+                                        class="wishlist-icon-btn <?php echo isWishlistedIndex($row['id'], $wishlistIds) ? 'active' : ''; ?>"
+                                        onclick="toggleWishlist(<?php echo (int)$row['id']; ?>, this)"
+                                        title="<?php echo isWishlistedIndex($row['id'], $wishlistIds) ? 'Remove from wishlist' : 'Add to wishlist'; ?>"
+                                    >
+                                        <?php echo isWishlistedIndex($row['id'], $wishlistIds) ? '♥' : '♡'; ?>
                                     </button>
                                 <?php endif; ?>
                             </div>
@@ -166,6 +281,16 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
 
                             <p class="price">Rs <?php echo number_format((float)$row['price'], 2); ?></p>
 
+                            <?php if ((int)($row['rating_count'] ?? 0) > 0): ?>
+                                <p class="rating-line">
+                                    <?php echo renderCardStarsIndex($row['average_rating'] ?? 0); ?>
+                                    <?php echo number_format((float)($row['average_rating'] ?? 0), 1); ?>
+                                    (<?php echo (int)$row['rating_count']; ?>)
+                                </p>
+                            <?php else: ?>
+                                <p class="rating-line empty">No ratings yet</p>
+                            <?php endif; ?>
+
                             <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category_name']); ?></p>
                             <p class="meta"><strong>Condition:</strong> <?php echo htmlspecialchars($row['product_condition']); ?></p>
                             <p class="meta"><strong>City:</strong> <?php echo htmlspecialchars($row['city']); ?></p>
@@ -176,17 +301,32 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
                                     View Details
                                 </a>
 
-                                <?php if ($row['status'] !== 'sold'): ?>
+                                <?php if ($userId > 0 && (int)$row['user_id'] === $userId): ?>
+                                    <button type="button" class="small-btn dark disabled-btn" disabled title="This is your own listing">
+                                        Your Listing
+                                    </button>
+                                <?php elseif ($row['status'] !== 'sold'): ?>
                                     <button
-    type="button"
-    class="small-btn dark"
-    onclick="addToCartFromHome(<?php echo (int)$row['id']; ?>)"
->
-    Add to Cart
-</button>
+                                        type="button"
+                                        class="small-btn dark"
+                                        onclick="addToCartFromHome(<?php echo (int)$row['id']; ?>)"
+                                    >
+                                        Add to Cart
+                                    </button>
                                 <?php else: ?>
                                     <button type="button" class="small-btn dark" disabled style="opacity:0.65; cursor:not-allowed;">
                                         Sold
+                                    </button>
+                                <?php endif; ?>
+
+                                <?php if ($userId > 0 && (int)$row['user_id'] !== $userId): ?>
+                                    <button
+                                        type="button"
+                                        class="wishlist-icon-btn <?php echo isWishlistedIndex($row['id'], $wishlistIds) ? 'active' : ''; ?>"
+                                        onclick="toggleWishlist(<?php echo (int)$row['id']; ?>, this)"
+                                        title="<?php echo isWishlistedIndex($row['id'], $wishlistIds) ? 'Remove from wishlist' : 'Add to wishlist'; ?>"
+                                    >
+                                        <?php echo isWishlistedIndex($row['id'], $wishlistIds) ? '♥' : '♡'; ?>
                                     </button>
                                 <?php endif; ?>
                             </div>
@@ -221,7 +361,7 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
 
             <div class="feature-card">
                 <h3>Smart Recommendations</h3>
-                <p>The system suggests products using category, description, condition, browsing activity, cart history, and past orders.</p>
+                <p>The system suggests products using category, description, condition, browsing activity, cart history, past orders, and ratings.</p>
             </div>
         </div>
     </div>
@@ -243,9 +383,62 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
 
 <footer>© 2026 TradeSphere. All rights reserved.</footer>
 
+<div id="wishlistToast" class="wishlist-toast">Added to wishlist</div>
+
 <script src="js/script.js"></script>
 
 <script>
+function updateWishlistButton(buttonEl, active) {
+    if (!buttonEl) return;
+
+    if (active) {
+        buttonEl.classList.add("active");
+        buttonEl.textContent = "♥";
+        buttonEl.setAttribute("title", "Remove from wishlist");
+    } else {
+        buttonEl.classList.remove("active");
+        buttonEl.textContent = "♡";
+        buttonEl.setAttribute("title", "Add to wishlist");
+    }
+}
+
+function showWishlistToast(message) {
+    const toast = document.getElementById("wishlistToast");
+    if (!toast) return;
+
+    toast.textContent = message;
+    toast.classList.add("show");
+
+    setTimeout(() => {
+        toast.classList.remove("show");
+    }, 1800);
+}
+
+function toggleWishlist(productId, buttonEl) {
+    fetch("ajax_toggle_wishlist.php", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: "product_id=" + encodeURIComponent(productId)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === "added") {
+            updateWishlistButton(buttonEl, true);
+            showWishlistToast(data.message || "Added to wishlist");
+        } else if (data.status === "removed") {
+            updateWishlistButton(buttonEl, false);
+            showWishlistToast(data.message || "Removed from wishlist");
+        } else {
+            showWishlistToast(data.message || "Could not update wishlist");
+        }
+    })
+    .catch(() => {
+        showWishlistToast("Something went wrong while updating wishlist.");
+    });
+}
+
 function addToCartFromHome(productId) {
     fetch("ajax_add_to_cart.php", {
         method: "POST",
@@ -256,10 +449,10 @@ function addToCartFromHome(productId) {
     })
     .then(response => response.json())
     .then(data => {
-        if (data.status === "success") {
-            const cart = document.getElementById("floatingCart");
-            const toast = document.getElementById("cartAddedToast");
+        const toast = document.getElementById("cartAddedToast");
+        const cart = document.getElementById("floatingCart");
 
+        if (data.status === "success") {
             if (cart) {
                 let badge = cart.querySelector(".cart-count-badge");
 
@@ -289,15 +482,32 @@ function addToCartFromHome(productId) {
                 setTimeout(() => {
                     toast.classList.remove("show");
                 }, 1800);
-            } else {
-                alert(data.message || "Added to cart");
             }
         } else {
-            alert(data.message || "Could not add to cart.");
+            if (toast) {
+                toast.textContent = data.message || "Could not add to cart";
+                toast.classList.add("show");
+
+                setTimeout(() => {
+                    toast.classList.remove("show");
+                }, 1800);
+            } else {
+                alert(data.message || "Could not add to cart.");
+            }
         }
     })
     .catch(() => {
-        alert("Something went wrong while adding to cart.");
+        const toast = document.getElementById("cartAddedToast");
+        if (toast) {
+            toast.textContent = "Something went wrong while adding to cart.";
+            toast.classList.add("show");
+
+            setTimeout(() => {
+                toast.classList.remove("show");
+            }, 1800);
+        } else {
+            alert("Something went wrong while adding to cart.");
+        }
     });
 }
 </script>
