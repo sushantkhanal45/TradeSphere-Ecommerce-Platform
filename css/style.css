@@ -1244,3 +1244,133 @@ footer{
         right: 14px;
     }
 }
+.notification-wrap{
+    position: relative;
+    display: inline-block;
+}
+
+.notification-btn{
+    position: relative;
+    border: none;
+    background: transparent;
+    font-size: 22px;
+    cursor: pointer;
+    padding: 8px;
+}
+
+.notification-count{
+    position: absolute;
+    top: 0;
+    right: 0;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #dc2626;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.notification-dropdown{
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 44px;
+    width: 340px;
+    max-height: 420px;
+    overflow-y: auto;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.18);
+    z-index: 3000;
+    overflow-x: hidden;
+}
+
+.notification-dropdown.show{
+    display: block;
+}
+
+.notification-head{
+    padding: 14px 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.notification-item{
+    display: block;
+    padding: 14px 16px;
+    color: rgba(0, 0, 0, 0.62) !important;
+    text-decoration: none;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 14px;
+    line-height: 1.5;
+    transition: 0.2s ease;
+    background: rgba(219, 234, 254, 0.18);
+    border-left: 4px solid rgba(37, 99, 235, 0.15);
+}
+
+.notification-item:hover{
+    background: #bfdbfe;
+    color: #1d4ed8 !important;
+}
+
+.notification-item.unread{
+    background: #dbeafe;
+    color: rgba(0, 0, 0, 0.95) !important;
+    font-weight: 700;
+    border-left: 4px solid #2563eb;
+}
+
+.notification-item small{
+    display: block;
+    color: #475569;
+    font-size: 11px;
+    margin-top: 6px;
+    font-weight: 500;
+}
+
+.empty-notification{
+    padding: 16px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.mark-read-btn{
+    width: 100%;
+    border: none;
+    background: #f3f4f6;
+    padding: 12px;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.mark-read-btn:hover{
+    background: #e5e7eb;
+}
+
+@media (max-width: 768px){
+    .notification-dropdown{
+        right: -80px;
+        width: 290px;
+    }
+}
+.notification-dropdown::-webkit-scrollbar{
+    width: 8px;
+}
+
+.notification-dropdown::-webkit-scrollbar-track{
+    background: #f1f5f9;
+    border-radius: 999px;
+}
+
+.notification-dropdown::-webkit-scrollbar-thumb{
+    background: #94a3b8;
+    border-radius: 999px;
+}
+
+.notification-dropdown::-webkit-scrollbar-thumb:hover{
+    background: #64748b;
+}

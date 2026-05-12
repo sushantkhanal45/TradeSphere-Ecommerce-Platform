@@ -84,3 +84,37 @@ function showToast(message) {
         toast.style.opacity = "0";
     }, 2000);
 }
+function toggleNotifications() {
+    const dropdown = document.getElementById("notificationDropdown");
+
+    if (dropdown) {
+        dropdown.classList.toggle("show");
+    }
+}
+
+function markNotificationsRead() {
+    fetch("ajax_mark_notifications_read.php", {
+        method: "POST"
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === "success") {
+            window.location.reload();
+        }
+    })
+    .catch(() => {
+        console.log("Could not mark notifications as read.");
+    });
+}
+
+document.addEventListener("click", function(e) {
+    const wrap = document.querySelector(".notification-wrap");
+
+    if (wrap && !wrap.contains(e.target)) {
+        const dropdown = document.getElementById("notificationDropdown");
+
+        if (dropdown) {
+            dropdown.classList.remove("show");
+        }
+    }
+});

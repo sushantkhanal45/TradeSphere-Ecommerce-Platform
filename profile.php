@@ -25,9 +25,7 @@ $openRatingModalOrderId = 0;
 
 /* Clear all wishlist items */
 if (isset($_POST['clear_all_wishlist'])) {
-    $clearWishlist = $conn->query("DELETE FROM wishlist WHERE user_id = $userId");
-
-    if ($clearWishlist) {
+    if ($conn->query("DELETE FROM wishlist WHERE user_id = $userId")) {
         header("Location: profile.php#wishlist");
         exit();
     } else {
@@ -181,6 +179,28 @@ if (isset($_POST['update_delivery_status'])) {
                     storeSignatureRecord($conn, $userId, "seller_delivery_status_update", $orderId, $actionData, $signature);
                 }
 
+                $buyerId = (int)$orderData['user_id'];
+                $prettyStatus = ucwords(str_replace('_', ' ', $escapedStatus));
+
+                if ($escapedStatus === 'processing') {
+                    $notificationMessage = "Seller is processing your order: " . $orderData['product_name'];
+                } elseif ($escapedStatus === 'out_for_delivery') {
+                    $notificationMessage = "Your product is out for delivery: " . $orderData['product_name'];
+                } elseif ($escapedStatus === 'delivered') {
+                    $notificationMessage = "Seller marked your order as delivered. Please confirm received: " . $orderData['product_name'];
+                } else {
+                    $notificationMessage = "Seller updated your order status to $prettyStatus: " . $orderData['product_name'];
+                }
+
+                $conn->query("
+                    INSERT INTO notifications (user_id, order_id, message)
+                    VALUES (
+                        $buyerId,
+                        $orderId,
+                        '" . $conn->real_escape_string($notificationMessage) . "'
+                    )
+                ");
+
                 $success = "Seller delivery status updated successfully.";
                 $highlightOrderId = $orderId;
                 $highlightMessage = "Delivery status updated";
@@ -236,6 +256,18 @@ if (isset($_POST['confirm_received'])) {
             if ($signature) {
                 storeSignatureRecord($conn, $userId, "buyer_confirmed_received", $orderId, $actionData, $signature);
             }
+
+            $sellerId = (int)$orderData['seller_user_id'];
+            $notificationMessage = "Buyer confirmed receiving your product: " . $orderData['product_name'];
+
+            $conn->query("
+                INSERT INTO notifications (user_id, order_id, message)
+                VALUES (
+                    $sellerId,
+                    $orderId,
+                    '" . $conn->real_escape_string($notificationMessage) . "'
+                )
+            ");
 
             $success = "Order marked as received successfully.";
             $highlightOrderId = $orderId;
@@ -720,7 +752,7 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
             <?php endif; ?>
         </div>
 
-                <div class="profile-section-card" id="purchases">
+        <div class="profile-section-card" id="purchases">
             <h2 class="section-title" style="text-align:left; margin-bottom:20px;">My Purchases</h2>
 
             <?php if ($myPurchases && $myPurchases->num_rows > 0): ?>
@@ -761,23 +793,18 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
                                 <p class="meta"><strong>Phone:</strong> <?php echo htmlspecialchars($row['contact_number'] ?? 'Not provided'); ?></p>
 
                                 <?php if ((int)$row['buyer_received'] === 1): ?>
-    <span class="purchase-badge">RECEIVED CONFIRMED</span>
-
-<?php elseif ($row['seller_delivery_status'] === 'delivered'): ?>
-    <span class="status-note">Seller marked this as delivered</span>
-
-<?php elseif ($row['seller_delivery_status'] === 'out_for_delivery'): ?>
-    <span class="status-note">Your order is out for delivery</span>
-
-<?php elseif ($row['seller_delivery_status'] === 'processing'): ?>
-    <span class="status-note">Seller is processing your order</span>
-
-<?php elseif ($row['seller_delivery_status'] === 'pending'): ?>
-    <span class="status-note">Order is pending seller confirmation</span>
-
-<?php else: ?>
-    <span class="status-note">Waiting for seller update</span>
-<?php endif; ?>
+                                    <span class="purchase-badge">You confirmed this order as received</span>
+                                <?php elseif ($row['seller_delivery_status'] === 'delivered'): ?>
+                                    <span class="status-note">Seller marked this as delivered. Please confirm received.</span>
+                                <?php elseif ($row['seller_delivery_status'] === 'out_for_delivery'): ?>
+                                    <span class="status-note">Your product is out for delivery</span>
+                                <?php elseif ($row['seller_delivery_status'] === 'processing'): ?>
+                                    <span class="status-note">Seller is processing your order</span>
+                                <?php elseif ($row['seller_delivery_status'] === 'pending'): ?>
+                                    <span class="status-note">Order is pending seller confirmation</span>
+                                <?php else: ?>
+                                    <span class="status-note">Waiting for seller update</span>
+                                <?php endif; ?>
 
                                 <div class="product-actions" style="display:flex; flex-wrap:wrap; gap:10px;">
                                     <a href="product_details.php?id=<?php echo (int)$row['product_id']; ?>" class="small-btn primary">View Details</a>
@@ -862,7 +889,9 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
                                 <p class="meta"><strong>Delivery:</strong> <?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $row['seller_delivery_status']))); ?></p>
 
                                 <?php if ((int)$row['buyer_received'] === 1): ?>
-                                    <span class="purchase-badge">BUYER CONFIRMED</span>
+                                    <span class="purchase-badge">Buyer confirmed receiving this product</span>
+                                <?php else: ?>
+                                    <span class="status-note">Waiting for buyer confirmation</span>
                                 <?php endif; ?>
 
                                 <div class="product-actions" style="display:flex; flex-direction:column; gap:10px; align-items:stretch;">

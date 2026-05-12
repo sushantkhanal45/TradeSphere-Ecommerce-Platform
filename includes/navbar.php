@@ -7,11 +7,12 @@ include_once __DIR__ . "/../config/db.php";
 
 $navUser = null;
 $navCartCount = 0;
-$sellerOrderCount = 0;
-$sellerNewOrderCount = 0;
+$notificationCount = 0;
+$notifications = [];
 
 if (isset($_SESSION['user'])) {
     $navEmail = $conn->real_escape_string($_SESSION['user']);
+
     $navRes = $conn->query("SELECT id, name, email FROM users WHERE email='$navEmail' LIMIT 1");
     $navUser = $navRes ? $navRes->fetch_assoc() : null;
 
@@ -23,27 +24,34 @@ if (isset($_SESSION['user'])) {
             FROM cart
             WHERE user_id = $navUserId
         ");
+
         $navCartRow = $navCartRes ? $navCartRes->fetch_assoc() : null;
         $navCartCount = ($navCartRow && $navCartRow['total_items']) ? (int)$navCartRow['total_items'] : 0;
 
-        $sellerOrderCountRes = $conn->query("
+        $countRes = $conn->query("
             SELECT COUNT(*) AS total
-            FROM orders
-            WHERE seller_user_id = $navUserId
-            AND payment_status = 'paid'
-            AND buyer_received = 0
+            FROM notifications
+            WHERE user_id = $navUserId
+            AND is_read = 0
         ");
-        $sellerOrderCount = $sellerOrderCountRes ? (int)$sellerOrderCountRes->fetch_assoc()['total'] : 0;
 
-        $sellerNewOrderCountRes = $conn->query("
-            SELECT COUNT(*) AS total
-            FROM orders
-            WHERE seller_user_id = $navUserId
-            AND payment_status = 'paid'
-            AND buyer_received = 0
-            AND seller_cleared = 0
+        if ($countRes) {
+            $notificationCount = (int)$countRes->fetch_assoc()['total'];
+        }
+
+        $notiRes = $conn->query("
+            SELECT *
+            FROM notifications
+            WHERE user_id = $navUserId
+            ORDER BY created_at DESC
+            LIMIT 5
         ");
-        $sellerNewOrderCount = $sellerNewOrderCountRes ? (int)$sellerNewOrderCountRes->fetch_assoc()['total'] : 0;
+
+        if ($notiRes) {
+            while ($row = $notiRes->fetch_assoc()) {
+                $notifications[] = $row;
+            }
+        }
     }
 }
 
@@ -64,6 +72,41 @@ $firstLetter = $navUser ? strtoupper(substr($navUser['name'], 0, 1)) : "U";
             <a href="index.php#contact">Contact</a>
 
             <?php if ($navUser): ?>
+
+                <div class="notification-wrap">
+                    <button type="button" class="notification-btn" onclick="toggleNotifications()" title="Notifications">
+                        🔔
+
+                        <?php if ($notificationCount > 0): ?>
+                            <span class="notification-count"><?php echo $notificationCount; ?></span>
+                        <?php endif; ?>
+                    </button>
+
+                    <div class="notification-dropdown" id="notificationDropdown">
+                        <div class="notification-head">
+                            <strong>Notifications</strong>
+                        </div>
+
+                        <?php if (!empty($notifications)): ?>
+                            <?php foreach ($notifications as $noti): ?>
+                                <a 
+                                    href="profile.php#<?php echo ((int)$noti['order_id'] > 0) ? 'purchases' : ''; ?>"
+                                    class="notification-item <?php echo ((int)$noti['is_read'] === 0) ? 'unread' : ''; ?>"
+                                >
+                                    <?php echo htmlspecialchars($noti['message']); ?>
+                                    <small><?php echo htmlspecialchars($noti['created_at']); ?></small>
+                                </a>
+                            <?php endforeach; ?>
+
+                            <button type="button" class="mark-read-btn" onclick="markNotificationsRead()">
+                                Mark all as read
+                            </button>
+                        <?php else: ?>
+                            <p class="empty-notification">No notifications yet.</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
                 <div class="profile-menu">
                     <button type="button" class="profile-toggle" id="profileToggle">
                         <span class="profile-avatar"><?php echo htmlspecialchars($firstLetter); ?></span>
@@ -75,25 +118,7 @@ $firstLetter = $navUser ? strtoupper(substr($navUser['name'], 0, 1)) : "U";
                         <a href="profile.php">My Profile</a>
                         <a href="profile.php#wishlist">My Wishlist</a>
                         <a href="profile.php#purchases">My Purchases</a>
-
-                        <a href="profile.php#orders_received" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-                            <span>Received Orders</span>
-
-                            <span style="display:flex; align-items:center; gap:6px;">
-                                <?php if ($sellerNewOrderCount > 0): ?>
-                                    <span style="background:#ef4444;color:#fff;padding:2px 7px;border-radius:999px;font-size:11px;font-weight:700;">
-                                        New <?php echo $sellerNewOrderCount; ?>
-                                    </span>
-                                <?php endif; ?>
-
-                                <?php if ($sellerOrderCount > 0): ?>
-                                    <span style="background:#2563eb;color:#fff;padding:2px 7px;border-radius:999px;font-size:11px;font-weight:700;">
-                                        <?php echo $sellerOrderCount; ?>
-                                    </span>
-                                <?php endif; ?>
-                            </span>
-                        </a>
-
+                        <a href="profile.php#orders_received">Received Orders</a>
                         <a href="profile.php#sales">Completed Sales</a>
                         <a href="profile.php#listings">My Listings</a>
                         <a href="logout.php">Logout</a>
