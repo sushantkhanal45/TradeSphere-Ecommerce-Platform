@@ -9,30 +9,39 @@ $navUser = null;
 $navCartCount = 0;
 $notificationCount = 0;
 $notifications = [];
+$unreadMessageCount = 0;
 
 if (isset($_SESSION['user'])) {
     $navEmail = $conn->real_escape_string($_SESSION['user']);
 
-    $navRes = $conn->query("SELECT id, name, email FROM users WHERE email='$navEmail' LIMIT 1");
+    $navRes = $conn->query("
+        SELECT id, name, email
+        FROM users
+        WHERE email='$navEmail'
+        LIMIT 1
+    ");
+
     $navUser = $navRes ? $navRes->fetch_assoc() : null;
 
     if ($navUser) {
         $navUserId = (int)$navUser['id'];
 
-        $navCartRes = $conn->query("
-            SELECT SUM(quantity) AS total_items
+        $cartRes = $conn->query("
+            SELECT SUM(quantity) AS total
             FROM cart
-            WHERE user_id = $navUserId
+            WHERE user_id=$navUserId
         ");
 
-        $navCartRow = $navCartRes ? $navCartRes->fetch_assoc() : null;
-        $navCartCount = ($navCartRow && $navCartRow['total_items']) ? (int)$navCartRow['total_items'] : 0;
+        if ($cartRes) {
+            $cartData = $cartRes->fetch_assoc();
+            $navCartCount = (int)($cartData['total'] ?? 0);
+        }
 
         $countRes = $conn->query("
             SELECT COUNT(*) AS total
             FROM notifications
-            WHERE user_id = $navUserId
-            AND is_read = 0
+            WHERE user_id=$navUserId
+            AND is_read=0
         ");
 
         if ($countRes) {
@@ -42,15 +51,26 @@ if (isset($_SESSION['user'])) {
         $notiRes = $conn->query("
             SELECT *
             FROM notifications
-            WHERE user_id = $navUserId
+            WHERE user_id=$navUserId
             ORDER BY created_at DESC
-            LIMIT 5
+            LIMIT 8
         ");
 
         if ($notiRes) {
             while ($row = $notiRes->fetch_assoc()) {
                 $notifications[] = $row;
             }
+        }
+
+        $msgRes = $conn->query("
+            SELECT COUNT(*) AS total
+            FROM chat_messages
+            WHERE receiver_id=$navUserId
+            AND is_read=0
+        ");
+
+        if ($msgRes) {
+            $unreadMessageCount = (int)$msgRes->fetch_assoc()['total'];
         }
     }
 }
@@ -60,27 +80,51 @@ $firstLetter = $navUser ? strtoupper(substr($navUser['name'], 0, 1)) : "U";
 
 <nav class="navbar">
     <div class="navbar-inner">
-        <div class="logo"><a href="index.php">TradeSphere</a></div>
+        <div class="logo">
+            <a href="index.php">TradeSphere</a>
+        </div>
 
         <div class="menu-toggle" id="menuToggle">☰</div>
 
         <div class="nav-links" id="navLinks">
             <a href="index.php">Home</a>
-            <a href="index.php#categories">Categories</a>
+            <a href="products.php">Products</a>
             <a href="sell.php">Sell</a>
             <a href="index.php#about">About</a>
             <a href="index.php#contact">Contact</a>
 
             <?php if ($navUser): ?>
+                <div class="profile-menu">
+                    <div class="profile-combo">
+                        <button type="button" class="profile-toggle" id="profileToggle">
+                            <span class="profile-avatar">
+                                <?php echo htmlspecialchars($firstLetter); ?>
+                            </span>
 
-                <div class="notification-wrap">
-                    <button type="button" class="notification-btn" onclick="toggleNotifications()" title="Notifications">
-                        🔔
+                            <span class="profile-name">
+                                <?php echo htmlspecialchars($navUser['name']); ?>
+                            </span>
 
-                        <?php if ($notificationCount > 0): ?>
-                            <span class="notification-count"><?php echo $notificationCount; ?></span>
-                        <?php endif; ?>
-                    </button>
+                            <span class="profile-caret">▾</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            class="notification-btn"
+                            onclick="toggleNotifications()"
+                            title="Notifications"
+                        >
+                            🔔
+
+                            <span
+                                id="notificationCountBadge"
+                                class="notification-count"
+                                style="<?php echo ($notificationCount > 0) ? '' : 'display:none;'; ?>"
+                            >
+                                <?php echo $notificationCount; ?>
+                            </span>
+                        </button>
+                    </div>
 
                     <div class="notification-dropdown" id="notificationDropdown">
                         <div class="notification-head">
@@ -88,36 +132,51 @@ $firstLetter = $navUser ? strtoupper(substr($navUser['name'], 0, 1)) : "U";
                         </div>
 
                         <?php if (!empty($notifications)): ?>
-                            <?php foreach ($notifications as $noti): ?>
-                                <a 
-                                    href="profile.php#<?php echo ((int)$noti['order_id'] > 0) ? 'purchases' : ''; ?>"
-                                    class="notification-item <?php echo ((int)$noti['is_read'] === 0) ? 'unread' : ''; ?>"
+                            <?php foreach ($notifications as $n): ?>
+                                <?php
+                                    $msg = strtolower($n['message']);
+                                    $notiLink = "profile.php";
+
+                                    if (
+                                        strpos($msg, "message") !== false ||
+                                        strpos($msg, "chat") !== false ||
+                                        strpos($msg, "offer") !== false
+                                    ) {
+                                        $notiLink = "messages.php";
+                                    }
+                                ?>
+
+                                <a
+                                    href="<?php echo $notiLink; ?>"
+                                    class="notification-item <?php echo ((int)$n['is_read'] === 0) ? 'unread' : ''; ?>"
+                                    onclick="markSingleNotificationRead(event, <?php echo (int)$n['id']; ?>, '<?php echo htmlspecialchars($notiLink, ENT_QUOTES); ?>')"
                                 >
-                                    <?php echo htmlspecialchars($noti['message']); ?>
-                                    <small><?php echo htmlspecialchars($noti['created_at']); ?></small>
+                                    <div>
+                                        <?php echo htmlspecialchars($n['message']); ?>
+                                    </div>
+
+                                    <small>
+                                        <?php echo htmlspecialchars($n['created_at']); ?>
+                                    </small>
                                 </a>
                             <?php endforeach; ?>
 
-                            <button type="button" class="mark-read-btn" onclick="markNotificationsRead()">
+                            <button
+                                type="button"
+                                class="mark-read-btn"
+                                onclick="markNotificationsRead()"
+                            >
                                 Mark all as read
                             </button>
                         <?php else: ?>
-                            <p class="empty-notification">No notifications yet.</p>
+                            <p class="empty-notification">No notifications</p>
                         <?php endif; ?>
                     </div>
-                </div>
-
-                <div class="profile-menu">
-                    <button type="button" class="profile-toggle" id="profileToggle">
-                        <span class="profile-avatar"><?php echo htmlspecialchars($firstLetter); ?></span>
-                        <span class="profile-name"><?php echo htmlspecialchars($navUser['name']); ?></span>
-                        <span class="profile-caret">▾</span>
-                    </button>
 
                     <div class="profile-dropdown" id="profileDropdown">
                         <a href="profile.php">My Profile</a>
-                        <a href="profile.php#wishlist">My Wishlist</a>
-                        <a href="profile.php#purchases">My Purchases</a>
+                        <a href="profile.php#wishlist">Wishlist</a>
+                        <a href="profile.php#purchases">Purchases</a>
                         <a href="profile.php#orders_received">Received Orders</a>
                         <a href="profile.php#sales">Completed Sales</a>
                         <a href="profile.php#listings">My Listings</a>
@@ -126,7 +185,7 @@ $firstLetter = $navUser ? strtoupper(substr($navUser['name'], 0, 1)) : "U";
                 </div>
             <?php else: ?>
                 <a href="login.php">Login</a>
-                <a href="register.php" class="nav-btn">Create Account</a>
+                <a href="register.php" class="nav-btn">Register</a>
             <?php endif; ?>
         </div>
     </div>
@@ -140,9 +199,29 @@ $firstLetter = $navUser ? strtoupper(substr($navUser['name'], 0, 1)) : "U";
         title="View Cart"
     >
         🛒
+
         <?php if ($navCartCount > 0): ?>
-            <span class="cart-count-badge"><?php echo $navCartCount; ?></span>
+            <span class="cart-count-badge">
+                <?php echo $navCartCount; ?>
+            </span>
         <?php endif; ?>
+    </a>
+
+    <a
+        href="messages.php"
+        id="floatingMessages"
+        class="floating-message-btn"
+        title="Messages"
+    >
+        💬
+
+        <span
+            id="messageFloatingCount"
+            class="message-floating-count"
+            style="<?php echo ($unreadMessageCount > 0) ? '' : 'display:none;'; ?>"
+        >
+            <?php echo $unreadMessageCount; ?>
+        </span>
     </a>
 
     <div id="cartAddedToast" class="cart-added-toast">Added to cart</div>

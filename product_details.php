@@ -23,6 +23,8 @@ if (!$product) {
     die("Product not found.");
 }
 
+$viewerId = 0;
+
 if (isset($_SESSION['user'])) {
     $userEmail = $conn->real_escape_string($_SESSION['user']);
     $viewerRes = $conn->query("SELECT id FROM users WHERE email='$userEmail' LIMIT 1");
@@ -83,6 +85,8 @@ if (isset($_POST['add_to_cart'])) {
 
         if ($product['status'] === 'sold') {
             $error = "This product is already sold.";
+        } elseif ((int)$product['user_id'] === $userId) {
+            $error = "You cannot add your own product to cart.";
         } else {
             $check = $conn->query("
                 SELECT id, quantity
@@ -345,6 +349,7 @@ if (isset($_POST['add_to_cart'])) {
 
                 <?php if (isset($_SESSION['user'])): ?>
                     <?php if ($product['status'] !== 'sold'): ?>
+
                         <form method="POST">
                             <div class="qty-row">
                                 <label for="quantity">Quantity</label>
@@ -352,19 +357,49 @@ if (isset($_POST['add_to_cart'])) {
                             </div>
 
                             <div class="detail-actions">
-                                <button type="submit" name="add_to_cart" class="small-btn dark">Add to Cart</button>
-
-                                <?php if ($showGoToCart): ?>
-                                    <a href="cart.php" class="small-btn primary">Go to Cart</a>
+                                <?php if ((int)$product['user_id'] !== $viewerId): ?>
+                                    <button type="submit" name="add_to_cart" class="small-btn dark">
+                                        Add to Cart
+                                    </button>
+                                <?php else: ?>
+                                    <button type="button" class="small-btn dark" disabled style="opacity:0.7; cursor:not-allowed;">
+                                        Your Product
+                                    </button>
                                 <?php endif; ?>
 
-                                <button type="button" onclick="window.history.back()" class="small-btn">Back</button>
+                                <?php if ($showGoToCart): ?>
+                                    <a href="cart.php" class="small-btn primary">
+                                        Go to Cart
+                                    </a>
+                                <?php endif; ?>
+
+                                <?php if ($viewerId > 0 && (int)$product['user_id'] !== $viewerId): ?>
+                                    <a href="start_chat.php?product_id=<?php echo (int)$product['id']; ?>" class="small-btn primary">
+                                        Chat with Seller
+                                    </a>
+                                <?php endif; ?>
+
+                                <button type="button" onclick="window.history.back()" class="small-btn">
+                                    Back
+                                </button>
                             </div>
                         </form>
+
                     <?php else: ?>
                         <div class="detail-actions">
-                            <button type="button" class="small-btn dark" disabled style="opacity:0.7; cursor:not-allowed;">Sold</button>
-                            <button type="button" onclick="window.history.back()" class="small-btn">Back</button>
+                            <button type="button" class="small-btn dark" disabled style="opacity:0.7; cursor:not-allowed;">
+                                Sold
+                            </button>
+
+                            <?php if ($viewerId > 0 && (int)$product['user_id'] !== $viewerId): ?>
+                                <a href="start_chat.php?product_id=<?php echo (int)$product['id']; ?>" class="small-btn primary">
+                                    Chat with Seller
+                                </a>
+                            <?php endif; ?>
+
+                            <button type="button" onclick="window.history.back()" class="small-btn">
+                                Back
+                            </button>
                         </div>
                     <?php endif; ?>
                 <?php else: ?>
@@ -414,5 +449,6 @@ if (isset($_POST['add_to_cart'])) {
 
 <footer>© 2026 TradeSphere. All rights reserved.</footer>
 
+<script src="js/script.js"></script>
 </body>
 </html>

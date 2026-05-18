@@ -118,3 +118,21 @@ document.addEventListener("click", function(e) {
         }
     }
 });
+function markSingleNotificationRead(event, notificationId, redirectUrl) {
+    event.preventDefault();
+
+    const formData = new URLSearchParams();
+    formData.append("notification_id", notificationId);
+
+    fetch("ajax_mark_single_notification_read.php", {
+        method: "POST",
+        body: formData
+    })
+    .then(response => response.json())
+    .then(() => {
+        window.location.href = redirectUrl;
+    })
+    .catch(() => {
+        window.location.href = redirectUrl;
+    });
+}
