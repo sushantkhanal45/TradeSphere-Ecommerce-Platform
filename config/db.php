@@ -1,17 +1,17 @@
-<!-- this is used for azure host only -->
+<!-- This is only used for azure host  -->
 <?php
-$host = "tradesphere-db.mysql.database.azure.com";
-$username = "adminuser@tradesphere-db";
-$password = "#hey it's sk_45..";
-$database = "tradesphere";
-$port = 3306;
+$host = getenv("DB_HOST");
+$username = getenv("DB_USER");
+$password = getenv("DB_PASSWORD");
+$database = getenv("DB_NAME");
+$port = getenv("DB_PORT") ?: 3306;
 
 $conn = new mysqli(
     $host,
     $username,
     $password,
     $database,
-    $port
+    (int)$port
 );
 
 if ($conn->connect_error) {
