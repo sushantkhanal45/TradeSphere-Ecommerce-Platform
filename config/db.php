@@ -9,14 +9,14 @@ if ($conn->connect_error) {
  -->
 
  <!-- This is used for azure db connection -->
-  <?php
-$conn = new mysqli(
-    "tradesphere-db.mysql.database.azure.com",
-    "adminuser",
-    "YOUR_AZURE_MYSQL_PASSWORD",
-    "tradesphere",
-    3306
-);
+<?php
+$host = "tradesphere-db.mysql.database.azure.com";
+$username = "adminuser@tradesphere-db";
+$password = "YOUR_AZURE_MYSQL_PASSWORD";
+$database = "tradesphere";
+$port = 3306;
+
+$conn = new mysqli($host, $username, $password, $database, $port);
 
 if ($conn->connect_error) {
     die("Database connection failed: " . $conn->connect_error);
