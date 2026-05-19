@@ -12,7 +12,7 @@ if ($conn->connect_error) {
 <?php
 $host = "tradesphere-db.mysql.database.azure.com";
 $username = "adminuser@tradesphere-db";
-$password = "YOUR_AZURE_MYSQL_PASSWORD";
+$password = "#hey it's sk_45..";
 $database = "tradesphere";
 $port = 3306;
 
