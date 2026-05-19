@@ -7,7 +7,14 @@ $port = getenv("DB_PORT") ?: 3306;
 
 $conn = mysqli_init();
 
-mysqli_ssl_set($conn, NULL, NULL, NULL, NULL, NULL);
+mysqli_ssl_set(
+    $conn,
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL
+);
 
 mysqli_real_connect(
     $conn,
