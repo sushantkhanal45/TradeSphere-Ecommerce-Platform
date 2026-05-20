@@ -31,3 +31,17 @@ if (mysqli_connect_errno()) {
     die("Database connection failed: " . mysqli_connect_error());
 }
 ?>
+
+
+   
+<!-- // // $conn = new mysqli(
+//     // "localhost",
+//     "root",
+//     "",
+//     "TradeSphere"
+// );
+
+// if ($conn->connect_error) {
+//     die("Database connection failed: " . $conn->connect_error);
+// } -->
+
