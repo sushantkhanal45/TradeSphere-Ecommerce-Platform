@@ -33,7 +33,7 @@ if (mysqli_connect_errno()) {
 ?>
 
 
-   
+   <!-- localhost db connection -->
 <!-- // // $conn = new mysqli(
 //     // "localhost",
 //     "root",
