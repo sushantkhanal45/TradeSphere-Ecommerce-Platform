@@ -5,14 +5,21 @@ include "config/db.php";
 header("Content-Type: application/json");
 
 if (!isset($_SESSION['user'])) {
+    $productId = isset($_POST['product_id']) ? (int)$_POST['product_id'] : 0;
+
+    if ($productId > 0) {
+        $_SESSION['pending_wishlist_product'] = $productId;
+    }
+
     echo json_encode([
-        "status" => "error",
-        "message" => "Please login first."
+        "status" => "login_required",
+        "message" => "Please login first.",
+        "redirect" => "login.php"
     ]);
     exit();
 }
 
-if (!isset($_POST['product_id'])) {
+if (!isset($_POST['product_id']) || (int)$_POST['product_id'] <= 0) {
     echo json_encode([
         "status" => "error",
         "message" => "Product ID missing."
@@ -28,19 +35,30 @@ $user = $userRes ? $userRes->fetch_assoc() : null;
 
 if (!$user) {
     echo json_encode([
-        "status" => "error",
-        "message" => "User not found."
+        "status" => "login_required",
+        "message" => "Please login again.",
+        "redirect" => "login.php"
     ]);
     exit();
 }
 
 $userId = (int)$user['id'];
 
-$productRes = $conn->query("SELECT id FROM products WHERE id=$productId LIMIT 1");
-if (!$productRes || $productRes->num_rows === 0) {
+$productRes = $conn->query("SELECT id, user_id FROM products WHERE id=$productId LIMIT 1");
+$product = $productRes ? $productRes->fetch_assoc() : null;
+
+if (!$product) {
     echo json_encode([
         "status" => "error",
         "message" => "Product not found."
+    ]);
+    exit();
+}
+
+if ((int)$product['user_id'] === $userId) {
+    echo json_encode([
+        "status" => "error",
+        "message" => "You cannot add your own listing to wishlist."
     ]);
     exit();
 }
@@ -75,10 +93,18 @@ if ($check && $check->num_rows > 0) {
     exit();
 }
 
-$conn->query("
+$insert = $conn->query("
     INSERT INTO wishlist (user_id, product_id)
     VALUES ($userId, $productId)
 ");
+
+if (!$insert) {
+    echo json_encode([
+        "status" => "error",
+        "message" => "Could not add to wishlist."
+    ]);
+    exit();
+}
 
 $countRes = $conn->query("
     SELECT COUNT(*) AS total
@@ -93,3 +119,4 @@ echo json_encode([
     "wishlist_count" => (int)$countRow['total']
 ]);
 exit();
+?>

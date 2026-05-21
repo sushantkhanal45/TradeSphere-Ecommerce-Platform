@@ -278,7 +278,7 @@ if ($search !== "") {
                                     <button type="button" class="small-btn dark" disabled style="opacity:0.65; cursor:not-allowed;">Sold</button>
                                 <?php endif; ?>
 
-                                <?php if ($userId > 0 && (int)$row['user_id'] !== $userId): ?>
+                                <?php if (!($userId > 0 && (int)$row['user_id'] === $userId)): ?>
                                     <button
                                         type="button"
                                         class="wishlist-icon-btn <?php echo isWishlistedProducts($row['id'], $wishlistIds) ? 'active' : ''; ?>"
@@ -401,6 +401,11 @@ function toggleWishlist(productId, buttonEl) {
     })
     .then(response => response.json())
     .then(data => {
+        if (data.status === "login_required") {
+            window.location.href = data.redirect || "login.php";
+            return;
+        }
+
         if (data.status === "added") {
             updateWishlistButton(buttonEl, true);
             showWishlistToast(data.message || "Added to wishlist");
@@ -428,6 +433,11 @@ function addToCartFromBrowse(productId) {
     .then(data => {
         const toast = document.getElementById("cartAddedToast");
         const cart = document.getElementById("floatingCart");
+
+        if (data.status === "login_required") {
+            window.location.href = data.redirect || "login.php";
+            return;
+        }
 
         if (data.status === "success") {
             if (cart) {

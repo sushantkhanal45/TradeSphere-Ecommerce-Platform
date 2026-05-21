@@ -33,6 +33,40 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             session_regenerate_id(true);
             $_SESSION['user'] = $user['email'];
 
+            if (isset($_SESSION['pending_wishlist_product'])) {
+                $productId = (int)$_SESSION['pending_wishlist_product'];
+                $userId = (int)$user['id'];
+
+                if ($productId > 0) {
+                    $productRes = $conn->query("
+                        SELECT id, user_id
+                        FROM products
+                        WHERE id = $productId
+                        LIMIT 1
+                    ");
+                    $product = $productRes ? $productRes->fetch_assoc() : null;
+
+                    if ($product && (int)$product['user_id'] !== $userId) {
+                        $check = $conn->query("
+                            SELECT id
+                            FROM wishlist
+                            WHERE user_id = $userId
+                            AND product_id = $productId
+                            LIMIT 1
+                        ");
+
+                        if (!$check || $check->num_rows === 0) {
+                            $conn->query("
+                                INSERT INTO wishlist (user_id, product_id)
+                                VALUES ($userId, $productId)
+                            ");
+                        }
+                    }
+                }
+
+                unset($_SESSION['pending_wishlist_product']);
+            }
+
             header("Location: index.php");
             exit();
         }
