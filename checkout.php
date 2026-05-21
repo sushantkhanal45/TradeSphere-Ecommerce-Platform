@@ -8,7 +8,9 @@ if (!isset($_SESSION['user'])) {
 }
 
 $userEmail = $_SESSION['user'];
-$userRes = $conn->query("SELECT id, name, email FROM users WHERE email='$userEmail' LIMIT 1");
+$safeUserEmail = $conn->real_escape_string($userEmail);
+
+$userRes = $conn->query("SELECT id, name, email FROM users WHERE email='$safeUserEmail' LIMIT 1");
 $user = $userRes ? $userRes->fetch_assoc() : null;
 
 if (!$user) {
@@ -16,6 +18,30 @@ if (!$user) {
 }
 
 $userId = (int)$user['id'];
+
+function getFinalCheckoutPrice($conn, $productId, $buyerId, $sellerUserId, $originalPrice) {
+    $productId = (int)$productId;
+    $buyerId = (int)$buyerId;
+    $sellerUserId = (int)$sellerUserId;
+
+    $offerRes = $conn->query("
+        SELECT offer_amount
+        FROM product_offers
+        WHERE product_id = $productId
+        AND buyer_id = $buyerId
+        AND seller_id = $sellerUserId
+        AND status = 'accepted'
+        ORDER BY id DESC
+        LIMIT 1
+    ");
+
+    if ($offerRes && $offerRes->num_rows > 0) {
+        $offer = $offerRes->fetch_assoc();
+        return (float)$offer['offer_amount'];
+    }
+
+    return (float)$originalPrice;
+}
 
 $cartQuery = $conn->query("
     SELECT 
@@ -42,10 +68,21 @@ $hasAvailableItems = false;
 
 if ($cartQuery) {
     while ($row = $cartQuery->fetch_assoc()) {
+        $finalPrice = getFinalCheckoutPrice(
+            $conn,
+            $row['product_id'],
+            $userId,
+            $row['seller_user_id'],
+            $row['price']
+        );
+
+        $row['final_price'] = $finalPrice;
+        $row['has_accepted_offer'] = ((float)$finalPrice !== (float)$row['price']);
+
         $cartItems[] = $row;
 
         if ($row['status'] !== 'sold') {
-            $totalAmount += ((float)$row['price'] * (int)$row['quantity']);
+            $totalAmount += ($finalPrice * (int)$row['quantity']);
             $hasAvailableItems = true;
         }
     }
@@ -88,7 +125,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
             $productId = (int)$item['product_id'];
             $sellerUserId = (int)$item['seller_user_id'];
             $qty = (int)$item['quantity'];
-            $amount = ((float)$item['price'] * $qty);
+            $finalPrice = getFinalCheckoutPrice($conn, $productId, $userId, $sellerUserId, $item['price']);
+            $amount = $finalPrice * $qty;
 
             $itemTransactionUuid = $transactionUuid . "_p" . $productId;
 
@@ -194,7 +232,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
 <div class="page-wrap">
     <div class="container">
         <h1 class="section-title">Checkout</h1>
-        <p class="section-subtitle">Confirm your details and proceed to eSewa. Products will stay active until seller/admin manually marks them sold.</p>
+        <p class="section-subtitle">Confirm your details and proceed to eSewa. Accepted offers are applied automatically.</p>
 
         <?php if ($success): ?>
             <div class="success-msg"><?php echo $success; ?></div>
@@ -211,11 +249,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
                 <?php foreach ($cartItems as $item): ?>
                     <div style="padding:14px 0; border-bottom:1px solid #e5e7eb;">
                         <p><strong><?php echo htmlspecialchars($item['name']); ?></strong></p>
-                        <p class="meta">Price: Rs <?php echo htmlspecialchars($item['price']); ?></p>
+
+                        <?php if (!empty($item['has_accepted_offer'])): ?>
+                            <p class="meta">
+                                Original Price:
+                                <span style="text-decoration:line-through;">
+                                    Rs <?php echo number_format((float)$item['price'], 2); ?>
+                                </span>
+                            </p>
+                            <p class="meta" style="color:#16a34a; font-weight:700;">
+                                Accepted Offer Price: Rs <?php echo number_format((float)$item['final_price'], 2); ?>
+                            </p>
+                        <?php else: ?>
+                            <p class="meta">Price: Rs <?php echo number_format((float)$item['price'], 2); ?></p>
+                        <?php endif; ?>
+
                         <p class="meta">Quantity: <?php echo (int)$item['quantity']; ?></p>
+                        <p class="meta">
+                            Line Total:
+                            Rs <?php echo number_format((float)$item['final_price'] * (int)$item['quantity'], 2); ?>
+                        </p>
                         <p class="meta">Seller Email: <?php echo htmlspecialchars($item['seller_email']); ?></p>
                         <p class="meta">Contact Number: <?php echo htmlspecialchars($item['contact_number'] ?? 'Not provided'); ?></p>
                         <p class="meta">Status: <?php echo htmlspecialchars(ucfirst($item['status'])); ?></p>
+
                         <?php if ($item['status'] === 'sold'): ?>
                             <p style="color:#b91c1c; font-weight:600;">This item is sold and will not be included in payment.</p>
                         <?php endif; ?>

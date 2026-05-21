@@ -33,15 +33,4 @@ if (mysqli_connect_errno()) {
 ?>
 
 
-   <!-- localhost db connection -->
-<!-- // // $conn = new mysqli(
-//     // "localhost",
-//     "root",
-//     "",
-//     "TradeSphere"
-// );
-
-// if ($conn->connect_error) {
-//     die("Database connection failed: " . $conn->connect_error);
-// } -->
 

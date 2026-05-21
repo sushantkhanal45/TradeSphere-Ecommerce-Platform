@@ -1,36 +1,62 @@
 <?php
+ob_start();
 session_start();
+
 include "config/db.php";
 include "includes/rsa_helper.php";
 
-header("Content-Type: application/json");
+function send_json($data) {
+    if (ob_get_length()) {
+        ob_clean();
+    }
 
-if (!isset($_SESSION['user'])) {
-    echo json_encode(["status" => "error", "message" => "Please login first."]);
+    header("Content-Type: application/json");
+    echo json_encode($data);
     exit();
 }
 
-$offerId = (int)($_POST['offer_id'] ?? 0);
+if (!isset($_SESSION['user'])) {
+    send_json([
+        "status" => "error",
+        "message" => "Please login first."
+    ]);
+}
+
+$offerId = isset($_POST['offer_id']) ? (int)$_POST['offer_id'] : 0;
 $action = $_POST['action_type'] ?? "";
 
 if ($offerId <= 0 || !in_array($action, ["accept", "reject"], true)) {
-    echo json_encode(["status" => "error", "message" => "Invalid action."]);
-    exit();
+    send_json([
+        "status" => "error",
+        "message" => "Invalid action."
+    ]);
 }
 
 $userEmail = $conn->real_escape_string($_SESSION['user']);
-$userRes = $conn->query("SELECT id FROM users WHERE email='$userEmail' LIMIT 1");
+
+$userRes = $conn->query("
+    SELECT id
+    FROM users
+    WHERE email = '$userEmail'
+    LIMIT 1
+");
+
 $user = $userRes ? $userRes->fetch_assoc() : null;
 
 if (!$user) {
-    echo json_encode(["status" => "error", "message" => "User not found."]);
-    exit();
+    send_json([
+        "status" => "error",
+        "message" => "User not found."
+    ]);
 }
 
 $sellerId = (int)$user['id'];
 
 $offerRes = $conn->query("
-    SELECT po.*, p.name AS product_name, cr.id AS room_id
+    SELECT 
+        po.*,
+        p.name AS product_name,
+        cr.id AS room_id
     FROM product_offers po
     INNER JOIN products p ON po.product_id = p.id
     INNER JOIN chat_rooms cr
@@ -46,11 +72,14 @@ $offerRes = $conn->query("
 $offer = $offerRes ? $offerRes->fetch_assoc() : null;
 
 if (!$offer) {
-    echo json_encode(["status" => "error", "message" => "Offer not found or already handled."]);
-    exit();
+    send_json([
+        "status" => "error",
+        "message" => "Offer not found or already handled."
+    ]);
 }
 
 $newStatus = ($action === "accept") ? "accepted" : "rejected";
+$timestamp = date("Y-m-d H:i:s");
 
 $signData = json_encode([
     "action" => $action . "_offer",
@@ -59,42 +88,67 @@ $signData = json_encode([
     "buyer_id" => (int)$offer['buyer_id'],
     "seller_id" => $sellerId,
     "offer_amount" => (float)$offer['offer_amount'],
-    "timestamp" => date("Y-m-d H:i:s")
+    "timestamp" => $timestamp
 ]);
 
-$sellerSignature = signData($signData);
+$sellerSignature = "";
+
+if (function_exists("signData")) {
+    $sellerSignature = signData($signData);
+}
+
 $safeSignature = $conn->real_escape_string($sellerSignature ?? "");
 
-$conn->query("
+$update = $conn->query("
     UPDATE product_offers
-    SET status='$newStatus',
-        seller_signature='$safeSignature',
-        responded_at=NOW()
-    WHERE id=$offerId
+    SET status = '$newStatus',
+        seller_signature = '$safeSignature',
+        responded_at = NOW()
+    WHERE id = $offerId
 ");
+
+if (!$update) {
+    send_json([
+        "status" => "error",
+        "message" => "Could not update offer: " . $conn->error
+    ]);
+}
 
 $roomId = (int)$offer['room_id'];
 $buyerId = (int)$offer['buyer_id'];
+$offerAmount = (float)$offer['offer_amount'];
 
 if ($action === "accept") {
-    $message = "Seller accepted offer Rs " . number_format((float)$offer['offer_amount'], 2) . " for " . $offer['product_name'];
-    $noti = "Your offer was accepted for " . $offer['product_name'];
+    $message = "Seller accepted offer Rs " . number_format($offerAmount, 2) . " for " . $offer['product_name'];
+    $notification = "Your offer was accepted for " . $offer['product_name'];
 } else {
-    $message = "Seller rejected offer Rs " . number_format((float)$offer['offer_amount'], 2) . " for " . $offer['product_name'];
-    $noti = "Your offer was rejected for " . $offer['product_name'];
+    $message = "Seller rejected offer Rs " . number_format($offerAmount, 2) . " for " . $offer['product_name'];
+    $notification = "Your offer was rejected for " . $offer['product_name'];
 }
 
-$conn->query("
+$safeMessage = $conn->real_escape_string($message);
+$safeNotification = $conn->real_escape_string($notification);
+
+$insertMessage = $conn->query("
     INSERT INTO chat_messages
     (room_id, sender_id, receiver_id, message_text, message_type, signature)
     VALUES
-    ($roomId, $sellerId, $buyerId, '" . $conn->real_escape_string($message) . "', '$newStatus', '$safeSignature')
+    ($roomId, $sellerId, $buyerId, '$safeMessage', '$newStatus', '$safeSignature')
 ");
+
+if (!$insertMessage) {
+    send_json([
+        "status" => "error",
+        "message" => "Offer updated, but chat message failed: " . $conn->error
+    ]);
+}
 
 $conn->query("
     INSERT INTO notifications (user_id, order_id, message)
-    VALUES ($buyerId, NULL, '" . $conn->real_escape_string($noti) . "')
+    VALUES ($buyerId, NULL, '$safeNotification')
 ");
 
-echo json_encode(["status" => "success", "message" => $message]);
-?>
+send_json([
+    "status" => "success",
+    "message" => $message
+]);

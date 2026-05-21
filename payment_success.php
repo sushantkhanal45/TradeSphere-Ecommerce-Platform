@@ -46,7 +46,6 @@ if (!$user) {
 
 $userId = (int)$user['id'];
 
-/* If page is refreshed and session order IDs are missing, recover orders from payment_logs */
 if (empty($orderIds)) {
     $logRes = $conn->query("
         SELECT order_id
@@ -76,7 +75,7 @@ if (!empty($orderIds)) {
             SELECT 
                 o.*,
                 p.name AS product_name,
-                p.price AS product_price,
+                p.price AS original_product_price,
                 p.image AS product_image,
                 p.seller_email,
                 p.contact_number,
@@ -134,7 +133,7 @@ if (!empty($orderIds)) {
             SELECT 
                 o.*,
                 p.name AS product_name,
-                p.price AS product_price,
+                p.price AS original_product_price,
                 p.image AS product_image,
                 p.seller_email,
                 p.contact_number,
@@ -164,12 +163,6 @@ if (!empty($orderIds)) {
 }
 
 $receiptNumber = "TS-" . strtoupper(substr(md5($transactionUuid), 0, 10));
-
-/*
-Do not unset immediately, because refreshing payment_success.php can make buyer details disappear.
-You can clear this later if needed.
-*/
-// unset($_SESSION['checkout_order_ids'], $_SESSION['checkout_transaction_uuid'], $_SESSION['checkout_total_amount']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -297,7 +290,8 @@ You can clear this later if needed.
                             <th>Product</th>
                             <th>Seller Email</th>
                             <th>Seller Contact</th>
-                            <th>Unit Price</th>
+                            <th>Original Price</th>
+                            <th>Paid Unit Price</th>
                             <th>Qty</th>
                             <th>Line Total</th>
                         </tr>
@@ -305,19 +299,24 @@ You can clear this later if needed.
                     <tbody>
                         <?php if (!empty($receiptItems)): ?>
                             <?php foreach ($receiptItems as $item): ?>
+                                <?php
+                                    $qty = max(1, (int)$item['quantity']);
+                                    $paidUnitPrice = (float)$item['amount'] / $qty;
+                                ?>
                                 <tr>
                                     <td><?php echo (int)$item['product_id']; ?></td>
                                     <td><?php echo htmlspecialchars($item['product_name']); ?></td>
                                     <td><?php echo htmlspecialchars($item['seller_email']); ?></td>
                                     <td><?php echo htmlspecialchars($item['contact_number'] ?? 'Not provided'); ?></td>
-                                    <td>Rs <?php echo number_format((float)$item['product_price'], 2); ?></td>
-                                    <td><?php echo (int)$item['quantity']; ?></td>
+                                    <td>Rs <?php echo number_format((float)$item['original_product_price'], 2); ?></td>
+                                    <td>Rs <?php echo number_format($paidUnitPrice, 2); ?></td>
+                                    <td><?php echo $qty; ?></td>
                                     <td>Rs <?php echo number_format((float)$item['amount'], 2); ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="7">No receipt items found.</td>
+                                <td colspan="8">No receipt items found.</td>
                             </tr>
                         <?php endif; ?>
                     </tbody>
@@ -329,7 +328,7 @@ You can clear this later if needed.
                 </div>
 
                 <div class="receipt-note">
-                    <strong>Important:</strong> The product remains active in the marketplace until the seller or admin manually marks it sold. Seller contact information is shown above to help direct communication.
+                    <strong>Important:</strong> If a negotiated offer was accepted, the paid unit price reflects that accepted offer amount. The product remains active in the marketplace until the seller or admin manually marks it sold.
                 </div>
             </div>
 

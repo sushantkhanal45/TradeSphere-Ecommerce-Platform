@@ -1,16 +1,25 @@
 <?php
+ob_start();
 session_start();
+
 include "config/db.php";
 include "includes/rsa_helper.php";
 
-header("Content-Type: application/json");
+function send_json($data) {
+    if (ob_get_length()) {
+        ob_clean();
+    }
+
+    header("Content-Type: application/json");
+    echo json_encode($data);
+    exit();
+}
 
 if (!isset($_SESSION['user'])) {
-    echo json_encode([
+    send_json([
         "status" => "error",
         "message" => "Not logged in."
     ]);
-    exit();
 }
 
 $roomId = isset($_POST['room_id']) ? (int)$_POST['room_id'] : 0;
@@ -18,11 +27,10 @@ $message = trim($_POST['message'] ?? '');
 $messageType = trim($_POST['message_type'] ?? 'normal');
 
 if ($roomId <= 0 || $message === '') {
-    echo json_encode([
+    send_json([
         "status" => "error",
         "message" => "Message cannot be empty."
     ]);
-    exit();
 }
 
 $userEmail = $conn->real_escape_string($_SESSION['user']);
@@ -37,11 +45,10 @@ $userRes = $conn->query("
 $user = $userRes ? $userRes->fetch_assoc() : null;
 
 if (!$user) {
-    echo json_encode([
+    send_json([
         "status" => "error",
         "message" => "User not found."
     ]);
-    exit();
 }
 
 $senderId = (int)$user['id'];
@@ -60,11 +67,10 @@ $roomRes = $conn->query("
 $room = $roomRes ? $roomRes->fetch_assoc() : null;
 
 if (!$room) {
-    echo json_encode([
+    send_json([
         "status" => "error",
         "message" => "Chat room not found."
     ]);
-    exit();
 }
 
 $receiverId = ((int)$room['buyer_id'] === $senderId)
@@ -85,7 +91,10 @@ if (!in_array($messageType, $allowedTypes, true)) {
 
 $signature = null;
 
-if (in_array($messageType, ["offer", "acceptance", "delivery_agreement", "cancellation_request"], true)) {
+if (
+    function_exists("signData") &&
+    in_array($messageType, ["offer", "acceptance", "delivery_agreement", "cancellation_request"], true)
+) {
     $dataToSign = json_encode([
         "room_id" => $roomId,
         "sender_id" => $senderId,
@@ -110,26 +119,22 @@ $insert = $conn->query("
     ($roomId, $senderId, $receiverId, '$safeMessage', '$safeType', $signatureSql)
 ");
 
-if ($insert) {
-    $notificationMessage = "New message about " . $room['product_name'];
-
-    $conn->query("
-        INSERT INTO notifications (user_id, order_id, message)
-        VALUES (
-            $receiverId,
-            NULL,
-            '" . $conn->real_escape_string($notificationMessage) . "'
-        )
-    ");
-
-    echo json_encode([
-        "status" => "success",
-        "message" => "Message sent."
-    ]);
-} else {
-    echo json_encode([
+if (!$insert) {
+    send_json([
         "status" => "error",
-        "message" => "Could not send message."
+        "message" => "Could not send message: " . $conn->error
     ]);
 }
-?>
+
+$notificationMessage = "New message about " . $room['product_name'];
+$safeNotification = $conn->real_escape_string($notificationMessage);
+
+$conn->query("
+    INSERT INTO notifications (user_id, order_id, message)
+    VALUES ($receiverId, NULL, '$safeNotification')
+");
+
+send_json([
+    "status" => "success",
+    "message" => "Message sent."
+]);

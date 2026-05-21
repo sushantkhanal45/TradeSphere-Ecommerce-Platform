@@ -1,36 +1,63 @@
 <?php
+ob_start();
 session_start();
+
 include "config/db.php";
 include "includes/rsa_helper.php";
 
-header("Content-Type: application/json");
+function send_json($data) {
+    if (ob_get_length()) {
+        ob_clean();
+    }
 
-if (!isset($_SESSION['user'])) {
-    echo json_encode(["status" => "error", "message" => "Please login first."]);
+    header("Content-Type: application/json");
+    echo json_encode($data);
     exit();
 }
 
-$roomId = (int)($_POST['room_id'] ?? 0);
-$offerAmount = (float)($_POST['offer_amount'] ?? 0);
+if (!isset($_SESSION['user'])) {
+    send_json([
+        "status" => "error",
+        "message" => "Please login first."
+    ]);
+}
+
+$roomId = isset($_POST['room_id']) ? (int)$_POST['room_id'] : 0;
+$offerAmount = isset($_POST['offer_amount']) ? (float)$_POST['offer_amount'] : 0;
 
 if ($roomId <= 0 || $offerAmount <= 0) {
-    echo json_encode(["status" => "error", "message" => "Invalid offer amount."]);
-    exit();
+    send_json([
+        "status" => "error",
+        "message" => "Invalid offer amount."
+    ]);
 }
 
 $userEmail = $conn->real_escape_string($_SESSION['user']);
-$userRes = $conn->query("SELECT id FROM users WHERE email='$userEmail' LIMIT 1");
+
+$userRes = $conn->query("
+    SELECT id
+    FROM users
+    WHERE email = '$userEmail'
+    LIMIT 1
+");
+
 $user = $userRes ? $userRes->fetch_assoc() : null;
 
 if (!$user) {
-    echo json_encode(["status" => "error", "message" => "User not found."]);
-    exit();
+    send_json([
+        "status" => "error",
+        "message" => "User not found."
+    ]);
 }
 
 $buyerId = (int)$user['id'];
 
 $roomRes = $conn->query("
-    SELECT cr.*, p.name AS product_name
+    SELECT 
+        cr.*,
+        p.name AS product_name,
+        p.price AS product_price,
+        p.status AS product_status
     FROM chat_rooms cr
     INNER JOIN products p ON cr.product_id = p.id
     WHERE cr.id = $roomId
@@ -41,8 +68,17 @@ $roomRes = $conn->query("
 $room = $roomRes ? $roomRes->fetch_assoc() : null;
 
 if (!$room) {
-    echo json_encode(["status" => "error", "message" => "Only buyer can make offer."]);
-    exit();
+    send_json([
+        "status" => "error",
+        "message" => "Only the buyer can make an offer."
+    ]);
+}
+
+if ($room['product_status'] === 'sold') {
+    send_json([
+        "status" => "error",
+        "message" => "This product is already sold."
+    ]);
 }
 
 $productId = (int)$room['product_id'];
@@ -50,12 +86,14 @@ $sellerId = (int)$room['seller_id'];
 
 $conn->query("
     UPDATE product_offers
-    SET status='expired'
-    WHERE product_id=$productId
-    AND buyer_id=$buyerId
-    AND seller_id=$sellerId
-    AND status='pending'
+    SET status = 'expired'
+    WHERE product_id = $productId
+    AND buyer_id = $buyerId
+    AND seller_id = $sellerId
+    AND status = 'pending'
 ");
+
+$timestamp = date("Y-m-d H:i:s");
 
 $signData = json_encode([
     "action" => "make_offer",
@@ -63,43 +101,60 @@ $signData = json_encode([
     "buyer_id" => $buyerId,
     "seller_id" => $sellerId,
     "offer_amount" => $offerAmount,
-    "timestamp" => date("Y-m-d H:i:s")
+    "timestamp" => $timestamp
 ]);
 
-$buyerSignature = signData($signData);
+$buyerSignature = "";
+
+if (function_exists("signData")) {
+    $buyerSignature = signData($signData);
+}
+
 $safeSignature = $conn->real_escape_string($buyerSignature ?? "");
 
-$conn->query("
+$insertOffer = $conn->query("
     INSERT INTO product_offers
-    (product_id, buyer_id, seller_id, offer_amount, buyer_signature)
+    (product_id, buyer_id, seller_id, offer_amount, status, buyer_signature)
     VALUES
-    ($productId, $buyerId, $sellerId, $offerAmount, '$safeSignature')
+    ($productId, $buyerId, $sellerId, $offerAmount, 'pending', '$safeSignature')
 ");
+
+if (!$insertOffer) {
+    send_json([
+        "status" => "error",
+        "message" => "Could not create offer: " . $conn->error
+    ]);
+}
 
 $offerId = (int)$conn->insert_id;
 
 $message = "Buyer offered Rs " . number_format($offerAmount, 2) . " for " . $room['product_name'];
 $safeMessage = $conn->real_escape_string($message);
 
-$conn->query("
+$insertMessage = $conn->query("
     INSERT INTO chat_messages
     (room_id, sender_id, receiver_id, message_text, message_type, signature)
     VALUES
     ($roomId, $buyerId, $sellerId, '$safeMessage', 'offer', '$safeSignature')
 ");
 
+if (!$insertMessage) {
+    send_json([
+        "status" => "error",
+        "message" => "Offer was created, but chat message failed: " . $conn->error
+    ]);
+}
+
+$notification = "New offer received: Rs " . number_format($offerAmount, 2) . " for " . $room['product_name'];
+$safeNotification = $conn->real_escape_string($notification);
+
 $conn->query("
     INSERT INTO notifications (user_id, order_id, message)
-    VALUES (
-        $sellerId,
-        NULL,
-        '" . $conn->real_escape_string("New offer received: Rs " . number_format($offerAmount, 2) . " for " . $room['product_name']) . "'
-    )
+    VALUES ($sellerId, NULL, '$safeNotification')
 ");
 
-echo json_encode([
+send_json([
     "status" => "success",
     "message" => "Offer sent successfully.",
     "offer_id" => $offerId
 ]);
-?>
