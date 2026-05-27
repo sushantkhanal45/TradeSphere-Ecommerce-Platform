@@ -24,7 +24,7 @@ if (isset($_POST['verify_otp'])) {
     if (!$user) {
         $error = "User not found.";
     } elseif (empty($user['otp_expires_at']) || strtotime($user['otp_expires_at']) < time()) {
-        $error = "OTP has expired.";
+        $error = "OTP has expired. Please resend OTP.";
     } elseif (empty($user['email_otp']) || !password_verify($otp, $user['email_otp'])) {
         $error = "Invalid OTP.";
     } else {
@@ -61,8 +61,13 @@ if (isset($_POST['resend_otp'])) {
             WHERE email='$safeEmail'
         ");
 
-        sendOtpEmail($email, $user['name'], $otp);
-        $success = "A new OTP has been sent to your email.";
+        $mailSent = sendOtpEmail($email, $user['name'], $otp);
+
+        if ($mailSent) {
+            $success = "A new OTP has been sent to your email.";
+        } else {
+            $error = "OTP was generated but email could not be sent. Please check your internet connection and try again.";
+        }
     } else {
         $error = "User not found.";
     }

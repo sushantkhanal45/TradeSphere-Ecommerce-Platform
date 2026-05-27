@@ -24,7 +24,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $safeName = $conn->real_escape_string($name);
         $safeEmail = $conn->real_escape_string($email);
 
-        $check = $conn->query("SELECT * FROM users WHERE email='$safeEmail'");
+        $check = $conn->query("SELECT * FROM users WHERE email='$safeEmail' LIMIT 1");
+
+        $otp = str_pad((string)random_int(0, 999999), 6, "0", STR_PAD_LEFT);
+        $otpHash = password_hash($otp, PASSWORD_DEFAULT);
+        $expiresAt = date("Y-m-d H:i:s", time() + 600);
+        $passwordHash = password_hash($passwordRaw, PASSWORD_DEFAULT);
 
         if ($check && $check->num_rows > 0) {
             $existing = $check->fetch_assoc();
@@ -32,50 +37,37 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             if ((int)$existing['is_verified'] === 1) {
                 $error = "An account with this email already exists.";
             } else {
-                $otp = str_pad((string)random_int(0, 999999), 6, "0", STR_PAD_LEFT);
-                $otpHash = password_hash($otp, PASSWORD_DEFAULT);
-                $expiresAt = date("Y-m-d H:i:s", time() + 600);
-
-                $conn->query("
+                $update = $conn->query("
                     UPDATE users
                     SET name='$safeName',
-                        password='" . password_hash($passwordRaw, PASSWORD_DEFAULT) . "',
+                        password='$passwordHash',
                         email_otp='$otpHash',
                         otp_expires_at='$expiresAt'
                     WHERE email='$safeEmail'
                 ");
 
-                $mailSent = sendOtpEmail($email, $name, $otp);
-
-                if ($mailSent) {
+                if (!$update) {
+                    $error = "Registration update failed. Please try again.";
+                } else {
                     $_SESSION['pending_email'] = $email;
+                    sendOtpEmail($email, $name, $otp);
                     header("Location: verify_otp.php");
                     exit();
-                } else {
-                    $error = "Could not send OTP email. Please try again.";
                 }
             }
         } else {
-            $passwordHash = password_hash($passwordRaw, PASSWORD_DEFAULT);
-            $otp = str_pad((string)random_int(0, 999999), 6, "0", STR_PAD_LEFT);
-            $otpHash = password_hash($otp, PASSWORD_DEFAULT);
-            $expiresAt = date("Y-m-d H:i:s", time() + 600);
-
             $sql = "
-                INSERT INTO users (name, email, password, is_verified, email_otp, otp_expires_at)
-                VALUES ('$safeName', '$safeEmail', '$passwordHash', 0, '$otpHash', '$expiresAt')
+                INSERT INTO users 
+                (name, email, password, role, is_verified, email_otp, otp_expires_at, seller_status)
+                VALUES 
+                ('$safeName', '$safeEmail', '$passwordHash', 'user', 0, '$otpHash', '$expiresAt', 'none')
             ";
 
             if ($conn->query($sql)) {
-                $mailSent = sendOtpEmail($email, $name, $otp);
-
-                if ($mailSent) {
-                    $_SESSION['pending_email'] = $email;
-                    header("Location: verify_otp.php");
-                    exit();
-                } else {
-                    $error = "Registration saved, but OTP email could not be sent.";
-                }
+                $_SESSION['pending_email'] = $email;
+                sendOtpEmail($email, $name, $otp);
+                header("Location: verify_otp.php");
+                exit();
             } else {
                 $error = "Registration failed. Please try again.";
             }
@@ -91,22 +83,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <title>Create Account - TradeSphere</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        .password-wrap{
-            position: relative;
-        }
-
-        .password-wrap input{
-            padding-right: 50px;
-        }
-
+        .password-wrap{position:relative;}
+        .password-wrap input{padding-right:50px;}
         .toggle-eye{
-            position: absolute;
-            right: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            cursor: pointer;
-            user-select: none;
-            font-size: 18px;
+            position:absolute;
+            right:14px;
+            top:50%;
+            transform:translateY(-50%);
+            cursor:pointer;
+            user-select:none;
+            font-size:18px;
         }
     </style>
 </head>
@@ -134,7 +120,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <div class="form-group">
                 <label>Email Address</label>
                 <input type="email" name="email" placeholder="Enter your email" required>
-                 <small class="helper">
+                <small class="helper">
                     Please enter your active email address. A verification OTP will be sent to this email after registration.
                 </small>
             </div>
