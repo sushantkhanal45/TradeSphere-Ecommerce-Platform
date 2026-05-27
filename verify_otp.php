@@ -5,6 +5,14 @@ include "includes/mail_helper.php";
 
 $error = "";
 $success = "";
+$toastMessage = "";
+$toastType = "success";
+
+if (isset($_SESSION['otp_notice'])) {
+    $toastMessage = $_SESSION['otp_notice'];
+    $toastType = "warning";
+    unset($_SESSION['otp_notice']);
+}
 
 if (!isset($_SESSION['pending_email'])) {
     header("Location: register.php");
@@ -65,8 +73,12 @@ if (isset($_POST['resend_otp'])) {
 
         if ($mailSent) {
             $success = "A new OTP has been sent to your email.";
+            $toastMessage = "A new OTP has been sent to your email.";
+            $toastType = "success";
         } else {
-            $error = "OTP was generated but email could not be sent. Please check your internet connection and try again.";
+            $error = "OTP was generated but email could not be sent.";
+            $toastMessage = "Network error: OTP email could not be sent. Please check your internet connection and try again.";
+            $toastType = "error";
         }
     } else {
         $error = "User not found.";
@@ -80,6 +92,42 @@ if (isset($_POST['resend_otp'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verify Email - TradeSphere</title>
     <link rel="stylesheet" href="css/style.css">
+
+    <style>
+        .toast{
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            min-width: 280px;
+            max-width: 420px;
+            padding: 14px 18px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            z-index: 9999;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .toast.show{
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .toast.success{
+            background: #16a34a;
+        }
+
+        .toast.error{
+            background: #dc2626;
+        }
+
+        .toast.warning{
+            background: #f59e0b;
+        }
+    </style>
 </head>
 <body>
 
@@ -89,11 +137,11 @@ if (isset($_POST['resend_otp'])) {
         <p class="helper">Enter the OTP sent to your email.</p>
 
         <?php if ($error): ?>
-            <div class="error-msg"><?php echo $error; ?></div>
+            <div class="error-msg"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
 
         <?php if ($success): ?>
-            <div class="success-msg"><?php echo $success; ?></div>
+            <div class="success-msg"><?php echo htmlspecialchars($success); ?></div>
         <?php endif; ?>
 
         <form method="POST">
@@ -122,6 +170,32 @@ if (isset($_POST['resend_otp'])) {
         </a>
     </div>
 </div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+function showToast(message, type = "success") {
+    const toast = document.getElementById("toast");
+
+    if (!toast || !message) return;
+
+    toast.innerText = message;
+    toast.className = "toast show " + type;
+
+    setTimeout(() => {
+        toast.classList.remove("show");
+    }, 4000);
+}
+</script>
+
+<?php if (!empty($toastMessage)): ?>
+<script>
+showToast(
+    "<?php echo addslashes($toastMessage); ?>",
+    "<?php echo $toastType; ?>"
+);
+</script>
+<?php endif; ?>
 
 </body>
 </html>
