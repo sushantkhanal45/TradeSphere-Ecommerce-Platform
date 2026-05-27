@@ -27,7 +27,7 @@ function sendMailMessage($toEmail, $toName, $subject, $bodyHtml) {
         return true;
 
     } catch (Exception $e) {
-        die("Mailer Error: " . $mail->ErrorInfo);
+        return false;
     }
 }
 

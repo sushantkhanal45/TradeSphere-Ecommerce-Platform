@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 19, 2026 at 06:34 AM
+-- Generation Time: May 21, 2026 at 11:45 AM
 -- Server version: 10.4.28-MariaDB
 -- PHP Version: 8.2.4
 
@@ -28,14 +28,11 @@ SET time_zone = "+00:00";
 --
 
 CREATE TABLE `cart` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL,
   `user_id` int(11) DEFAULT NULL,
   `product_id` int(11) DEFAULT NULL,
   `quantity` int(11) DEFAULT 1,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `unique_cart` (`user_id`,`product_id`),
-  KEY `product_id` (`product_id`)
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -117,7 +114,18 @@ INSERT INTO `chat_messages` (`id`, `room_id`, `sender_id`, `receiver_id`, `messa
 (29, 1, 2, 3, 'test completed', 'normal', NULL, 1, '2026-05-18 11:40:37'),
 (30, 1, 2, 3, 'test again', 'normal', NULL, 1, '2026-05-18 11:42:23'),
 (31, 1, 3, 2, 'test start', 'normal', NULL, 1, '2026-05-18 11:42:31'),
-(32, 1, 2, 3, 'test completed', 'normal', NULL, 1, '2026-05-18 11:42:50');
+(32, 1, 2, 3, 'test completed', 'normal', NULL, 1, '2026-05-18 11:42:50'),
+(33, 2, 3, 2, 'hello', 'normal', NULL, 1, '2026-05-21 04:10:45'),
+(34, 2, 3, 2, 'hello', 'normal', NULL, 1, '2026-05-21 04:17:12'),
+(35, 2, 3, 2, '//', 'normal', NULL, 1, '2026-05-21 04:17:19'),
+(36, 2, 3, 2, '..', 'normal', NULL, 1, '2026-05-21 04:18:05'),
+(37, 2, 2, 3, 'hello', 'normal', NULL, 1, '2026-05-21 07:16:24'),
+(38, 2, 3, 2, 'Buyer offered Rs 500.00 for Desk Organizer 320', 'offer', 'KfwzxzFUd955nD/blQrqb3ajfGWBUPQwKPzF5W2ndhN4WP9TOmrChs/VRK24dCorjcpbL+ZUiymU66/p2zagPP+7PefcNverrgYu29E9Dlpk5pRBmeNTRf9g7ffoMaUPfK1SGeJuuLjpdrdRyxZVuxC2eBZklpWcpdgKM5/+t68PwuzawvP2YLMI90wEH2L++BC8G3iZ+H8BxkzCnwp7+eguy8WZezv6LKTCI6GGYkDoI9Xw4ftfWrIwhhJWOl8TFzb46o1XZ2ALK+LZfu3i+5/ytGSJEMuFWbAzpd1KlNFf0sM9PQ/z7TTW2/8BDEpRLLgSgmg9sO9ayR8ygJzERw==', 1, '2026-05-21 07:16:49'),
+(39, 2, 2, 3, 'Yes, we can negotiate.', 'normal', NULL, 1, '2026-05-21 07:16:57'),
+(40, 2, 3, 2, 'Is the price negotiable?', 'normal', NULL, 1, '2026-05-21 07:17:06'),
+(41, 2, 2, 3, 'Yes, we can negotiate.', 'normal', NULL, 1, '2026-05-21 07:17:11'),
+(42, 2, 3, 2, 'Buyer offered Rs 500.00 for Desk Organizer 320', 'offer', 'f/zt7ng0GEte5FibENJXuBF2ZTTM+p2rpCY5HoyhTf2CF5DvbQpF3EE1/q3Gz8DcP4GyrFE6gE2hcMZvE9NELehXSMTI1Fz4PYPwwsE7OEFw4zBu4817qalZFd8Yq/4O8QkC7vie80Pis6iVeeVp7rGBPS8MMPb68dIjr8qXQRotsYCXp1PiIrkoXJSYVGZNr62ac96DBmpoe85NXValQnMOMquJm+PkbxIL9LyO+DDEA0npZq4lYe3ZNOnfusT8UN53IF6yGtqqSQ50bdalYzqL7nS8EQ8ZrTvPucsFZCdWiQSEdlqJCmJQ+Kyu4Hds/N0XBDiONxD+6KkGyAgCDw==', 1, '2026-05-21 07:17:17'),
+(43, 2, 2, 3, 'Seller accepted offer Rs 500.00 for Desk Organizer 320', 'accepted', 'k9Yb8euZQL5pkF/ZFjAEldmw/LWtvXEc2n2KLOKmH5BTHMwyGFN1Gfjjdi7w+0jiM9hnak6z6C7NAvz+OMJd6iSAvFHqYRm6iskcc3gy4AbnHN8AKjHPa0cpACdm6Ea5IYQgW7bHnfXao/LYE9wTBGAMr54oJkogInQQSaykuF98Vrpg9K7Of2Mf5DyAKfguUXlK6SJOsBoZdNF3/vcckIYNKmJSm92jdpuOPSc7g6Gvgld/L5iRRL7Fee33Mkq+2emJMYwl/mABPclgIDjzAC/xAgGGmklhYf8LWGCl7QUK0I+tytMVK+Ox2nq2titnqPM0cneF6efWTCO1yPpJIA==', 1, '2026-05-21 07:42:16');
 
 -- --------------------------------------------------------
 
@@ -139,7 +147,8 @@ CREATE TABLE `chat_rooms` (
 --
 
 INSERT INTO `chat_rooms` (`id`, `buyer_id`, `seller_id`, `product_id`, `order_id`, `created_at`) VALUES
-(1, 3, 2, 7, NULL, '2026-05-18 03:25:28');
+(1, 3, 2, 7, NULL, '2026-05-18 03:25:28'),
+(2, 3, 2, 91, NULL, '2026-05-21 04:10:40');
 
 -- --------------------------------------------------------
 
@@ -201,7 +210,18 @@ INSERT INTO `notifications` (`id`, `user_id`, `order_id`, `message`, `is_read`, 
 (50, 3, NULL, 'New message about Noise Cancelling Headphones 171', 1, '2026-05-18 11:40:37'),
 (51, 3, NULL, 'New message about Noise Cancelling Headphones 171', 1, '2026-05-18 11:42:23'),
 (52, 2, NULL, 'New message about Noise Cancelling Headphones 171', 1, '2026-05-18 11:42:31'),
-(53, 3, NULL, 'New message about Noise Cancelling Headphones 171', 1, '2026-05-18 11:42:50');
+(53, 3, NULL, 'New message about Noise Cancelling Headphones 171', 1, '2026-05-18 11:42:50'),
+(54, 2, NULL, 'New message about Desk Organizer 320', 1, '2026-05-21 04:10:45'),
+(55, 2, NULL, 'New message about Desk Organizer 320', 1, '2026-05-21 04:17:12'),
+(56, 2, NULL, 'New message about Desk Organizer 320', 1, '2026-05-21 04:17:19'),
+(57, 2, NULL, 'New message about Desk Organizer 320', 1, '2026-05-21 04:18:05'),
+(58, 3, NULL, 'New message about Desk Organizer 320', 1, '2026-05-21 07:16:24'),
+(59, 2, NULL, 'New offer received: Rs 500.00 for Desk Organizer 320', 1, '2026-05-21 07:16:49'),
+(60, 3, NULL, 'New message about Desk Organizer 320', 1, '2026-05-21 07:16:57'),
+(61, 2, NULL, 'New message about Desk Organizer 320', 1, '2026-05-21 07:17:06'),
+(62, 3, NULL, 'New message about Desk Organizer 320', 1, '2026-05-21 07:17:11'),
+(63, 2, NULL, 'New offer received: Rs 500.00 for Desk Organizer 320', 1, '2026-05-21 07:17:17'),
+(64, 3, NULL, 'Your offer was accepted for Desk Organizer 320', 1, '2026-05-21 07:42:16');
 
 -- --------------------------------------------------------
 
@@ -243,7 +263,11 @@ INSERT INTO `orders` (`id`, `user_id`, `product_id`, `seller_user_id`, `buyer_na
 (2, 3, 3, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 487.00, 1, 'ts_6a014dfdd8673_p3', 'eSewa', 'paid', 'processing', 'delivered', 1, '2026-05-11 09:34:21', '2026-05-11 09:19:10', 0, '000F976', '2026-05-11 03:33:17', '2026-05-11 03:49:21'),
 (3, 3, 86, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 317.00, 1, 'ts_6a014e8018205_p86', 'eSewa', 'paid', 'processing', 'delivered', 1, '2026-05-12 12:39:50', '2026-05-12 12:39:42', 0, '000F977', '2026-05-11 03:35:28', '2026-05-12 06:54:50'),
 (4, 3, 86, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 317.00, 1, 'ts_6a0150d44f338_p86', 'eSewa', 'paid', 'processing', 'delivered', 1, '2026-05-12 12:52:54', '2026-05-12 12:40:48', 0, '000F97C', '2026-05-11 03:45:24', '2026-05-12 07:07:54'),
-(5, 3, 7, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 1127.00, 1, 'ts_6a0ae8343d002_p7', 'eSewa', 'pending', 'placed', 'pending', 0, NULL, NULL, 0, NULL, '2026-05-18 10:21:40', '2026-05-18 10:21:40');
+(5, 3, 7, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 1127.00, 1, 'ts_6a0ae8343d002_p7', 'eSewa', 'pending', 'placed', 'pending', 0, NULL, NULL, 0, NULL, '2026-05-18 10:21:40', '2026-05-18 10:21:40'),
+(6, 3, 91, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 1061.00, 1, 'ts_6a0eb774a3ed4_p91', 'eSewa', 'pending', 'placed', 'pending', 0, NULL, NULL, 0, NULL, '2026-05-21 07:42:44', '2026-05-21 07:42:44'),
+(7, 3, 91, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 500.00, 1, 'ts_6a0ebcad3a3a5_p91', 'eSewa', 'pending', 'placed', 'pending', 0, NULL, NULL, 0, NULL, '2026-05-21 08:05:01', '2026-05-21 08:05:01'),
+(8, 3, 91, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 500.00, 1, 'ts_6a0ebce3a1fa0_p91', 'eSewa', 'pending', 'placed', 'pending', 0, NULL, NULL, 0, NULL, '2026-05-21 08:05:55', '2026-05-21 08:05:55'),
+(9, 3, 91, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 500.00, 1, 'ts_6a0ebd2daa0c9_p91', 'eSewa', 'paid', 'confirmed', 'pending', 0, NULL, NULL, 0, '000FIKL', '2026-05-21 08:07:09', '2026-05-21 08:07:58');
 
 -- --------------------------------------------------------
 
@@ -270,7 +294,8 @@ INSERT INTO `payment_logs` (`id`, `order_id`, `transaction_uuid`, `status`, `raw
 (17, 1, 'ts_6a00273ec4434', 'paid', '{\"transaction_code\":\"000F830\",\"status\":\"COMPLETE\",\"total_amount\":\"933.0\",\"transaction_uuid\":\"ts_6a00273ec4434\",\"product_code\":\"EPAYTEST\",\"signed_field_names\":\"transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names\",\"signature\":\"uyoEqh2agenW8rWEJ4cRxeb40wYFazRt8DjbDNJecCk=\"}', '2026-05-10 06:38:57'),
 (18, 2, 'ts_6a014dfdd8673', 'paid', '{\"transaction_code\":\"000F976\",\"status\":\"COMPLETE\",\"total_amount\":\"487.0\",\"transaction_uuid\":\"ts_6a014dfdd8673\",\"product_code\":\"EPAYTEST\",\"signed_field_names\":\"transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names\",\"signature\":\"hWAo1BLXHRDGs0mMPAM9CEcjEZHqL9lAIXWvjzmXxfM=\"}', '2026-05-11 03:33:37'),
 (19, 3, 'ts_6a014e8018205', 'paid', '{\"transaction_code\":\"000F977\",\"status\":\"COMPLETE\",\"total_amount\":\"317.0\",\"transaction_uuid\":\"ts_6a014e8018205\",\"product_code\":\"EPAYTEST\",\"signed_field_names\":\"transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names\",\"signature\":\"3TxRbfHn4FFBpwExyhYojMLt+yCWsJ/695MX6nQ6OX8=\"}', '2026-05-11 03:35:46'),
-(20, 4, 'ts_6a0150d44f338', 'paid', '{\"transaction_code\":\"000F97C\",\"status\":\"COMPLETE\",\"total_amount\":\"317.0\",\"transaction_uuid\":\"ts_6a0150d44f338\",\"product_code\":\"EPAYTEST\",\"signed_field_names\":\"transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names\",\"signature\":\"Qvx35eQK+w9ZP76UxLuj4ZG+hlG5u0ni0HO2pqL84XQ=\"}', '2026-05-11 03:45:43');
+(20, 4, 'ts_6a0150d44f338', 'paid', '{\"transaction_code\":\"000F97C\",\"status\":\"COMPLETE\",\"total_amount\":\"317.0\",\"transaction_uuid\":\"ts_6a0150d44f338\",\"product_code\":\"EPAYTEST\",\"signed_field_names\":\"transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names\",\"signature\":\"Qvx35eQK+w9ZP76UxLuj4ZG+hlG5u0ni0HO2pqL84XQ=\"}', '2026-05-11 03:45:43'),
+(21, 9, 'ts_6a0ebd2daa0c9', 'paid', '{\"transaction_code\":\"000FIKL\",\"status\":\"COMPLETE\",\"total_amount\":\"500.0\",\"transaction_uuid\":\"ts_6a0ebd2daa0c9\",\"product_code\":\"EPAYTEST\",\"signed_field_names\":\"transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names\",\"signature\":\"Wrem0oBEQ8VpGJbOCOJ0oIQM/R2y413pa25O6JRC638=\"}', '2026-05-21 08:07:58');
 
 -- --------------------------------------------------------
 
@@ -424,7 +449,9 @@ CREATE TABLE `product_offers` (
 
 INSERT INTO `product_offers` (`id`, `product_id`, `buyer_id`, `seller_id`, `offer_amount`, `status`, `buyer_signature`, `seller_signature`, `created_at`, `responded_at`) VALUES
 (1, 7, 3, 2, 1000.00, 'accepted', 'oVPpghhuuqdPsZaJD6HLUdVFgzxHh2jJtYNxr9PC1tSQqKF3zHoHFxMBxvgrWUsmOujVBpjqm+9mDsbhU0NOXHheDpbJlcv8AWTNk8QF0N1e0mNOEMzFp8f0Fh7vrH0ZDG5PgXu2VEev7c+EeRiZVLEc3i1ITJK6wc2IItFZeaAOpkJm9fb7Bb3X+9rTBJzuji+P+AqQEvckNqE3amd5WyyN9L9nnoj/l3RomVqCKe3WyghK8JW7jaTLl6oL7JLrZGDcdjHUDhQSP+3ugFNa9lDphycmdvz9MuVKs6p9CiNS+iwJLyMDaRYFLlVhZLjE46ouXxC+IrTWpOiRfFAKgA==', 'hGIhntImw7MoTQCmb8WD3HNJBbsY3KSoKaF+xNmU/fVMxrWDCvujO6GYaB5Op1LXIE6weKbg/A5XkNR92DqU7gsxCT5584kJljlQg9hYZPdtnoN3H3BSCx3qWlVFot4WCfNWtlK9w2Aix+u1kO8XkWkx/kMUdFDS+sl0CQiouSZQ/aJPZh9z7rC22ReMw+9n4OksegDvckMEKpzSYckNFiO2SNyrFQOgv0FRXSTya+YaZ2NTXYXaKwkC2v6MCrUt8cricaC+DLaU2JMjYAg4GEZ6XiGa52H5Fp+647MaY8nPe1NjHmbqR/z9SAJed7i6QUSr6Y8S7mMqQjKdPgiIAA==', '2026-05-18 08:14:38', '2026-05-18 13:59:49'),
-(2, 7, 3, 2, 900.00, 'accepted', 'AVoOMpVa8ENa+tkb6wTM6Ni9R/ecD6ZzPR/xiPAUTGkUpCD3SmIPkQ7u08EcM9JQDNMUvPf3Btk2oqBxOpda3t1rEmwqzoB7BDe2A+RVUOFkxFdr15L7es5J+oUoFFR35ihgIA/adSV2liVtvXs6wB1BfYVEZtFuxruCEx4TQbBQ3qy3eRnJCwGDcg64I5vgBrj05rklDaU1KGT7J1z3nRgdGCm5rzWd5e1DuYr2yTyGaBplxCdKI/peHHOivUY2a13M8aZ5OiIo/as8ppzrmQkx+UviF811Y96lQfShxdBGy51KfXK3FKxYwHDhCAx/y+Oh0dL1qdSGWyaSBq1NFA==', 'dLV6nAalrckVRysN9rp3CTS/2dyo/pmL4DxJmfTQ+ikyfllyEgAJy7nqVrXafD2GDNhCGgS7lvD5/S4OKvIY+g7X+MnNhRZ9HI21UgBGJpYmBdry5QpBjWxCsYtdsMoFCwsDEFh2+1sdzBNtkxQTE23RQTf4F2JyKlIrffoQUja7Y5SbthMXvZICgBLe6mdagKWPg04iZvB8We9y7VBC8K2EcWQVRIsMqlAiYdw7MOL8RdovlrkKJLPyBsPESHAJkudF+lOU0A+OIyE4390iGPKaQ9jb3wFzWtOHpi+9CUJ9l4i9TM+30WxQi9S7jYd3ZrsMlNG5OSa4KzapE0ETnA==', '2026-05-18 08:40:49', '2026-05-18 14:25:54');
+(2, 7, 3, 2, 900.00, 'accepted', 'AVoOMpVa8ENa+tkb6wTM6Ni9R/ecD6ZzPR/xiPAUTGkUpCD3SmIPkQ7u08EcM9JQDNMUvPf3Btk2oqBxOpda3t1rEmwqzoB7BDe2A+RVUOFkxFdr15L7es5J+oUoFFR35ihgIA/adSV2liVtvXs6wB1BfYVEZtFuxruCEx4TQbBQ3qy3eRnJCwGDcg64I5vgBrj05rklDaU1KGT7J1z3nRgdGCm5rzWd5e1DuYr2yTyGaBplxCdKI/peHHOivUY2a13M8aZ5OiIo/as8ppzrmQkx+UviF811Y96lQfShxdBGy51KfXK3FKxYwHDhCAx/y+Oh0dL1qdSGWyaSBq1NFA==', 'dLV6nAalrckVRysN9rp3CTS/2dyo/pmL4DxJmfTQ+ikyfllyEgAJy7nqVrXafD2GDNhCGgS7lvD5/S4OKvIY+g7X+MnNhRZ9HI21UgBGJpYmBdry5QpBjWxCsYtdsMoFCwsDEFh2+1sdzBNtkxQTE23RQTf4F2JyKlIrffoQUja7Y5SbthMXvZICgBLe6mdagKWPg04iZvB8We9y7VBC8K2EcWQVRIsMqlAiYdw7MOL8RdovlrkKJLPyBsPESHAJkudF+lOU0A+OIyE4390iGPKaQ9jb3wFzWtOHpi+9CUJ9l4i9TM+30WxQi9S7jYd3ZrsMlNG5OSa4KzapE0ETnA==', '2026-05-18 08:40:49', '2026-05-18 14:25:54'),
+(3, 91, 3, 2, 500.00, 'expired', 'KfwzxzFUd955nD/blQrqb3ajfGWBUPQwKPzF5W2ndhN4WP9TOmrChs/VRK24dCorjcpbL+ZUiymU66/p2zagPP+7PefcNverrgYu29E9Dlpk5pRBmeNTRf9g7ffoMaUPfK1SGeJuuLjpdrdRyxZVuxC2eBZklpWcpdgKM5/+t68PwuzawvP2YLMI90wEH2L++BC8G3iZ+H8BxkzCnwp7+eguy8WZezv6LKTCI6GGYkDoI9Xw4ftfWrIwhhJWOl8TFzb46o1XZ2ALK+LZfu3i+5/ytGSJEMuFWbAzpd1KlNFf0sM9PQ/z7TTW2/8BDEpRLLgSgmg9sO9ayR8ygJzERw==', NULL, '2026-05-21 07:16:49', NULL),
+(4, 91, 3, 2, 500.00, 'accepted', 'f/zt7ng0GEte5FibENJXuBF2ZTTM+p2rpCY5HoyhTf2CF5DvbQpF3EE1/q3Gz8DcP4GyrFE6gE2hcMZvE9NELehXSMTI1Fz4PYPwwsE7OEFw4zBu4817qalZFd8Yq/4O8QkC7vie80Pis6iVeeVp7rGBPS8MMPb68dIjr8qXQRotsYCXp1PiIrkoXJSYVGZNr62ac96DBmpoe85NXValQnMOMquJm+PkbxIL9LyO+DDEA0npZq4lYe3ZNOnfusT8UN53IF6yGtqqSQ50bdalYzqL7nS8EQ8ZrTvPucsFZCdWiQSEdlqJCmJQ+Kyu4Hds/N0XBDiONxD+6KkGyAgCDw==', 'k9Yb8euZQL5pkF/ZFjAEldmw/LWtvXEc2n2KLOKmH5BTHMwyGFN1Gfjjdi7w+0jiM9hnak6z6C7NAvz+OMJd6iSAvFHqYRm6iskcc3gy4AbnHN8AKjHPa0cpACdm6Ea5IYQgW7bHnfXao/LYE9wTBGAMr54oJkogInQQSaykuF98Vrpg9K7Of2Mf5DyAKfguUXlK6SJOsBoZdNF3/vcckIYNKmJSm92jdpuOPSc7g6Gvgld/L5iRRL7Fee33Mkq+2emJMYwl/mABPclgIDjzAC/xAgGGmklhYf8LWGCl7QUK0I+tytMVK+Ox2nq2titnqPM0cneF6efWTCO1yPpJIA==', '2026-05-21 07:17:17', '2026-05-21 13:27:16');
 
 -- --------------------------------------------------------
 
@@ -475,14 +502,15 @@ INSERT INTO `product_views` (`id`, `user_id`, `product_id`, `category_id`, `view
 (1, 3, 12, 1, '2026-04-18 15:10:53'),
 (2, 3, 95, 8, '2026-04-21 02:10:26'),
 (3, 2, 96, 8, '2026-04-22 10:26:07'),
-(4, 2, 95, 8, '2026-04-22 10:26:20'),
+(4, 2, 95, 8, '2026-05-21 04:17:39'),
 (5, 2, 3, 1, '2026-04-22 10:27:53'),
 (6, 3, 87, 8, '2026-04-22 10:50:54'),
 (7, 3, 88, 8, '2026-04-22 14:43:12'),
 (8, 5, 96, 8, '2026-04-22 14:59:45'),
 (9, 3, 85, 8, '2026-05-11 03:35:08'),
 (10, 3, 86, 8, '2026-05-11 03:45:15'),
-(11, 3, 7, 1, '2026-05-18 08:16:38');
+(11, 3, 7, 1, '2026-05-18 08:16:38'),
+(12, 3, 91, 8, '2026-05-21 04:10:39');
 
 -- --------------------------------------------------------
 
@@ -596,7 +624,8 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`, `is_verified`, `
 (2, 'Sushant Khanal.', 'skkhanal45@gmail.com', '$2y$10$T.xSPtM4ohrhluh8wXGoA.iLfb5Wh3j1JU82HaqOylq23lfOClyiu', 'user', 1, NULL, NULL, NULL, NULL, '2026-04-02 08:47:16'),
 (3, 'Harry Potter', 'hellwrld0045@gmail.com', '$2y$10$a2TyqVBrTJxlv2KklP3Uue91ZsidDIvARL76KgRkvy.MDCMVtdZOK', 'user', 1, NULL, NULL, NULL, NULL, '2026-04-07 06:53:56'),
 (4, 'Sushant Khanal', 'sk@gmail.com', '$2y$10$RjVNIEnYnyTwcUo6bFBYU.2KGqRvhJ7Ria/1K1/Xo3W3yc4P6Swvq', 'user', 0, '$2y$10$HGgd7WTie0OV8kWBnO7Pt.05upaJ1BnDHYrv9K0a0BjyLJO1cOryW', '2026-04-22 16:03:09', NULL, NULL, '2026-04-22 13:53:09'),
-(5, 'Sushant Khanal', 'skhanal0045@gmail.com', '$2y$10$hoIiuAp0b1gMS8SOqrETNOwnyLz2sJEDgCRMHlmJWXjZLNVHBmAQu', 'user', 1, NULL, NULL, NULL, NULL, '2026-04-22 14:58:58');
+(5, 'Sushant Khanal', 'skhanal0045@gmail.com', '$2y$10$hoIiuAp0b1gMS8SOqrETNOwnyLz2sJEDgCRMHlmJWXjZLNVHBmAQu', 'user', 1, NULL, NULL, NULL, NULL, '2026-04-22 14:58:58'),
+(6, 'Swastik College', 'info.swastikcollege@gmail.com', '$2y$10$DPm.B0Jbr/Rp3ZRvsHMLS.oTfLGKjz0VcEDDUQQAH.Glm6NlLa/AO', 'user', 0, '$2y$10$66FahTCbjxYQ6zjNGJnRwejn15405fXS1YbAWR599lxODmAnfb4m6', '2026-05-21 11:52:07', NULL, NULL, '2026-05-21 09:42:07');
 
 -- --------------------------------------------------------
 
@@ -617,12 +646,21 @@ CREATE TABLE `wishlist` (
 
 INSERT INTO `wishlist` (`id`, `user_id`, `product_id`, `created_at`) VALUES
 (8, 3, 86, '2026-05-11 03:34:42'),
-(9, 3, 4, '2026-05-11 03:34:43');
+(9, 3, 4, '2026-05-11 03:34:43'),
+(17, 3, 93, '2026-05-21 04:21:44'),
+(21, 3, 96, '2026-05-21 06:20:45');
 
 --
 -- Indexes for dumped tables
 --
 
+--
+-- Indexes for table `cart`
+--
+ALTER TABLE `cart`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_cart` (`user_id`,`product_id`),
+  ADD KEY `product_id` (`product_id`);
 
 --
 -- Indexes for table `categories`
@@ -717,7 +755,10 @@ ALTER TABLE `wishlist`
 --
 
 --
-
+-- AUTO_INCREMENT for table `cart`
+--
+ALTER TABLE `cart`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `categories`
@@ -729,31 +770,31 @@ ALTER TABLE `categories`
 -- AUTO_INCREMENT for table `chat_messages`
 --
 ALTER TABLE `chat_messages`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
 
 --
 -- AUTO_INCREMENT for table `chat_rooms`
 --
 ALTER TABLE `chat_rooms`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=54;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=65;
 
 --
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `payment_logs`
 --
 ALTER TABLE `payment_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT for table `products`
@@ -765,7 +806,7 @@ ALTER TABLE `products`
 -- AUTO_INCREMENT for table `product_offers`
 --
 ALTER TABLE `product_offers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `product_ratings`
@@ -777,7 +818,7 @@ ALTER TABLE `product_ratings`
 -- AUTO_INCREMENT for table `product_views`
 --
 ALTER TABLE `product_views`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `signatures`
@@ -789,13 +830,13 @@ ALTER TABLE `signatures`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `wishlist`
 --
 ALTER TABLE `wishlist`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- Constraints for dumped tables
