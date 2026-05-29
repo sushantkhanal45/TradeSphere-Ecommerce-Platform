@@ -23,27 +23,6 @@ $highlightOrderId = 0;
 $highlightMessage = "";
 $openRatingModalOrderId = 0;
 
-/* Clear all wishlist items */
-if (isset($_POST['clear_all_wishlist'])) {
-    if ($conn->query("DELETE FROM wishlist WHERE user_id = $userId")) {
-        header("Location: profile.php#wishlist");
-        exit();
-    } else {
-        $error = "Could not clear wishlist.";
-    }
-}
-
-/* Remove wishlist item */
-if (isset($_POST['remove_wishlist_item'])) {
-    $productId = (int)$_POST['product_id'];
-
-    if ($conn->query("DELETE FROM wishlist WHERE user_id = $userId AND product_id = $productId")) {
-        $success = "Item removed from wishlist.";
-    } else {
-        $error = "Could not remove item from wishlist.";
-    }
-}
-
 /* Toggle product status */
 if (isset($_POST['toggle_status'])) {
     $productId = (int)$_POST['product_id'];
@@ -679,7 +658,7 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
                 <div class="profile-stat"><h3>Completed Sales</h3><p><?php echo $completedSales; ?></p></div>
                 <div class="profile-stat"><h3>Cart Items</h3><p><?php echo $cartItems; ?></p></div>
                 <div class="profile-stat"><h3>Paid Purchases</h3><p><?php echo $totalPurchases; ?></p></div>
-                <div class="profile-stat"><h3>Wishlist Items</h3><p><?php echo $wishlistCount; ?></p></div>
+                <div class="profile-stat"><h3>Wishlist Items</h3><p id="wishlistStatCount"><?php echo $wishlistCount; ?></p></div>
             </div>
         </div>
 
@@ -688,23 +667,16 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
                 <h2 class="section-title" style="text-align:left; margin-bottom:0;">My Wishlist</h2>
 
                 <?php if ($myWishlist && $myWishlist->num_rows > 0): ?>
-                    <form 
-                        method="POST" 
-                        action="profile.php#wishlist" 
-                        onsubmit="return confirm('Are you sure you want to clear all wishlist items?');"
-                        style="margin:0;"
-                    >
-                        <button type="submit" name="clear_all_wishlist" value="1" class="clear-wishlist-btn">
-                            Clear All
-                        </button>
-                    </form>
+                    <button type="button" id="clearWishlistBtn" class="clear-wishlist-btn">
+                        Clear All
+                    </button>
                 <?php endif; ?>
             </div>
 
             <?php if ($myWishlist && $myWishlist->num_rows > 0): ?>
-                <div class="products-grid">
+                <div class="products-grid" id="wishlistGrid">
                     <?php while ($row = $myWishlist->fetch_assoc()): ?>
-                        <div class="product-card">
+                        <div class="product-card wishlist-card" id="wishlist-card-<?php echo (int)$row['id']; ?>">
                             <div class="product-image-wrap">
                                 <img src="uploads/<?php echo htmlspecialchars($row['image']); ?>" alt="Wishlist Product">
 
@@ -738,17 +710,20 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
                                 <div class="product-actions" style="display:flex; gap:10px; flex-wrap:wrap;">
                                     <a href="product_details.php?id=<?php echo (int)$row['id']; ?>" class="small-btn primary">View Details</a>
 
-                                    <form method="POST" style="margin:0;">
-                                        <input type="hidden" name="product_id" value="<?php echo (int)$row['id']; ?>">
-                                        <button type="submit" name="remove_wishlist_item" class="wishlist-remove-btn">Remove</button>
-                                    </form>
+                                    <button 
+                                        type="button" 
+                                        class="wishlist-remove-btn"
+                                        onclick="removeProfileWishlistItem(event, <?php echo (int)$row['id']; ?>)"
+                                    >
+                                        Remove
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     <?php endwhile; ?>
                 </div>
             <?php else: ?>
-                <p class="inline-empty">No items in your wishlist yet.</p>
+                <p class="inline-empty" id="wishlistEmptyMessage">No items in your wishlist yet.</p>
             <?php endif; ?>
         </div>
 
@@ -1056,10 +1031,152 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
 </div>
 
 <div id="ratingToast" class="cart-added-toast">Rating submitted</div>
+<div id="wishlistToast" class="cart-added-toast">Wishlist updated</div>
 
 <script src="js/script.js"></script>
 
 <script>
+
+function showWishlistToast(message) {
+    const toast = document.getElementById("wishlistToast");
+    if (!toast) return;
+
+    toast.textContent = message;
+    toast.classList.add("show");
+
+    setTimeout(() => {
+        toast.classList.remove("show");
+    }, 1800);
+}
+
+function updateWishlistStat(count) {
+    const stat = document.getElementById("wishlistStatCount");
+    if (stat) {
+        stat.textContent = count;
+    }
+}
+
+function updateNavbarWishlistCount(count) {
+    const candidates = [
+        document.getElementById("wishlistCount"),
+        document.querySelector(".wishlist-count-badge"),
+        document.querySelector(".wishlist-badge")
+    ];
+
+    candidates.forEach(function(el) {
+        if (el) {
+            el.textContent = count;
+            if (count <= 0) {
+                el.style.display = "none";
+            } else {
+                el.style.display = "inline-flex";
+            }
+        }
+    });
+}
+
+function showWishlistEmptyState() {
+    const section = document.getElementById("wishlist");
+    const grid = document.getElementById("wishlistGrid");
+    const clearBtn = document.getElementById("clearWishlistBtn");
+
+    if (grid) {
+        grid.remove();
+    }
+
+    if (clearBtn) {
+        clearBtn.remove();
+    }
+
+    if (section && !document.getElementById("wishlistEmptyMessage")) {
+        const empty = document.createElement("p");
+        empty.className = "inline-empty";
+        empty.id = "wishlistEmptyMessage";
+        empty.textContent = "No items in your wishlist yet.";
+        section.appendChild(empty);
+    }
+}
+
+function removeProfileWishlistItem(event, productId) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const formData = new URLSearchParams();
+    formData.append("action", "remove");
+    formData.append("product_id", productId);
+
+    fetch("ajax_profile_wishlist.php", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: formData.toString()
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === "success") {
+            const card = document.getElementById("wishlist-card-" + productId);
+            if (card) {
+                card.remove();
+            }
+
+            updateWishlistStat(data.wishlist_count || 0);
+            updateNavbarWishlistCount(data.wishlist_count || 0);
+
+            if ((data.wishlist_count || 0) <= 0) {
+                showWishlistEmptyState();
+            }
+
+            showWishlistToast(data.message || "Item removed from wishlist.");
+        } else {
+            showWishlistToast(data.message || "Could not remove item from wishlist.");
+        }
+    })
+    .catch(() => {
+        showWishlistToast("Network error. Could not update wishlist.");
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    const clearBtn = document.getElementById("clearWishlistBtn");
+
+    if (clearBtn) {
+        clearBtn.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (!confirm("Are you sure you want to clear all wishlist items?")) {
+                return;
+            }
+
+            const formData = new URLSearchParams();
+            formData.append("action", "clear");
+
+            fetch("ajax_profile_wishlist.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: formData.toString()
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    updateWishlistStat(0);
+                    updateNavbarWishlistCount(0);
+                    showWishlistEmptyState();
+                    showWishlistToast(data.message || "Wishlist cleared.");
+                } else {
+                    showWishlistToast(data.message || "Could not clear wishlist.");
+                }
+            })
+            .catch(() => {
+                showWishlistToast("Network error. Could not clear wishlist.");
+            });
+        });
+    }
+});
+
 function toggleListingMenu(id) {
     const menu = document.getElementById("listing-menu-" + id);
     const allMenus = document.querySelectorAll(".card-menu-dropdown");

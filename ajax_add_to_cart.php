@@ -1,23 +1,37 @@
 <?php
+ob_start();
 session_start();
 include "config/db.php";
 
-header("Content-Type: application/json");
+function send_json($data) {
+    if (ob_get_length()) {
+        ob_clean();
+    }
 
-if (!isset($_SESSION['user'])) {
-    echo json_encode([
-        "status" => "error",
-        "message" => "Please login first."
-    ]);
+    header("Content-Type: application/json");
+    echo json_encode($data);
     exit();
 }
 
-if (!isset($_POST['product_id'])) {
-    echo json_encode([
+if (!isset($_SESSION['user'])) {
+    $productId = isset($_POST['product_id']) ? (int)$_POST['product_id'] : 0;
+
+    if ($productId > 0) {
+        $_SESSION['pending_cart_product'] = $productId;
+    }
+
+    send_json([
+        "status" => "login_required",
+        "message" => "Please login first.",
+        "redirect" => "login.php"
+    ]);
+}
+
+if (!isset($_POST['product_id']) || (int)$_POST['product_id'] <= 0) {
+    send_json([
         "status" => "error",
         "message" => "Product ID missing."
     ]);
-    exit();
 }
 
 $productId = (int)$_POST['product_id'];
@@ -27,11 +41,11 @@ $userRes = $conn->query("SELECT id FROM users WHERE email='$userEmail' LIMIT 1")
 $user = $userRes ? $userRes->fetch_assoc() : null;
 
 if (!$user) {
-    echo json_encode([
-        "status" => "error",
-        "message" => "User not found."
+    send_json([
+        "status" => "login_required",
+        "message" => "Please login again.",
+        "redirect" => "login.php"
     ]);
-    exit();
 }
 
 $userId = (int)$user['id'];
@@ -42,30 +56,28 @@ $productRes = $conn->query("
     WHERE id = $productId
     LIMIT 1
 ");
+
 $product = $productRes ? $productRes->fetch_assoc() : null;
 
 if (!$product) {
-    echo json_encode([
+    send_json([
         "status" => "error",
         "message" => "Product not found."
     ]);
-    exit();
 }
 
 if ((int)$product['user_id'] === $userId) {
-    echo json_encode([
+    send_json([
         "status" => "error",
         "message" => "You cannot buy your own listing."
     ]);
-    exit();
 }
 
 if ($product['status'] === 'sold') {
-    echo json_encode([
+    send_json([
         "status" => "error",
         "message" => "This product is already sold."
     ]);
-    exit();
 }
 
 $cartCheck = $conn->query("
@@ -81,16 +93,30 @@ if ($cartCheck && $cartCheck->num_rows > 0) {
     $cartId = (int)$cartRow['id'];
     $newQty = (int)$cartRow['quantity'] + 1;
 
-    $conn->query("
+    $update = $conn->query("
         UPDATE cart
         SET quantity = $newQty
         WHERE id = $cartId
     ");
+
+    if (!$update) {
+        send_json([
+            "status" => "error",
+            "message" => "Could not update cart."
+        ]);
+    }
 } else {
-    $conn->query("
+    $insert = $conn->query("
         INSERT INTO cart (user_id, product_id, quantity)
         VALUES ($userId, $productId, 1)
     ");
+
+    if (!$insert) {
+        send_json([
+            "status" => "error",
+            "message" => "Could not add to cart."
+        ]);
+    }
 }
 
 $countRes = $conn->query("
@@ -98,11 +124,11 @@ $countRes = $conn->query("
     FROM cart
     WHERE user_id = $userId
 ");
+
 $countRow = $countRes ? $countRes->fetch_assoc() : ['total_items' => 0];
 
-echo json_encode([
+send_json([
     "status" => "success",
     "message" => "Added to cart",
     "cart_count" => (int)($countRow['total_items'] ?? 0)
 ]);
-exit();
