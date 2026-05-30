@@ -29,23 +29,6 @@ if (isset($_SESSION['user'])) {
     }
 }
 
-
-$cartQuantities = [];
-
-if ($userId > 0) {
-    $cartQtyRes = $conn->query("
-        SELECT product_id, quantity
-        FROM cart
-        WHERE user_id = $userId
-    ");
-
-    if ($cartQtyRes) {
-        while ($cartQty = $cartQtyRes->fetch_assoc()) {
-            $cartQuantities[(int)$cartQty['product_id']] = (int)$cartQty['quantity'];
-        }
-    }
-}
-
 function isWishlistedIndex($productId, $wishlistIds) {
     return in_array((int)$productId, $wishlistIds, true);
 }
@@ -64,6 +47,25 @@ $recent = $conn->query("
     ORDER BY p.id DESC
     LIMIT 6
 ");
+
+
+$recentlyViewed = null;
+
+if ($userId > 0) {
+    $recentlyViewed = $conn->query("
+        SELECT 
+            p.*, 
+            c.name AS category_name,
+            MAX(pv.viewed_at) AS last_viewed_at
+        FROM product_views pv
+        INNER JOIN products p ON pv.product_id = p.id
+        LEFT JOIN categories c ON p.category_id = c.id
+        WHERE pv.user_id = $userId
+        GROUP BY p.id
+        ORDER BY last_viewed_at DESC
+        LIMIT 6
+    ");
+}
 
 $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
 ?>
@@ -141,61 +143,6 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
                 right: 14px;
             }
         }
-
-
-        .product-card-qty-control{
-            display:inline-flex;
-            align-items:center;
-            gap:8px;
-            background:#f8fafc;
-            border:1px solid #e5e7eb;
-            border-radius:12px;
-            padding:5px;
-            onclick:none;
-        }
-
-        .product-card-qty-btn{
-            width:32px;
-            height:32px;
-            border:none;
-            border-radius:9px;
-            background:#111827;
-            color:white;
-            font-size:18px;
-            font-weight:800;
-            cursor:pointer;
-            display:inline-flex;
-            align-items:center;
-            justify-content:center;
-            line-height:1;
-        }
-
-        .product-card-qty-btn:hover{
-            background:#2563eb;
-        }
-
-        .product-card-qty-btn:disabled{
-            background:#d1d5db;
-            color:#6b7280;
-            cursor:not-allowed;
-        }
-
-        .product-card-qty-value{
-            min-width:32px;
-            text-align:center;
-            font-weight:800;
-            color:#111827;
-            font-size:14px;
-        }
-
-        .clickable-card{
-            cursor:pointer;
-            transition:0.25s ease;
-        }
-
-        .clickable-card:hover{
-            transform:translateY(-3px);
-        }
     </style>
 </head>
 <body>
@@ -231,7 +178,7 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
         <?php if (!empty($recommendedProducts)): ?>
             <div class="products-grid">
                 <?php foreach ($recommendedProducts as $row): ?>
-                    <div class="product-card clickable-card" onclick="window.location.href='product_details.php?id=<?php echo (int)$row['id']; ?>'">
+                    <div class="product-card">
                         <div class="product-image-wrap">
                             <img src="uploads/<?php echo htmlspecialchars($row['image']); ?>" alt="Product Image">
 
@@ -267,7 +214,7 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
                             <p class="meta"><strong>Status:</strong> <?php echo htmlspecialchars(ucfirst($row['status'])); ?></p>
 
                             <div class="product-actions">
-                                <a href="product_details.php?id=<?php echo (int)$row['id']; ?>" class="small-btn primary" onclick="event.stopPropagation();">
+                                <a href="product_details.php?id=<?php echo (int)$row['id']; ?>" class="small-btn primary">
                                     View Details
                                 </a>
 
@@ -276,41 +223,13 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
                                         Your Listing
                                     </button>
                                 <?php elseif ($row['status'] !== 'sold'): ?>
-                                    <?php $cardCartQty = $cartQuantities[(int)$row['id']] ?? 0; ?>
-
                                     <button
                                         type="button"
                                         class="small-btn dark"
-                                        data-product-add-button="<?php echo (int)$row['id']; ?>"
-                                        style="<?php echo $cardCartQty > 0 ? 'display:none;' : ''; ?>"
-                                        onclick="event.stopPropagation(); addToCartFromHome(<?php echo (int)$row['id']; ?>)"
+                                        onclick="addToCartFromHome(<?php echo (int)$row['id']; ?>)"
                                     >
                                         Add to Cart
                                     </button>
-
-                                    <div
-                                        class="product-card-qty-control"
-                                        data-product-qty-control="<?php echo (int)$row['id']; ?>"
-                                        style="<?php echo $cardCartQty > 0 ? '' : 'display:none;'; ?>"
-                                        onclick="event.stopPropagation();"
-                                    >
-                                        <button
-                                            type="button"
-                                            class="product-card-qty-btn"
-                                            onclick="event.stopPropagation(); updateProductCardQty(<?php echo (int)$row['id']; ?>, 'decrease', this)"
-                                        >−</button>
-
-                                        <span
-                                            class="product-card-qty-value"
-                                            data-product-qty-value="<?php echo (int)$row['id']; ?>"
-                                        ><?php echo max(1, (int)$cardCartQty); ?></span>
-
-                                        <button
-                                            type="button"
-                                            class="product-card-qty-btn"
-                                            onclick="event.stopPropagation(); updateProductCardQty(<?php echo (int)$row['id']; ?>, 'increase', this)"
-                                        >+</button>
-                                    </div>
                                 <?php else: ?>
                                     <button type="button" class="small-btn dark" disabled style="opacity:0.65; cursor:not-allowed;">
                                         Sold
@@ -321,7 +240,7 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
                                     <button
                                         type="button"
                                         class="wishlist-icon-btn <?php echo isWishlistedIndex($row['id'], $wishlistIds) ? 'active' : ''; ?>"
-                                        onclick="event.stopPropagation(); toggleWishlist(<?php echo (int)$row['id']; ?>, this)"
+                                        onclick="toggleWishlist(<?php echo (int)$row['id']; ?>, this)"
                                         title="<?php echo isWishlistedIndex($row['id'], $wishlistIds) ? 'Remove from wishlist' : 'Add to wishlist'; ?>"
                                     >
                                         <?php echo isWishlistedIndex($row['id'], $wishlistIds) ? '♥' : '♡'; ?>
@@ -337,6 +256,86 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
         <?php endif; ?>
     </div>
 </section>
+
+
+<?php if ($userId > 0 && $recentlyViewed && $recentlyViewed->num_rows > 0): ?>
+<section class="home-block alt">
+    <div class="container">
+        <h2 class="section-title">Recently Viewed</h2>
+        <p class="section-subtitle">Products you recently opened while browsing TradeSphere.</p>
+
+        <div class="products-grid">
+            <?php while ($row = $recentlyViewed->fetch_assoc()): ?>
+                <div class="product-card clickable-card" onclick="window.location.href='product_details.php?id=<?php echo (int)$row['id']; ?>'">
+                    <div class="product-image-wrap">
+                        <img src="uploads/<?php echo htmlspecialchars($row['image']); ?>" alt="Product Image">
+
+                        <?php if ($row['status'] === 'sold'): ?>
+                            <div class="sold-badge">SOLD</div>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="product-body">
+                        <h3><?php echo htmlspecialchars($row['name']); ?></h3>
+
+                        <p class="price">Rs <?php echo number_format((float)$row['price'], 2); ?></p>
+
+                        <?php if ((int)($row['rating_count'] ?? 0) > 0): ?>
+                            <p class="rating-line">
+                                <?php echo renderCardStarsIndex($row['average_rating'] ?? 0); ?>
+                                <?php echo number_format((float)($row['average_rating'] ?? 0), 1); ?>
+                                (<?php echo (int)$row['rating_count']; ?>)
+                            </p>
+                        <?php else: ?>
+                            <p class="rating-line empty">No ratings yet</p>
+                        <?php endif; ?>
+
+                        <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category_name']); ?></p>
+                        <p class="meta"><strong>Condition:</strong> <?php echo htmlspecialchars($row['product_condition']); ?></p>
+                        <p class="meta"><strong>City:</strong> <?php echo htmlspecialchars($row['city']); ?></p>
+                        <p class="meta"><strong>Status:</strong> <?php echo htmlspecialchars(ucfirst($row['status'])); ?></p>
+
+                        <div class="product-actions">
+                            <a href="product_details.php?id=<?php echo (int)$row['id']; ?>" class="small-btn primary" onclick="event.stopPropagation();">
+                                View Details
+                            </a>
+
+                            <?php if ($userId > 0 && (int)$row['user_id'] === $userId): ?>
+                                <button type="button" class="small-btn dark disabled-btn" disabled title="This is your own listing">
+                                    Your Listing
+                                </button>
+                            <?php elseif ($row['status'] !== 'sold'): ?>
+                                <button
+                                    type="button"
+                                    class="small-btn dark"
+                                    onclick="event.stopPropagation(); addToCartFromHome(<?php echo (int)$row['id']; ?>)"
+                                >
+                                    Add to Cart
+                                </button>
+                            <?php else: ?>
+                                <button type="button" class="small-btn dark" disabled style="opacity:0.65; cursor:not-allowed;">
+                                    Sold
+                                </button>
+                            <?php endif; ?>
+
+                            <?php if (!($userId > 0 && (int)$row['user_id'] === $userId)): ?>
+                                <button
+                                    type="button"
+                                    class="wishlist-icon-btn <?php echo isWishlistedIndex($row['id'], $wishlistIds) ? 'active' : ''; ?>"
+                                    onclick="event.stopPropagation(); toggleWishlist(<?php echo (int)$row['id']; ?>, this)"
+                                    title="<?php echo isWishlistedIndex($row['id'], $wishlistIds) ? 'Remove from wishlist' : 'Add to wishlist'; ?>"
+                                >
+                                    <?php echo isWishlistedIndex($row['id'], $wishlistIds) ? '♥' : '♡'; ?>
+                                </button>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            <?php endwhile; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
 
 <section class="home-block alt" id="categories">
     <div class="container">
@@ -367,7 +366,7 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
         <?php if ($recent && $recent->num_rows > 0): ?>
             <div class="products-grid">
                 <?php while ($row = $recent->fetch_assoc()): ?>
-                    <div class="product-card clickable-card" onclick="window.location.href='product_details.php?id=<?php echo (int)$row['id']; ?>'">
+                    <div class="product-card">
                         <div class="product-image-wrap">
                             <img src="uploads/<?php echo htmlspecialchars($row['image']); ?>" alt="Product Image">
 
@@ -397,7 +396,7 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
                             <p class="meta"><strong>Status:</strong> <?php echo htmlspecialchars(ucfirst($row['status'])); ?></p>
 
                             <div class="product-actions">
-                                <a href="product_details.php?id=<?php echo (int)$row['id']; ?>" class="small-btn primary" onclick="event.stopPropagation();">
+                                <a href="product_details.php?id=<?php echo (int)$row['id']; ?>" class="small-btn primary">
                                     View Details
                                 </a>
 
@@ -406,41 +405,13 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
                                         Your Listing
                                     </button>
                                 <?php elseif ($row['status'] !== 'sold'): ?>
-                                    <?php $cardCartQty = $cartQuantities[(int)$row['id']] ?? 0; ?>
-
                                     <button
                                         type="button"
                                         class="small-btn dark"
-                                        data-product-add-button="<?php echo (int)$row['id']; ?>"
-                                        style="<?php echo $cardCartQty > 0 ? 'display:none;' : ''; ?>"
-                                        onclick="event.stopPropagation(); addToCartFromHome(<?php echo (int)$row['id']; ?>)"
+                                        onclick="addToCartFromHome(<?php echo (int)$row['id']; ?>)"
                                     >
                                         Add to Cart
                                     </button>
-
-                                    <div
-                                        class="product-card-qty-control"
-                                        data-product-qty-control="<?php echo (int)$row['id']; ?>"
-                                        style="<?php echo $cardCartQty > 0 ? '' : 'display:none;'; ?>"
-                                        onclick="event.stopPropagation();"
-                                    >
-                                        <button
-                                            type="button"
-                                            class="product-card-qty-btn"
-                                            onclick="event.stopPropagation(); updateProductCardQty(<?php echo (int)$row['id']; ?>, 'decrease', this)"
-                                        >−</button>
-
-                                        <span
-                                            class="product-card-qty-value"
-                                            data-product-qty-value="<?php echo (int)$row['id']; ?>"
-                                        ><?php echo max(1, (int)$cardCartQty); ?></span>
-
-                                        <button
-                                            type="button"
-                                            class="product-card-qty-btn"
-                                            onclick="event.stopPropagation(); updateProductCardQty(<?php echo (int)$row['id']; ?>, 'increase', this)"
-                                        >+</button>
-                                    </div>
                                 <?php else: ?>
                                     <button type="button" class="small-btn dark" disabled style="opacity:0.65; cursor:not-allowed;">
                                         Sold
@@ -451,7 +422,7 @@ $categoryQuery = $conn->query("SELECT * FROM categories ORDER BY name ASC");
                                     <button
                                         type="button"
                                         class="wishlist-icon-btn <?php echo isWishlistedIndex($row['id'], $wishlistIds) ? 'active' : ''; ?>"
-                                        onclick="event.stopPropagation(); toggleWishlist(<?php echo (int)$row['id']; ?>, this)"
+                                        onclick="toggleWishlist(<?php echo (int)$row['id']; ?>, this)"
                                         title="<?php echo isWishlistedIndex($row['id'], $wishlistIds) ? 'Remove from wishlist' : 'Add to wishlist'; ?>"
                                     >
                                         <?php echo isWishlistedIndex($row['id'], $wishlistIds) ? '♥' : '♡'; ?>
@@ -572,100 +543,6 @@ function toggleWishlist(productId, buttonEl) {
     });
 }
 
-
-function updateProductCardCartUI(productId, quantity, cartCount) {
-    const addButtons = document.querySelectorAll(`[data-product-add-button="${productId}"]`);
-    const qtyControls = document.querySelectorAll(`[data-product-qty-control="${productId}"]`);
-    const qtyValues = document.querySelectorAll(`[data-product-qty-value="${productId}"]`);
-
-    addButtons.forEach(btn => {
-        btn.style.display = "none";
-    });
-
-    qtyControls.forEach(control => {
-        control.style.display = "inline-flex";
-    });
-
-    qtyValues.forEach(valueEl => {
-        valueEl.textContent = Math.max(1, parseInt(quantity || 1, 10));
-    });
-
-    if (typeof updateCartBadge === "function" && typeof cartCount !== "undefined") {
-        updateCartBadge(parseInt(cartCount || 0, 10));
-    }
-}
-
-function updateProductCardQty(productId, action, buttonEl) {
-    const qtyValues = document.querySelectorAll(`[data-product-qty-value="${productId}"]`);
-
-    if (action === "decrease") {
-        const currentQty = qtyValues.length ? parseInt(qtyValues[0].textContent.trim(), 10) : 1;
-
-        if (currentQty <= 1) {
-            const toast = document.getElementById("cartAddedToast");
-            if (toast) {
-                toast.textContent = "Quantity cannot be less than 1.";
-                toast.classList.add("show");
-                setTimeout(() => toast.classList.remove("show"), 1800);
-            }
-            return;
-        }
-    }
-
-    const relatedButtons = document.querySelectorAll(`[data-product-qty-control="${productId}"] .product-card-qty-btn`);
-    relatedButtons.forEach(btn => btn.disabled = true);
-
-    const formData = new URLSearchParams();
-    formData.append("product_id", productId);
-    formData.append("action", action);
-
-    fetch("ajax_update_product_qty.php", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded"
-        },
-        body: formData.toString()
-    })
-    .then(response => response.json())
-    .then(data => {
-        relatedButtons.forEach(btn => btn.disabled = false);
-
-        if (data.status === "login_required") {
-            window.location.href = data.redirect || "login.php";
-            return;
-        }
-
-        const toast = document.getElementById("cartAddedToast");
-
-        if (data.status !== "success") {
-            if (toast) {
-                toast.textContent = data.message || "Could not update quantity.";
-                toast.classList.add("show");
-                setTimeout(() => toast.classList.remove("show"), 1800);
-            }
-            return;
-        }
-
-        updateProductCardCartUI(productId, data.quantity, data.cart_count);
-
-        if (toast) {
-            toast.textContent = data.message || "Cart updated.";
-            toast.classList.add("show");
-            setTimeout(() => toast.classList.remove("show"), 1800);
-        }
-    })
-    .catch(() => {
-        relatedButtons.forEach(btn => btn.disabled = false);
-
-        const toast = document.getElementById("cartAddedToast");
-        if (toast) {
-            toast.textContent = "Network error while updating cart.";
-            toast.classList.add("show");
-            setTimeout(() => toast.classList.remove("show"), 1800);
-        }
-    });
-}
-
 function addToCartFromHome(productId) {
     fetch("ajax_add_to_cart.php", {
         method: "POST",
@@ -707,8 +584,6 @@ function addToCartFromHome(productId) {
                 }
             }
 
-            updateProductCardCartUI(productId, data.quantity || 1, data.cart_count);
-
             if (toast) {
                 toast.textContent = data.message || "Added to cart";
                 toast.classList.add("show");
@@ -726,7 +601,7 @@ function addToCartFromHome(productId) {
                     toast.classList.remove("show");
                 }, 1800);
             } else {
-               showToast(data.message || "Could not add to cart.", "error");
+                alert(data.message || "Could not add to cart.");
             }
         }
     })
@@ -740,7 +615,7 @@ function addToCartFromHome(productId) {
                 toast.classList.remove("show");
             }, 1800);
         } else {
-            showToast("Something went wrong while adding to cart.", "error");
+            alert("Something went wrong while adding to cart.");
         }
     });
 }
