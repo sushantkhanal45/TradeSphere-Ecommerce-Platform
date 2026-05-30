@@ -31,6 +31,23 @@ if (isset($_SESSION['user'])) {
     }
 }
 
+
+$cartQuantities = [];
+
+if ($userId > 0) {
+    $cartQtyRes = $conn->query("
+        SELECT product_id, quantity
+        FROM cart
+        WHERE user_id = $userId
+    ");
+
+    if ($cartQtyRes) {
+        while ($cartQty = $cartQtyRes->fetch_assoc()) {
+            $cartQuantities[(int)$cartQty['product_id']] = (int)$cartQty['quantity'];
+        }
+    }
+}
+
 function isWishlistedProducts($productId, $wishlistIds) {
     return in_array((int)$productId, $wishlistIds, true);
 }
@@ -182,6 +199,61 @@ if ($search !== "") {
                 right: 14px;
             }
         }
+
+
+        .product-card-qty-control{
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            background:#f8fafc;
+            border:1px solid #e5e7eb;
+            border-radius:12px;
+            padding:5px;
+            onclick:none;
+        }
+
+        .product-card-qty-btn{
+            width:32px;
+            height:32px;
+            border:none;
+            border-radius:9px;
+            background:#111827;
+            color:white;
+            font-size:18px;
+            font-weight:800;
+            cursor:pointer;
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            line-height:1;
+        }
+
+        .product-card-qty-btn:hover{
+            background:#2563eb;
+        }
+
+        .product-card-qty-btn:disabled{
+            background:#d1d5db;
+            color:#6b7280;
+            cursor:not-allowed;
+        }
+
+        .product-card-qty-value{
+            min-width:32px;
+            text-align:center;
+            font-weight:800;
+            color:#111827;
+            font-size:14px;
+        }
+
+        .clickable-card{
+            cursor:pointer;
+            transition:0.25s ease;
+        }
+
+        .clickable-card:hover{
+            transform:translateY(-3px);
+        }
     </style>
 </head>
 <body>
@@ -232,7 +304,7 @@ if ($search !== "") {
         <?php if (!empty($products)): ?>
             <div class="products-grid">
                 <?php foreach ($products as $row): ?>
-                    <div class="product-card">
+                    <div class="product-card clickable-card" onclick="window.location.href='product_details.php?id=<?php echo (int)$row['id']; ?>'">
                         <div class="product-image-wrap">
                             <img src="uploads/<?php echo htmlspecialchars($row['image']); ?>" alt="Product Image">
                             <?php if ($row['status'] === 'sold'): ?>
@@ -260,20 +332,48 @@ if ($search !== "") {
                             <p class="meta"><strong>Status:</strong> <?php echo htmlspecialchars(ucfirst($row['status'])); ?></p>
 
                             <div class="product-actions" style="display:flex; gap:10px; flex-wrap:wrap;">
-                                <a href="product_details.php?id=<?php echo (int)$row['id']; ?>" class="small-btn primary">View Details</a>
+                                <a href="product_details.php?id=<?php echo (int)$row['id']; ?>" class="small-btn primary" onclick="event.stopPropagation();">View Details</a>
 
                                 <?php if ($userId > 0 && (int)$row['user_id'] === $userId): ?>
                                     <button type="button" class="small-btn dark disabled-btn" disabled title="This is your own listing">
                                         Your Listing
                                     </button>
                                 <?php elseif ($row['status'] !== 'sold'): ?>
+                                    <?php $cardCartQty = $cartQuantities[(int)$row['id']] ?? 0; ?>
+
                                     <button
                                         type="button"
                                         class="small-btn dark"
-                                        onclick="addToCartFromBrowse(<?php echo (int)$row['id']; ?>)"
+                                        data-product-add-button="<?php echo (int)$row['id']; ?>"
+                                        style="<?php echo $cardCartQty > 0 ? 'display:none;' : ''; ?>"
+                                        onclick="event.stopPropagation(); addToCartFromBrowse(<?php echo (int)$row['id']; ?>)"
                                     >
                                         Add to Cart
                                     </button>
+
+                                    <div
+                                        class="product-card-qty-control"
+                                        data-product-qty-control="<?php echo (int)$row['id']; ?>"
+                                        style="<?php echo $cardCartQty > 0 ? '' : 'display:none;'; ?>"
+                                        onclick="event.stopPropagation();"
+                                    >
+                                        <button
+                                            type="button"
+                                            class="product-card-qty-btn"
+                                            onclick="event.stopPropagation(); updateProductCardQty(<?php echo (int)$row['id']; ?>, 'decrease', this)"
+                                        >−</button>
+
+                                        <span
+                                            class="product-card-qty-value"
+                                            data-product-qty-value="<?php echo (int)$row['id']; ?>"
+                                        ><?php echo max(1, (int)$cardCartQty); ?></span>
+
+                                        <button
+                                            type="button"
+                                            class="product-card-qty-btn"
+                                            onclick="event.stopPropagation(); updateProductCardQty(<?php echo (int)$row['id']; ?>, 'increase', this)"
+                                        >+</button>
+                                    </div>
                                 <?php else: ?>
                                     <button type="button" class="small-btn dark" disabled style="opacity:0.65; cursor:not-allowed;">Sold</button>
                                 <?php endif; ?>
@@ -282,7 +382,7 @@ if ($search !== "") {
                                     <button
                                         type="button"
                                         class="wishlist-icon-btn <?php echo isWishlistedProducts($row['id'], $wishlistIds) ? 'active' : ''; ?>"
-                                        onclick="toggleWishlist(<?php echo (int)$row['id']; ?>, this)"
+                                        onclick="event.stopPropagation(); toggleWishlist(<?php echo (int)$row['id']; ?>, this)"
                                         title="<?php echo isWishlistedProducts($row['id'], $wishlistIds) ? 'Remove from wishlist' : 'Add to wishlist'; ?>"
                                     >
                                         <?php echo isWishlistedProducts($row['id'], $wishlistIds) ? '♥' : '♡'; ?>
@@ -421,6 +521,100 @@ function toggleWishlist(productId, buttonEl) {
     });
 }
 
+
+function updateProductCardCartUI(productId, quantity, cartCount) {
+    const addButtons = document.querySelectorAll(`[data-product-add-button="${productId}"]`);
+    const qtyControls = document.querySelectorAll(`[data-product-qty-control="${productId}"]`);
+    const qtyValues = document.querySelectorAll(`[data-product-qty-value="${productId}"]`);
+
+    addButtons.forEach(btn => {
+        btn.style.display = "none";
+    });
+
+    qtyControls.forEach(control => {
+        control.style.display = "inline-flex";
+    });
+
+    qtyValues.forEach(valueEl => {
+        valueEl.textContent = Math.max(1, parseInt(quantity || 1, 10));
+    });
+
+    if (typeof updateCartBadge === "function" && typeof cartCount !== "undefined") {
+        updateCartBadge(parseInt(cartCount || 0, 10));
+    }
+}
+
+function updateProductCardQty(productId, action, buttonEl) {
+    const qtyValues = document.querySelectorAll(`[data-product-qty-value="${productId}"]`);
+
+    if (action === "decrease") {
+        const currentQty = qtyValues.length ? parseInt(qtyValues[0].textContent.trim(), 10) : 1;
+
+        if (currentQty <= 1) {
+            const toast = document.getElementById("cartAddedToast");
+            if (toast) {
+                toast.textContent = "Quantity cannot be less than 1.";
+                toast.classList.add("show");
+                setTimeout(() => toast.classList.remove("show"), 1800);
+            }
+            return;
+        }
+    }
+
+    const relatedButtons = document.querySelectorAll(`[data-product-qty-control="${productId}"] .product-card-qty-btn`);
+    relatedButtons.forEach(btn => btn.disabled = true);
+
+    const formData = new URLSearchParams();
+    formData.append("product_id", productId);
+    formData.append("action", action);
+
+    fetch("ajax_update_product_qty.php", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: formData.toString()
+    })
+    .then(response => response.json())
+    .then(data => {
+        relatedButtons.forEach(btn => btn.disabled = false);
+
+        if (data.status === "login_required") {
+            window.location.href = data.redirect || "login.php";
+            return;
+        }
+
+        const toast = document.getElementById("cartAddedToast");
+
+        if (data.status !== "success") {
+            if (toast) {
+                toast.textContent = data.message || "Could not update quantity.";
+                toast.classList.add("show");
+                setTimeout(() => toast.classList.remove("show"), 1800);
+            }
+            return;
+        }
+
+        updateProductCardCartUI(productId, data.quantity, data.cart_count);
+
+        if (toast) {
+            toast.textContent = data.message || "Cart updated.";
+            toast.classList.add("show");
+            setTimeout(() => toast.classList.remove("show"), 1800);
+        }
+    })
+    .catch(() => {
+        relatedButtons.forEach(btn => btn.disabled = false);
+
+        const toast = document.getElementById("cartAddedToast");
+        if (toast) {
+            toast.textContent = "Network error while updating cart.";
+            toast.classList.add("show");
+            setTimeout(() => toast.classList.remove("show"), 1800);
+        }
+    });
+}
+
 function addToCartFromBrowse(productId) {
     fetch("ajax_add_to_cart.php", {
         method: "POST",
@@ -461,6 +655,8 @@ function addToCartFromBrowse(productId) {
                     }
                 }
             }
+
+            updateProductCardCartUI(productId, data.quantity || 1, data.cart_count);
 
             if (toast) {
                 toast.textContent = data.message || "Added to cart";

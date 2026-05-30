@@ -14,12 +14,6 @@ function send_json($data) {
 }
 
 if (!isset($_SESSION['user'])) {
-    $productId = isset($_POST['product_id']) ? (int)$_POST['product_id'] : 0;
-
-    if ($productId > 0) {
-        $_SESSION['pending_cart_product'] = $productId;
-    }
-
     send_json([
         "status" => "login_required",
         "message" => "Please login first.",
@@ -27,17 +21,25 @@ if (!isset($_SESSION['user'])) {
     ]);
 }
 
-if (!isset($_POST['product_id']) || (int)$_POST['product_id'] <= 0) {
+$productId = isset($_POST['product_id']) ? (int)$_POST['product_id'] : 0;
+$action = $_POST['action'] ?? "";
+
+if ($productId <= 0 || !in_array($action, ["increase", "decrease"], true)) {
     send_json([
         "status" => "error",
-        "message" => "Product ID missing."
+        "message" => "Invalid quantity request."
     ]);
 }
 
-$productId = (int)$_POST['product_id'];
 $userEmail = $conn->real_escape_string($_SESSION['user']);
 
-$userRes = $conn->query("SELECT id FROM users WHERE email='$userEmail' LIMIT 1");
+$userRes = $conn->query("
+    SELECT id
+    FROM users
+    WHERE email='$userEmail'
+    LIMIT 1
+");
+
 $user = $userRes ? $userRes->fetch_assoc() : null;
 
 if (!$user) {
@@ -53,7 +55,7 @@ $userId = (int)$user['id'];
 $productRes = $conn->query("
     SELECT id, user_id, status
     FROM products
-    WHERE id = $productId
+    WHERE id=$productId
     LIMIT 1
 ");
 
@@ -73,65 +75,72 @@ if ((int)$product['user_id'] === $userId) {
     ]);
 }
 
-if ($product['status'] === 'sold') {
+if ($product['status'] === "sold") {
     send_json([
         "status" => "error",
         "message" => "This product is already sold."
     ]);
 }
 
-$cartCheck = $conn->query("
+$cartRes = $conn->query("
     SELECT id, quantity
     FROM cart
-    WHERE user_id = $userId
-    AND product_id = $productId
+    WHERE user_id=$userId
+    AND product_id=$productId
     LIMIT 1
 ");
 
-$newQty = 1;
+$cart = $cartRes ? $cartRes->fetch_assoc() : null;
 
-if ($cartCheck && $cartCheck->num_rows > 0) {
-    $cartRow = $cartCheck->fetch_assoc();
-    $cartId = (int)$cartRow['id'];
-    $newQty = (int)$cartRow['quantity'] + 1;
+if (!$cart) {
+    send_json([
+        "status" => "error",
+        "message" => "This product is not in your cart yet."
+    ]);
+}
 
-    $update = $conn->query("
-        UPDATE cart
-        SET quantity = $newQty
-        WHERE id = $cartId
-    ");
+$currentQty = (int)$cart['quantity'];
+$newQty = $currentQty;
 
-    if (!$update) {
-        send_json([
-            "status" => "error",
-            "message" => "Could not update cart."
-        ]);
+if ($action === "increase") {
+    $newQty++;
+}
+
+if ($action === "decrease") {
+    $newQty--;
+
+    if ($newQty < 1) {
+        $newQty = 1;
     }
-} else {
-    $insert = $conn->query("
-        INSERT INTO cart (user_id, product_id, quantity)
-        VALUES ($userId, $productId, 1)
-    ");
+}
 
-    if (!$insert) {
-        send_json([
-            "status" => "error",
-            "message" => "Could not add to cart."
-        ]);
-    }
+$cartId = (int)$cart['id'];
+
+$update = $conn->query("
+    UPDATE cart
+    SET quantity=$newQty
+    WHERE id=$cartId
+    AND user_id=$userId
+");
+
+if (!$update) {
+    send_json([
+        "status" => "error",
+        "message" => "Could not update quantity."
+    ]);
 }
 
 $countRes = $conn->query("
     SELECT SUM(quantity) AS total_items
     FROM cart
-    WHERE user_id = $userId
+    WHERE user_id=$userId
 ");
 
 $countRow = $countRes ? $countRes->fetch_assoc() : ['total_items' => 0];
 
 send_json([
     "status" => "success",
-    "message" => "Added to cart",
+    "message" => "Cart quantity updated.",
     "quantity" => $newQty,
     "cart_count" => (int)($countRow['total_items'] ?? 0)
 ]);
