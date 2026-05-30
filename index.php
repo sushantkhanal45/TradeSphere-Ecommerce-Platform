@@ -726,7 +726,7 @@ function addToCartFromHome(productId) {
                     toast.classList.remove("show");
                 }, 1800);
             } else {
-                alert(data.message || "Could not add to cart.");
+               showToast(data.message || "Could not add to cart.", "error");
             }
         }
     })
@@ -740,7 +740,7 @@ function addToCartFromHome(productId) {
                 toast.classList.remove("show");
             }, 1800);
         } else {
-            alert("Something went wrong while adding to cart.");
+            showToast("Something went wrong while adding to cart.", "error");
         }
     });
 }

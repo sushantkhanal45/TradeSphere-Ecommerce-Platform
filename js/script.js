@@ -57,32 +57,43 @@ function updateCartBadge(count) {
 }
 
 // TOAST FUNCTION
-function showToast(message) {
+function showToast(message, type = "success") {
     let toast = document.getElementById("cartToast");
 
     if (!toast) {
         toast = document.createElement("div");
         toast.id = "cartToast";
         toast.style.position = "fixed";
-        toast.style.bottom = "20px";
+        toast.style.top = "20px";
         toast.style.right = "20px";
-        toast.style.background = "#111827";
+        toast.style.padding = "14px 18px";
+        toast.style.borderRadius = "12px";
         toast.style.color = "#ffffff";
-        toast.style.padding = "12px 16px";
-        toast.style.borderRadius = "10px";
-        toast.style.boxShadow = "0 10px 24px rgba(0,0,0,0.18)";
-        toast.style.zIndex = "9999";
+        toast.style.fontWeight = "700";
+        toast.style.zIndex = "99999";
         toast.style.opacity = "0";
+        toast.style.transform = "translateY(-15px)";
         toast.style.transition = "0.3s ease";
+        toast.style.boxShadow = "0 10px 24px rgba(0,0,0,0.18)";
         document.body.appendChild(toast);
+    }
+
+    if (type === "error") {
+        toast.style.background = "#dc2626";
+    } else if (type === "warning") {
+        toast.style.background = "#f59e0b";
+    } else {
+        toast.style.background = "#16a34a";
     }
 
     toast.innerText = message;
     toast.style.opacity = "1";
+    toast.style.transform = "translateY(0)";
 
     setTimeout(() => {
         toast.style.opacity = "0";
-    }, 2000);
+        toast.style.transform = "translateY(-15px)";
+    }, 2500);
 }
 function toggleNotifications() {
     const dropdown = document.getElementById("notificationDropdown");

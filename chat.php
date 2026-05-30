@@ -570,11 +570,11 @@ chatForm.addEventListener("submit", function(e) {
             messageInput.value = "";
             fetchMessages();
         } else {
-            alert(data.message || "Could not send message.");
+            showToast(data.message || "Could not send message.", "error");
         }
     })
     .catch(() => {
-        alert("Could not send message.");
+        showToast("Could not send message.", "error");
     });
 });
 
@@ -594,7 +594,7 @@ function sendOffer() {
     const amount = amountInput.value;
 
     if (!amount || parseFloat(amount) <= 0) {
-        alert("Enter a valid offer amount.");
+        showToast("Enter a valid offer amount.", "warning");
         return;
     }
 
@@ -608,7 +608,7 @@ function sendOffer() {
     })
     .then(response => response.json())
     .then(data => {
-        alert(data.message || "Offer updated.");
+        showToast(data.message || "Offer updated.", "success");
 
         if (data.status === "success") {
             amountInput.value = "";
@@ -618,7 +618,7 @@ function sendOffer() {
         }
     })
     .catch(() => {
-        alert("Could not send offer.");
+        showToast("Could not send offer.", "error");
     });
 }
 
@@ -641,12 +641,12 @@ function respondOffer(offerId, actionType) {
     })
     .then(response => response.json())
     .then(data => {
-        alert(data.message || "Offer updated.");
+        showToast(data.message || "Offer updated.", "success");
         fetchMessages();
         setTimeout(() => window.location.reload(), 700);
     })
     .catch(() => {
-        alert("Could not update offer.");
+        showToast("Could not update offer.", "error");
     });
 }
 
@@ -660,14 +660,14 @@ function addNegotiatedItemToCart() {
     })
     .then(response => response.json())
     .then(data => {
-        alert(data.message || "Cart updated.");
+        showToast(data.message || "Cart updated.", "success");
 
         if (data.status === "success") {
             window.location.href = "cart.php";
         }
     })
     .catch(() => {
-        alert("Could not add negotiated item to cart.");
+        showToast("Could not add negotiated item to cart.", "error");
     });
 }
 
