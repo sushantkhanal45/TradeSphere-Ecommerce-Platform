@@ -110,11 +110,21 @@ function markNotificationsRead() {
     .then(response => response.json())
     .then(data => {
         if (data.status === "success") {
-            window.location.reload();
+            document.querySelectorAll(".notification-item.unread").forEach(item => {
+                item.classList.remove("unread");
+            });
+
+            document.querySelectorAll(".notification-count").forEach(badge => {
+                badge.remove();
+            });
+
+            showToast("Notifications marked as read.", "success");
+        } else {
+            showToast(data.message || "Could not mark notifications as read.", "error");
         }
     })
     .catch(() => {
-        console.log("Could not mark notifications as read.");
+        showToast("Network error while updating notifications.", "error");
     });
 }
 
