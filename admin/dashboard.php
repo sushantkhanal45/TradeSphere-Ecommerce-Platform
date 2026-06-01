@@ -76,7 +76,7 @@ adminHeader("Dashboard");
 </div>
 
 <div class="admin-card">
-    <h2>Seller Verification Notifications</h2>
+    <br><h2>Seller Verification Notifications</h2>
 
     <?php if ($pendingSellers && $pendingSellers->num_rows > 0): ?>
         <div class="table-wrap">
