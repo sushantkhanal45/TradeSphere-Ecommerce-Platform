@@ -118,7 +118,7 @@ function markNotificationsRead() {
                 badge.remove();
             });
 
-            showToast("Notifications marked as read.", "success");
+            // No toast needed here
         } else {
             showToast(data.message || "Could not mark notifications as read.", "error");
         }
