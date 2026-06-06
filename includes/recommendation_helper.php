@@ -139,7 +139,7 @@ function calculateRecommendationScore($baseProduct, $candidateProduct) {
 }
 
 function getRecommendationReason() {
-    return "Recommended using TF-IDF and cosine similarity";
+    return "Recommended for you";
 }
 
 function getUserRecommendedProducts($conn, $userId, $limit = 6) {

@@ -6,10 +6,7 @@ include "config/db.php";
 include "includes/rsa_helper.php";
 
 function send_json($data) {
-    if (ob_get_length()) {
-        ob_clean();
-    }
-
+    if (ob_get_length()) ob_clean();
     header("Content-Type: application/json");
     echo json_encode($data);
     exit();
@@ -78,7 +75,11 @@ $signedData = json_encode([
 
 $sellerSignature = signData($signedData);
 
-$safeSignature = $conn->real_escape_string($sellerSignature ?? "");
+if (!$sellerSignature) {
+    send_json(["status" => "error", "message" => "RSA signing failed for offer action."]);
+}
+
+$safeSignature = $conn->real_escape_string($sellerSignature);
 $safeSignedData = $conn->real_escape_string($signedData);
 
 $update = $conn->query("
@@ -91,13 +92,10 @@ $update = $conn->query("
 ");
 
 if (!$update) {
-    send_json([
-        "status" => "error",
-        "message" => "Could not update offer: " . $conn->error
-    ]);
+    send_json(["status" => "error", "message" => "Could not update offer: " . $conn->error]);
 }
 
-storeSignatureRecord(
+$signatureSaved = storeSignatureRecord(
     $conn,
     $sellerId,
     "offer_" . $newStatus,
@@ -105,6 +103,10 @@ storeSignatureRecord(
     $signedData,
     $sellerSignature
 );
+
+if (!$signatureSaved) {
+    send_json(["status" => "error", "message" => "Offer updated but RSA audit insert failed: " . $conn->error]);
+}
 
 $roomId = (int)$offer['room_id'];
 $buyerId = (int)$offer['buyer_id'];
@@ -130,10 +132,7 @@ $insertMessage = insertEncryptedChatMessage(
 );
 
 if (!$insertMessage) {
-    send_json([
-        "status" => "error",
-        "message" => "Offer updated, but chat message failed: " . $conn->error
-    ]);
+    send_json(["status" => "error", "message" => "Offer updated, but chat message failed: " . $conn->error]);
 }
 
 $safeNotification = $conn->real_escape_string($notification);

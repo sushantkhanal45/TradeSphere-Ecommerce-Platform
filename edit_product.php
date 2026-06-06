@@ -1,13 +1,14 @@
 <?php
 session_start();
 include "config/db.php";
+include "includes/rsa_helper.php";
 
 if (!isset($_SESSION['user'])) {
     header("Location: login.php");
     exit();
 }
 
-$userEmail = $_SESSION['user'];
+$userEmail = $conn->real_escape_string($_SESSION['user']);
 $userRes = $conn->query("SELECT id, email FROM users WHERE email='$userEmail' LIMIT 1");
 $user = $userRes ? $userRes->fetch_assoc() : null;
 
@@ -55,6 +56,8 @@ if (isset($_POST['update_product'])) {
     ) {
         $error = "Please fill in all fields.";
     } else {
+        $oldProduct = $product;
+
         $safeName = $conn->real_escape_string($name);
         $safePrice = $conn->real_escape_string($price);
         $safeCity = $conn->real_escape_string($city);
@@ -90,6 +93,46 @@ if (isset($_POST['update_product'])) {
         ";
 
         if ($conn->query($update)) {
+            $actionData = json_encode([
+                "action" => "product_updated",
+                "user_id" => $userId,
+                "product_id" => $productId,
+                "old_product" => [
+                    "name" => $oldProduct['name'],
+                    "category_id" => $oldProduct['category_id'],
+                    "price" => $oldProduct['price'],
+                    "city" => $oldProduct['city'],
+                    "description" => $oldProduct['description'],
+                    "product_condition" => $oldProduct['product_condition'],
+                    "status" => $oldProduct['status'],
+                    "image" => $oldProduct['image']
+                ],
+                "new_product" => [
+                    "name" => $name,
+                    "category_id" => $categoryId,
+                    "price" => $price,
+                    "city" => $city,
+                    "description" => $description,
+                    "product_condition" => $productCondition,
+                    "status" => $status,
+                    "image" => $imageName
+                ],
+                "timestamp" => date("Y-m-d H:i:s")
+            ]);
+
+            $signature = signData($actionData);
+
+            if ($signature) {
+                storeSignatureRecord(
+                    $conn,
+                    $userId,
+                    "product_updated",
+                    $productId,
+                    $actionData,
+                    $signature
+                );
+            }
+
             $success = "Product updated successfully.";
             $productRes = $conn->query("SELECT * FROM products WHERE id=$productId AND user_id=$userId");
             $product = $productRes ? $productRes->fetch_assoc() : null;

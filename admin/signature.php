@@ -30,15 +30,25 @@ if (!$adminUser) {
 
 $_SESSION['admin_name'] = $adminUser['name'] ?? 'Admin';
 
-$signatures = $conn->query("
+$selectedAction = $_GET['action_type'] ?? '';
+
+$query = "
     SELECT
         s.*,
         u.name AS user_name,
         u.email AS user_email
     FROM signatures s
     LEFT JOIN users u ON s.user_id = u.id
-    ORDER BY s.id DESC
-");
+";
+
+if ($selectedAction !== '') {
+    $safeAction = $conn->real_escape_string($selectedAction);
+    $query .= " WHERE s.action_type = '$safeAction'";
+}
+
+$query .= " ORDER BY s.id DESC";
+
+$signatures = $conn->query($query);
 
 $totalSignatures = 0;
 $totalValid = 0;
@@ -87,6 +97,94 @@ adminHeader("RSA Signature Audit");
         to ensure data integrity and authenticity.
     </p>
 
+    <form method="GET" style="margin-bottom:22px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+        <label for="action_type"><strong>Filter by Action:</strong></label>
+
+        <select 
+            name="action_type" 
+            id="action_type" 
+            onchange="this.form.submit()"
+            style="
+                padding:10px 14px;
+                border:1px solid #d1d5db;
+                border-radius:10px;
+                min-width:260px;
+                background:white;
+            "
+        >
+            <option value="">All Actions</option>
+
+            <optgroup label="Products">
+                <option value="product_created" <?php echo ($selectedAction === 'product_created') ? 'selected' : ''; ?>>
+                    Product Created
+                </option>
+                <option value="product_updated" <?php echo ($selectedAction === 'product_updated') ? 'selected' : ''; ?>>
+                    Product Updated
+                </option>
+                <option value="product_deleted" <?php echo ($selectedAction === 'product_deleted') ? 'selected' : ''; ?>>
+                    Product Deleted
+                </option>
+                <option value="product_status_update" <?php echo ($selectedAction === 'product_status_update') ? 'selected' : ''; ?>>
+                    Product Status Update
+                </option>
+            </optgroup>
+
+            <optgroup label="Offers">
+                <option value="offer_created" <?php echo ($selectedAction === 'offer_created') ? 'selected' : ''; ?>>
+                    Offer Created
+                </option>
+                <option value="offer_accepted" <?php echo ($selectedAction === 'offer_accepted') ? 'selected' : ''; ?>>
+                    Offer Accepted
+                </option>
+                <option value="offer_rejected" <?php echo ($selectedAction === 'offer_rejected') ? 'selected' : ''; ?>>
+                    Offer Rejected
+                </option>
+            </optgroup>
+
+            <optgroup label="Orders">
+                <option value="order_created" <?php echo ($selectedAction === 'order_created') ? 'selected' : ''; ?>>
+                    Order Created
+                </option>
+                <option value="seller_delivery_status_update" <?php echo ($selectedAction === 'seller_delivery_status_update') ? 'selected' : ''; ?>>
+                    Delivery Update
+                </option>
+                <option value="buyer_confirmed_received" <?php echo ($selectedAction === 'buyer_confirmed_received') ? 'selected' : ''; ?>>
+                    Buyer Received
+                </option>
+            </optgroup>
+
+            <optgroup label="Payments">
+                <option value="payment_success" <?php echo ($selectedAction === 'payment_success') ? 'selected' : ''; ?>>
+                    Payment Success
+                </option>
+                <option value="payment_failure" <?php echo ($selectedAction === 'payment_failure') ? 'selected' : ''; ?>>
+                    Payment Failure
+                </option>
+            </optgroup>
+
+            <optgroup label="Chat / Transaction Messages">
+                <option value="chat_offer" <?php echo ($selectedAction === 'chat_offer') ? 'selected' : ''; ?>>
+                    Chat Offer
+                </option>
+                <option value="chat_acceptance" <?php echo ($selectedAction === 'chat_acceptance') ? 'selected' : ''; ?>>
+                    Chat Acceptance
+                </option>
+                <option value="chat_delivery_agreement" <?php echo ($selectedAction === 'chat_delivery_agreement') ? 'selected' : ''; ?>>
+                    Delivery Agreement
+                </option>
+                <option value="chat_cancellation_request" <?php echo ($selectedAction === 'chat_cancellation_request') ? 'selected' : ''; ?>>
+                    Cancellation Request
+                </option>
+            </optgroup>
+        </select>
+
+        <?php if ($selectedAction !== ''): ?>
+            <a href="signature.php" class="badge badge-gray" style="text-decoration:none;">
+                Clear Filter
+            </a>
+        <?php endif; ?>
+    </form>
+
     <div class="table-wrap">
         <table>
             <thead>
@@ -102,10 +200,8 @@ adminHeader("RSA Signature Audit");
             </thead>
 
             <tbody>
-
             <?php if ($signatures && $signatures->num_rows > 0): ?>
                 <?php while ($row = $signatures->fetch_assoc()): ?>
-
                     <?php
                     $isValid = verifySignature(
                         $row['signed_data'],
@@ -114,14 +210,12 @@ adminHeader("RSA Signature Audit");
                     ?>
 
                     <tr>
-
                         <td>
                             <strong>#<?php echo (int)$row['id']; ?></strong>
                         </td>
 
                         <td>
                             <?php if (!empty($row['user_name'])): ?>
-
                                 <strong>
                                     <?php echo htmlspecialchars($row['user_name']); ?>
                                 </strong>
@@ -131,13 +225,10 @@ adminHeader("RSA Signature Audit");
                                 <span class="muted">
                                     <?php echo htmlspecialchars($row['user_email']); ?>
                                 </span>
-
                             <?php else: ?>
-
                                 <span class="badge badge-gray">
                                     Unknown User
                                 </span>
-
                             <?php endif; ?>
                         </td>
 
@@ -169,19 +260,14 @@ adminHeader("RSA Signature Audit");
                         </td>
 
                         <td>
-
                             <?php if ($isValid): ?>
-
                                 <span class="badge badge-green">
                                     Valid Signature
                                 </span>
-
                             <?php else: ?>
-
                                 <span class="badge badge-red">
                                     Invalid Signature
                                 </span>
-
                             <?php endif; ?>
 
                             <div style="
@@ -193,7 +279,6 @@ adminHeader("RSA Signature Audit");
                             ">
                                 <?php echo htmlspecialchars(substr($row['signature'], 0, 100)); ?>...
                             </div>
-
                         </td>
 
                         <td>
@@ -201,21 +286,15 @@ adminHeader("RSA Signature Audit");
                                 <?php echo htmlspecialchars($row['created_at']); ?>
                             </span>
                         </td>
-
                     </tr>
-
                 <?php endwhile; ?>
-
             <?php else: ?>
-
                 <tr>
                     <td colspan="7">
                         No RSA signature records found.
                     </td>
                 </tr>
-
             <?php endif; ?>
-
             </tbody>
         </table>
     </div>
