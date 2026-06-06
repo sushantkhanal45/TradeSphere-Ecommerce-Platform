@@ -3,6 +3,7 @@ ob_start();
 session_start();
 
 include "config/db.php";
+include "includes/rsa_helper.php";
 
 function send_json($data) {
     if (ob_get_length()) {
@@ -79,9 +80,7 @@ $conn->query("
 ");
 
 $msgRes = $conn->query("
-    SELECT 
-        m.*,
-        u.name AS sender_name
+    SELECT m.*, u.name AS sender_name
     FROM chat_messages m
     INNER JOIN users u ON m.sender_id = u.id
     WHERE m.room_id = $roomId
@@ -99,7 +98,6 @@ if (!$msgRes) {
 $messages = [];
 
 while ($row = $msgRes->fetch_assoc()) {
-
     $offerData = null;
 
     if ($row['message_type'] === 'offer') {
@@ -132,10 +130,11 @@ while ($row = $msgRes->fetch_assoc()) {
         "id" => (int)$row['id'],
         "sender_id" => (int)$row['sender_id'],
         "sender_name" => $row['sender_name'],
-        "message_text" => $row['message_text'],
+        "message_text" => decryptChatMessageRow($row),
         "message_type" => $row['message_type'],
         "is_mine" => ((int)$row['sender_id'] === $userId),
         "is_signed" => !empty($row['signature']),
+        "is_encrypted" => !empty($row['encrypted_message']),
         "created_at" => $row['created_at'],
         "offer" => $offerData
     ];
@@ -145,3 +144,4 @@ send_json([
     "status" => "success",
     "messages" => $messages
 ]);
+?>

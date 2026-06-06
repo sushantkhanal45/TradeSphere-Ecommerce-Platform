@@ -16,20 +16,14 @@ function send_json($data) {
 }
 
 if (!isset($_SESSION['user'])) {
-    send_json([
-        "status" => "error",
-        "message" => "Please login first."
-    ]);
+    send_json(["status" => "error", "message" => "Please login first."]);
 }
 
 $roomId = isset($_POST['room_id']) ? (int)$_POST['room_id'] : 0;
 $offerAmount = isset($_POST['offer_amount']) ? (float)$_POST['offer_amount'] : 0;
 
 if ($roomId <= 0 || $offerAmount <= 0) {
-    send_json([
-        "status" => "error",
-        "message" => "Invalid offer amount."
-    ]);
+    send_json(["status" => "error", "message" => "Invalid offer amount."]);
 }
 
 $userEmail = $conn->real_escape_string($_SESSION['user']);
@@ -44,20 +38,13 @@ $userRes = $conn->query("
 $user = $userRes ? $userRes->fetch_assoc() : null;
 
 if (!$user) {
-    send_json([
-        "status" => "error",
-        "message" => "User not found."
-    ]);
+    send_json(["status" => "error", "message" => "User not found."]);
 }
 
 $buyerId = (int)$user['id'];
 
 $roomRes = $conn->query("
-    SELECT 
-        cr.*,
-        p.name AS product_name,
-        p.price AS product_price,
-        p.status AS product_status
+    SELECT cr.*, p.name AS product_name, p.price AS product_price, p.status AS product_status
     FROM chat_rooms cr
     INNER JOIN products p ON cr.product_id = p.id
     WHERE cr.id = $roomId
@@ -68,21 +55,16 @@ $roomRes = $conn->query("
 $room = $roomRes ? $roomRes->fetch_assoc() : null;
 
 if (!$room) {
-    send_json([
-        "status" => "error",
-        "message" => "Only the buyer can make an offer."
-    ]);
+    send_json(["status" => "error", "message" => "Only the buyer can make an offer."]);
 }
 
 if ($room['product_status'] === 'sold') {
-    send_json([
-        "status" => "error",
-        "message" => "This product is already sold."
-    ]);
+    send_json(["status" => "error", "message" => "This product is already sold."]);
 }
 
 $productId = (int)$room['product_id'];
 $sellerId = (int)$room['seller_id'];
+$timestamp = date("Y-m-d H:i:s");
 
 $conn->query("
     UPDATE product_offers
@@ -93,10 +75,8 @@ $conn->query("
     AND status = 'pending'
 ");
 
-$timestamp = date("Y-m-d H:i:s");
-
-$signData = json_encode([
-    "action" => "make_offer",
+$signedData = json_encode([
+    "action" => "offer_created",
     "product_id" => $productId,
     "buyer_id" => $buyerId,
     "seller_id" => $sellerId,
@@ -104,19 +84,32 @@ $signData = json_encode([
     "timestamp" => $timestamp
 ]);
 
-$buyerSignature = "";
-
-if (function_exists("signData")) {
-    $buyerSignature = signData($signData);
-}
+$buyerSignature = signData($signedData);
 
 $safeSignature = $conn->real_escape_string($buyerSignature ?? "");
+$safeSignedData = $conn->real_escape_string($signedData);
 
 $insertOffer = $conn->query("
     INSERT INTO product_offers
-    (product_id, buyer_id, seller_id, offer_amount, status, buyer_signature)
+    (
+        product_id,
+        buyer_id,
+        seller_id,
+        offer_amount,
+        status,
+        buyer_signature,
+        buyer_signed_data
+    )
     VALUES
-    ($productId, $buyerId, $sellerId, $offerAmount, 'pending', '$safeSignature')
+    (
+        $productId,
+        $buyerId,
+        $sellerId,
+        $offerAmount,
+        'pending',
+        '$safeSignature',
+        '$safeSignedData'
+    )
 ");
 
 if (!$insertOffer) {
@@ -128,15 +121,27 @@ if (!$insertOffer) {
 
 $offerId = (int)$conn->insert_id;
 
-$message = "Buyer offered Rs " . number_format($offerAmount, 2) . " for " . $room['product_name'];
-$safeMessage = $conn->real_escape_string($message);
+storeSignatureRecord(
+    $conn,
+    $buyerId,
+    "offer_created",
+    $offerId,
+    $signedData,
+    $buyerSignature
+);
 
-$insertMessage = $conn->query("
-    INSERT INTO chat_messages
-    (room_id, sender_id, receiver_id, message_text, message_type, signature)
-    VALUES
-    ($roomId, $buyerId, $sellerId, '$safeMessage', 'offer', '$safeSignature')
-");
+$message = "Buyer offered Rs " . number_format($offerAmount, 2) . " for " . $room['product_name'];
+
+$insertMessage = insertEncryptedChatMessage(
+    $conn,
+    $roomId,
+    $buyerId,
+    $sellerId,
+    $message,
+    "offer",
+    $buyerSignature,
+    $signedData
+);
 
 if (!$insertMessage) {
     send_json([
@@ -158,3 +163,4 @@ send_json([
     "message" => "Offer sent successfully.",
     "offer_id" => $offerId
 ]);
+?>

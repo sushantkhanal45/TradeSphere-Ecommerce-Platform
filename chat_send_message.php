@@ -16,10 +16,7 @@ function send_json($data) {
 }
 
 if (!isset($_SESSION['user'])) {
-    send_json([
-        "status" => "error",
-        "message" => "Not logged in."
-    ]);
+    send_json(["status" => "error", "message" => "Not logged in."]);
 }
 
 $roomId = isset($_POST['room_id']) ? (int)$_POST['room_id'] : 0;
@@ -27,10 +24,7 @@ $message = trim($_POST['message'] ?? '');
 $messageType = trim($_POST['message_type'] ?? 'normal');
 
 if ($roomId <= 0 || $message === '') {
-    send_json([
-        "status" => "error",
-        "message" => "Message cannot be empty."
-    ]);
+    send_json(["status" => "error", "message" => "Message cannot be empty."]);
 }
 
 $userEmail = $conn->real_escape_string($_SESSION['user']);
@@ -45,18 +39,13 @@ $userRes = $conn->query("
 $user = $userRes ? $userRes->fetch_assoc() : null;
 
 if (!$user) {
-    send_json([
-        "status" => "error",
-        "message" => "User not found."
-    ]);
+    send_json(["status" => "error", "message" => "User not found."]);
 }
 
 $senderId = (int)$user['id'];
 
 $roomRes = $conn->query("
-    SELECT 
-        cr.*,
-        p.name AS product_name
+    SELECT cr.*, p.name AS product_name
     FROM chat_rooms cr
     INNER JOIN products p ON cr.product_id = p.id
     WHERE cr.id = $roomId
@@ -67,10 +56,7 @@ $roomRes = $conn->query("
 $room = $roomRes ? $roomRes->fetch_assoc() : null;
 
 if (!$room) {
-    send_json([
-        "status" => "error",
-        "message" => "Chat room not found."
-    ]);
+    send_json(["status" => "error", "message" => "Chat room not found."]);
 }
 
 $receiverId = ((int)$room['buyer_id'] === $senderId)
@@ -90,12 +76,18 @@ if (!in_array($messageType, $allowedTypes, true)) {
 }
 
 $signature = null;
+$signedData = null;
 
-if (
-    function_exists("signData") &&
-    in_array($messageType, ["offer", "acceptance", "delivery_agreement", "cancellation_request"], true)
-) {
-    $dataToSign = json_encode([
+$importantTypes = [
+    "offer",
+    "acceptance",
+    "delivery_agreement",
+    "cancellation_request"
+];
+
+if (in_array($messageType, $importantTypes, true)) {
+    $signedData = json_encode([
+        "action" => "chat_" . $messageType,
         "room_id" => $roomId,
         "sender_id" => $senderId,
         "receiver_id" => $receiverId,
@@ -105,25 +97,36 @@ if (
         "timestamp" => date("Y-m-d H:i:s")
     ]);
 
-    $signature = signData($dataToSign);
+    $signature = signData($signedData);
 }
 
-$safeMessage = $conn->real_escape_string($message);
-$safeType = $conn->real_escape_string($messageType);
-$signatureSql = $signature ? "'" . $conn->real_escape_string($signature) . "'" : "NULL";
-
-$insert = $conn->query("
-    INSERT INTO chat_messages
-    (room_id, sender_id, receiver_id, message_text, message_type, signature)
-    VALUES
-    ($roomId, $senderId, $receiverId, '$safeMessage', '$safeType', $signatureSql)
-");
+$insert = insertEncryptedChatMessage(
+    $conn,
+    $roomId,
+    $senderId,
+    $receiverId,
+    $message,
+    $messageType,
+    $signature,
+    $signedData
+);
 
 if (!$insert) {
     send_json([
         "status" => "error",
         "message" => "Could not send message: " . $conn->error
     ]);
+}
+
+if ($signature && $signedData) {
+    storeSignatureRecord(
+        $conn,
+        $senderId,
+        "chat_" . $messageType,
+        $roomId,
+        $signedData,
+        $signature
+    );
 }
 
 $notificationMessage = "New message about " . $room['product_name'];
@@ -134,7 +137,5 @@ $conn->query("
     VALUES ($receiverId, NULL, '$safeNotification')
 ");
 
-send_json([
-    "status" => "success",
-    "message" => "Message sent."
-]);
+send_json(["status" => "success", "message" => "Message sent."]);
+?>
