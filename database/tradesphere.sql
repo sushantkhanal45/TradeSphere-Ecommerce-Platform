@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 06, 2026 at 12:03 PM
+-- Generation Time: Jun 07, 2026 at 10:25 AM
 -- Server version: 10.4.28-MariaDB
 -- PHP Version: 8.2.4
 
@@ -149,7 +149,11 @@ INSERT INTO `chat_messages` (`id`, `room_id`, `sender_id`, `receiver_id`, `messa
 (58, 7, 3, 2, '[Encrypted message]', 'offer', 'isZgXz+4QCH05ZySu3xu5Htk6VPQobmgUXOcpFK4tNQlHhgR9hPeycIe+wAIqFcX9kvLYfTtWmq6PAbL82Wk6031zGf3A87LFuRfgL1msDF+xFNQAPluP/wUQnlHFQAw9NR3OImbOWBEf4ZRyd6d+rP6rJu7meZnH5Rww2g3AkqwxiOke1obL+Ak50OpIdmer/dqKFIYacxIH2795Y94RpkBga9xOym8QuAO2/76ZCyGVCBpBCafDG+V6jo4qiHJ02EqQJyxwlACb0AfjgvL8XVt8SzKiN0BibY8nVqXdsD7fsLjcRfHksMqm9RObsJiMtZdD+sILbzY1XH8zax50g==', 1, '2026-06-06 09:36:35', 'gIipolATJZ8cFTJLsQmalzl+lVLFi5Sfi6YJHw05DYa0e3t3Wdgy5Gb38cHM', 'ZTXUsEu4K2i2iYRqvhmG9DaamV5/ITLnwUjY8S+pBywGpgeeN1ijsURAZJfPk0pV7JB4tIDIXvNLZ1yrJYkFQs9it4GU8BCEA0TEecFiTYcEqrqhL96WxUolozbLijA6Uyl0fkrZr140hF7hPj8EvDT/uurmS8c3h2DugZcGtyHBE0yXAXEow8rZPfmeJApjSiDDQ8fefy/u7I+1YGyC9c/rKAMDEuz/FdR5hghBOkf//rWN0rn8TmZcfvEsswB+kQU7yx+YtivcGslKnOActxoc7HOALW/D5e/rWwXVhs3HtRSubc08mfkJayoRuzgyT1nJBurmrJATGKU9RdHJ4g==', 'ZwkClRQEh2koUhfl', 'ymCKquvAEwc6kV8UeeLLdg==', 'AES-256-GCM + RSA-OAEP', '{\"action\":\"offer_created\",\"product_id\":78,\"buyer_id\":3,\"seller_id\":2,\"offer_amount\":200,\"timestamp\":\"2026-06-06 11:36:34\"}'),
 (59, 7, 2, 3, '[Encrypted message]', 'accepted', 'TCpSF4C5ojsWs8Sl0+yRt6gyU68lWP0C+fQ01v9SUIkS1bPwp6l1dSEzvq+rM0jMnqc7pRe4zD0RdEliv51JuqxHpZAGLxwaNS1n/E0i3Hfa+alEFPjmZH5QvP0v8sKNWhakBwvBRU3/6w7shd0Ucc7lmsTskgUkYI2Ueu4BaT1NNm79lUln7uOGfASYcp2k0uSVKpaARwcD66nigcQMx2OH4LdzLEdE5sxW4HLUOO/XM+9BL3VcYE2URe8yAfbYm3G9yCOHF0icj5LQtz0+slwXGuJhsEioxJtNxY4v/Pz8DOr34j+viOYcM6+5rA9evHrX9rpwnsPo3CjuL5XlNw==', 1, '2026-06-06 09:36:46', 'TRg7VBbQZjgytKyVqDuFsOCfUp0CHoYOOUhep6MT4hSHdP5qzLtpKyi5ZHjpQCi6Lw1kDqQ=', 'hbCf+Hszk0YzjT0cl5OkIxXjfBkaW3U9ZlTBCbtfB1hbhv8h2bmyIWy0BO2/DhGSDyyqWJruCBfuj5ujLp2de2PBc8UCT9FsmSNzne8gdu/a8tweMI8a2E9LyruO4bYCVxdZmNb8ZO5ZdvdsYxMngRoxyJHnRkaHHFKgT0CVedvOSXjcMS7vbKZQ/ltQe2+YRboL6buUP+IuahkIMM/XHQjNutINUW6b5UASNHpleD3wQbzDGnnC8EpUb8La+JPTnqoNmWp6eWK7xinh4ZwRELIibH4rsNLtAkn+lcWYi73SgmIHA2rAzeyqg9qga+WoR62mgrh2+ruTujkEi0AYow==', 'PLQyCn2Ij4E2xoi6', 'ZRBFOTyP/LLkzrJQR0H27Q==', 'AES-256-GCM + RSA-OAEP', '{\"action\":\"offer_accepted\",\"offer_id\":10,\"product_id\":78,\"buyer_id\":3,\"seller_id\":2,\"offer_amount\":200,\"timestamp\":\"2026-06-06 11:36:46\"}'),
 (60, 7, 2, 3, '[Encrypted message]', 'normal', NULL, 1, '2026-06-06 09:36:51', 'ZT+3ct0=', 'i4s8qHc3L3iQ5JbZD1x04XR7VQGbBVZzpKIVMgLjFSQOY7VTS+20Mp0t9O76hF1t+y3AFaBQOd7GQHBk7pUBlnHDqmXmaS6gLV/2+X+QSZ+wVmfxnRkISWxN2T/cSS0+7pbP6UPYTtzl+Xq1pI08NENKUYTKEspiZthmlEGROZki5DbG9bAuc1/4RF+itlE/WgiFQc8qYvq6YbAzf/8zxucTa4NJtT+kNQkfxvB7f8Vgwk2RUPMj9ZkyvPWOCBdwHUYR+kv5CNng+g2OdMU+qPAwW/WHDrSEmaUkqLcdHjUeYpLdRjCfO4D7sk23AHVLUXXPbBXpeCpCwX8W9alAnA==', '4eQ9CbwU/pLkbeo9', 'd1/p/3+VPmBYDu7O1s2JYw==', 'AES-256-GCM + RSA-OAEP', NULL),
-(61, 7, 3, 2, '[Encrypted message]', 'normal', NULL, 1, '2026-06-06 09:36:55', 'H4+bURE=', 'JspH1LVjfqX/4ziWhQKHjzC3UdyUaK2sLazUHRq3ib4Mq+gXSxtK3oDd1yJ81xNQjazZ5TxcaTtrgAMMmEDgvSsKeK7sq97YPzqHRekvmququXQBP3b0Xr11oerYQ3EcALDwTYY/eekd/r2K5JSAEbf2/Nkj/OKhsMEhQLLZEVQPDt/2afdQuGgTsoSYn8Su6e24hu+OS5TNp7vMwbqxIOru4XPcxVQ5bAYYiGkUnmm/RjUIMivum4Re4Ywy5IVaTrDKoLj9H/uu0aSTH0IO7VjEtjRK79nCLc0cnaMCxyHjCvbSqIgG5qIhEK2UbOC3w82StKFmCfxaFH1agf8ftA==', 'Rfw3caoLZVi95uSn', 'MJxh5/V2J5qVVGbBGTr3XA==', 'AES-256-GCM + RSA-OAEP', NULL);
+(61, 7, 3, 2, '[Encrypted message]', 'normal', NULL, 1, '2026-06-06 09:36:55', 'H4+bURE=', 'JspH1LVjfqX/4ziWhQKHjzC3UdyUaK2sLazUHRq3ib4Mq+gXSxtK3oDd1yJ81xNQjazZ5TxcaTtrgAMMmEDgvSsKeK7sq97YPzqHRekvmququXQBP3b0Xr11oerYQ3EcALDwTYY/eekd/r2K5JSAEbf2/Nkj/OKhsMEhQLLZEVQPDt/2afdQuGgTsoSYn8Su6e24hu+OS5TNp7vMwbqxIOru4XPcxVQ5bAYYiGkUnmm/RjUIMivum4Re4Ywy5IVaTrDKoLj9H/uu0aSTH0IO7VjEtjRK79nCLc0cnaMCxyHjCvbSqIgG5qIhEK2UbOC3w82StKFmCfxaFH1agf8ftA==', 'Rfw3caoLZVi95uSn', 'MJxh5/V2J5qVVGbBGTr3XA==', 'AES-256-GCM + RSA-OAEP', NULL),
+(62, 7, 3, 2, '[Encrypted message]', 'normal', NULL, 1, '2026-06-07 05:11:40', 'jDQn+NI=', 'PaqArhFkwL0Okz8H+V4fpwh/LkaSygXt+AtHlTKm7vp+VhfsGBYQHFijT04pVPzPm1UxGDkOxKOE9RT7aX/KxRVrcM17xc93np6pXy55aiq2ajTJ/kOwUmLIVq2HeGQrkHMp+neCLC8LU994TL6jyA66O5glr1Laj+AvlcgqDn3gp8b/dClZ+9KCpjaMUPnzxO2Kglspa6N4PmCXWMGaeN46813PdStVrPJ/7KdbwjaoUv39z0is9nEcp8AVQc1tr9ZbkDtOnav1+30cKiZvPdNnL82JOJhqA/J2UR36J9BknYC1PyXPCj5UDQ+QwyplgPCWZmMErIgto2SaqRjaDw==', 'b+NDoTb3alUG5RA7', 'SyYCQrlUo9gw0bGxTUMnBg==', 'AES-256-GCM + RSA-OAEP', NULL),
+(63, 7, 2, 3, '[Encrypted message]', 'normal', NULL, 1, '2026-06-07 05:11:54', 'ZB9mg2SYfzIme/rXHJkh3hm15A32WA==', 'NNJfO3iiuExl8fc8wtCgvYh5x8/SHvcUf3/Q1vUQ3fUJ4Q9lvtr/HPx5KGwAD+TVhm8GH3t80Qhd+5igauqbTFUTI2lSEDULRK6SlndrsnOFlytFwmn5W0bH9mT2YsxwfrMZUpynlJHwiPq78iW2bwuoCzOqdOuDNjuBGUzv61WSethakIrV5GXWqcjx3JHNXmmkonVhJ/S/jJyvRZPp3fFycj/Rb0IPmE1Gxbk0h92eMNMo5B94livfQG0/g8MKk0+CNtN6y+gVqZ9mTaIW94NOXbFysZQrKjhMGGqvb8Z/s+lXFb2Hqybe9Is73t6RJy0p0v3A0OPEqlvkjnQrFg==', '1RavkPGw6+TcC/pz', '28wrzrGPYiJXKUJmFjIGbg==', 'AES-256-GCM + RSA-OAEP', NULL),
+(64, 8, 3, 2, '[Encrypted message]', 'offer', 'cxBnH+qQYgCcyfZ2DJIjuzsRmqT0fjKNJ4TCnw5ClVzcWShVYF2ElCQ/0d3p28/mOHP6IQJxZbPKTXXCekHjuMkyq9HuXjLPzddWJf/LbxHkmAj3tRZimQPYTv1me4jyBTYxnNIJU4a/0mluiAIKZAJ5tmRZXnXUqizC7q6Ocq3vEKi+C/sDfk6dSAOeKE7qtW+QLNxH7eSZb8BpMjaxd6CgrfdcDavusmeDgIthwTiOB7KAcjIiiGmP2zLsd1dAJxgBZi8Mf1at6x4UpXbFWYrFZLwt//f9+/YAkPMS2g/kJvtwAZC1wQfvpW9CCAcdqDz9I8jytG8Zi3WE2cJTjg==', 1, '2026-06-07 05:20:38', 'amCwT1JDb9ZHS79Mhu9NFNV2y07E2022afFoii8gs9z7cXFRnmDlFKU2BtA=', 'fb94iGp3cnurCqYtTC92FM1aYCwky8Z/hUZOVm6WJC+6fHeElNqCUTxTclk1gVkdby5XBs2ZeVZMLjpiYO4JgXbAEaIUF7NR1oOXAe5NoYaojABzsUylCEmj5kkVltMzdWmvizejqvF555DKFt+QgvNJgxLJgNBv03Sh159GcjtJxIhubgKXaW7nlFkNZP0noMYZ4viAfkGP6i7GalWj5Icy/DqSaYuHg+ZwBhABXbCARgqBIRlxFgDHCE427A7kkg+N9efdWBAn/PrJmpUalU8Rd2QKHeSm30dKtb9MsAOiwxn7f3LrVCzC0UYvCuRBDIAxlu7l/TdHC9CyK04Nzg==', '3EqJSzhLDhGHDQeS', 'n/FWsGboe2Jh4l0x59YnjA==', 'AES-256-GCM + RSA-OAEP', '{\"action\":\"offer_created\",\"product_id\":12,\"buyer_id\":3,\"seller_id\":2,\"offer_amount\":100,\"timestamp\":\"2026-06-07 07:20:38\"}'),
+(65, 8, 2, 3, '[Encrypted message]', 'accepted', 'QhIO0rjDyQVp3xY+FGey0vwKED0sRYl3T2C2KlxfvrEZnt0V9g+/5qt1Ge6zss4DhlOS+ZvzrlkNxgXToRFSfvvRSDCPe6TQypjNrLme12XUaggnwof4RXul0vl2wz6zLt9MmVq+UE4tvRzDZAYUHgDiMeuuvwGu0zFtem18rXGaRAxGuXCsq7SU92KT82W50R3vHU5nQfWNlJVyRG5GJHtom4VHbOuqt6Xdk+xZyufQ0vMElphxcY7kJo0ZXMY5lolumNRrwPu1cqS7/osAZB5IXvcP+vRkMM04o9gJWBC0WHZl6FWCFHDSIUpxbELVo4/rh3YvLKZvICrdyr+scQ==', 1, '2026-06-07 05:20:57', '4JmGzba64KpfqSKpR+ycGrczn9s2lLkPDQaPnhB1vhuRGoibG5q3D4helWuCXRUxUIXpfw==', 'iOzOmX37KIpn/ecCbSQyS62YOh1gtG30iiYTiBpz+7gP3CXH+up9cFCUcHN8nIJM4P/MHCq3ZzBxio9V2+hFAAjxFcLU9tCqTpgM3Dvov4owqlia/dYAxXgidVJ941zVH9KsVcT42N/v8d3B5IeFz4CfQ+D5eOirhR4GESjeT48A1MNrb2WVeBNsGAgr731fngbvGSejDUcqpxKZ6GuQcQNDKTRR7j8XyT+gd4gWjYKQSMAJIec0Sj+9W9riN3wCFDKNfVzG5ZBuvWFWgheR+hk4Z75G/WhGhhqhJHYzBSTtqZr2WIbYqZmmMm2LdI/MDSb4tMOAo8MuRwMZpDJSSA==', 'PwrMfTZF5SwxFcM4', '341dp4EacDAyKJrYp3ruBQ==', 'AES-256-GCM + RSA-OAEP', '{\"action\":\"offer_accepted\",\"offer_id\":11,\"product_id\":12,\"buyer_id\":3,\"seller_id\":2,\"offer_amount\":100,\"timestamp\":\"2026-06-07 07:20:57\"}');
 
 -- --------------------------------------------------------
 
@@ -177,7 +181,8 @@ INSERT INTO `chat_rooms` (`id`, `buyer_id`, `seller_id`, `product_id`, `order_id
 (4, 3, 2, 76, NULL, '2026-06-02 03:40:08'),
 (5, 3, 2, 90, NULL, '2026-06-02 03:57:50'),
 (6, 3, 2, 77, NULL, '2026-06-02 04:06:37'),
-(7, 3, 2, 78, NULL, '2026-06-06 09:36:24');
+(7, 3, 2, 78, NULL, '2026-06-06 09:36:24'),
+(8, 3, 2, 12, NULL, '2026-06-07 05:20:32');
 
 -- --------------------------------------------------------
 
@@ -268,7 +273,12 @@ INSERT INTO `notifications` (`id`, `user_id`, `order_id`, `message`, `is_read`, 
 (79, 2, NULL, 'New offer received: Rs 200.00 for Slip-On Shoes 835', 1, '2026-06-06 09:36:35'),
 (80, 3, NULL, 'Your offer was accepted for Slip-On Shoes 835', 1, '2026-06-06 09:36:46'),
 (81, 3, NULL, 'New message about Slip-On Shoes 835', 1, '2026-06-06 09:36:51'),
-(82, 2, NULL, 'New message about Slip-On Shoes 835', 0, '2026-06-06 09:36:55');
+(82, 2, NULL, 'New message about Slip-On Shoes 835', 1, '2026-06-06 09:36:55'),
+(83, 2, 11, 'Payment received for Slip-On Shoes 835', 1, '2026-06-07 04:43:26'),
+(84, 2, NULL, 'New message about Slip-On Shoes 835', 1, '2026-06-07 05:11:40'),
+(85, 3, NULL, 'New message about Slip-On Shoes 835', 1, '2026-06-07 05:11:54'),
+(86, 2, NULL, 'New offer received: Rs 100.00 for Phone Charger 96', 1, '2026-06-07 05:20:38'),
+(87, 3, NULL, 'Your offer was accepted for Phone Charger 96', 1, '2026-06-07 05:20:57');
 
 -- --------------------------------------------------------
 
@@ -298,24 +308,28 @@ CREATE TABLE `orders` (
   `seller_cleared` tinyint(1) NOT NULL DEFAULT 0,
   `esewa_ref_id` varchar(120) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `buyer_address` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `orders`
 --
 
-INSERT INTO `orders` (`id`, `user_id`, `product_id`, `seller_user_id`, `buyer_name`, `buyer_email`, `buyer_phone`, `buyer_message`, `amount`, `quantity`, `transaction_uuid`, `payment_method`, `payment_status`, `order_status`, `seller_delivery_status`, `buyer_received`, `delivered_at`, `buyer_received_at`, `seller_cleared`, `esewa_ref_id`, `created_at`, `updated_at`) VALUES
-(1, 3, 85, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 933.00, 1, 'ts_6a00273ec4434_p85', 'eSewa', 'paid', 'processing', 'delivered', 1, '2026-05-10 12:37:06', '2026-05-10 12:36:47', 0, '000F830', '2026-05-10 06:35:42', '2026-05-10 06:52:06'),
-(2, 3, 3, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 487.00, 1, 'ts_6a014dfdd8673_p3', 'eSewa', 'paid', 'processing', 'delivered', 1, '2026-05-11 09:34:21', '2026-05-11 09:19:10', 0, '000F976', '2026-05-11 03:33:17', '2026-05-11 03:49:21'),
-(3, 3, 86, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 317.00, 1, 'ts_6a014e8018205_p86', 'eSewa', 'paid', 'processing', 'delivered', 1, '2026-05-12 12:39:50', '2026-05-12 12:39:42', 0, '000F977', '2026-05-11 03:35:28', '2026-05-12 06:54:50'),
-(4, 3, 86, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 317.00, 1, 'ts_6a0150d44f338_p86', 'eSewa', 'paid', 'processing', 'delivered', 1, '2026-05-12 12:52:54', '2026-05-12 12:40:48', 0, '000F97C', '2026-05-11 03:45:24', '2026-05-12 07:07:54'),
-(5, 3, 7, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 1127.00, 1, 'ts_6a0ae8343d002_p7', 'eSewa', 'pending', 'placed', 'pending', 0, NULL, NULL, 0, NULL, '2026-05-18 10:21:40', '2026-05-18 10:21:40'),
-(6, 3, 91, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 1061.00, 1, 'ts_6a0eb774a3ed4_p91', 'eSewa', 'pending', 'placed', 'pending', 0, NULL, NULL, 0, NULL, '2026-05-21 07:42:44', '2026-05-21 07:42:44'),
-(7, 3, 91, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 500.00, 1, 'ts_6a0ebcad3a3a5_p91', 'eSewa', 'pending', 'placed', 'pending', 0, NULL, NULL, 0, NULL, '2026-05-21 08:05:01', '2026-05-21 08:05:01'),
-(8, 3, 91, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 500.00, 1, 'ts_6a0ebce3a1fa0_p91', 'eSewa', 'pending', 'placed', 'pending', 0, NULL, NULL, 0, NULL, '2026-05-21 08:05:55', '2026-05-21 08:05:55'),
-(9, 3, 91, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 500.00, 1, 'ts_6a0ebd2daa0c9_p91', 'eSewa', 'paid', 'confirmed', 'pending', 0, NULL, NULL, 0, '000FIKL', '2026-05-21 08:07:09', '2026-05-21 08:07:58'),
-(10, 3, 3, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 50.00, 1, 'ts_6a1538b7c3bfa_p3', 'eSewa', 'paid', 'confirmed', 'pending', 0, NULL, NULL, 0, '000FJT2', '2026-05-26 06:07:51', '2026-05-26 06:08:38');
+INSERT INTO `orders` (`id`, `user_id`, `product_id`, `seller_user_id`, `buyer_name`, `buyer_email`, `buyer_phone`, `buyer_message`, `amount`, `quantity`, `transaction_uuid`, `payment_method`, `payment_status`, `order_status`, `seller_delivery_status`, `buyer_received`, `delivered_at`, `buyer_received_at`, `seller_cleared`, `esewa_ref_id`, `created_at`, `updated_at`, `buyer_address`) VALUES
+(1, 3, 85, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 933.00, 1, 'ts_6a00273ec4434_p85', 'eSewa', 'paid', 'processing', 'delivered', 1, '2026-05-10 12:37:06', '2026-05-10 12:36:47', 0, '000F830', '2026-05-10 06:35:42', '2026-05-10 06:52:06', NULL),
+(2, 3, 3, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 487.00, 1, 'ts_6a014dfdd8673_p3', 'eSewa', 'paid', 'processing', 'delivered', 1, '2026-05-11 09:34:21', '2026-05-11 09:19:10', 0, '000F976', '2026-05-11 03:33:17', '2026-05-11 03:49:21', NULL),
+(3, 3, 86, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 317.00, 1, 'ts_6a014e8018205_p86', 'eSewa', 'paid', 'processing', 'delivered', 1, '2026-05-12 12:39:50', '2026-05-12 12:39:42', 0, '000F977', '2026-05-11 03:35:28', '2026-05-12 06:54:50', NULL),
+(4, 3, 86, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 317.00, 1, 'ts_6a0150d44f338_p86', 'eSewa', 'paid', 'processing', 'delivered', 1, '2026-05-12 12:52:54', '2026-05-12 12:40:48', 0, '000F97C', '2026-05-11 03:45:24', '2026-05-12 07:07:54', NULL),
+(5, 3, 7, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 1127.00, 1, 'ts_6a0ae8343d002_p7', 'eSewa', 'pending', 'placed', 'pending', 0, NULL, NULL, 0, NULL, '2026-05-18 10:21:40', '2026-05-18 10:21:40', NULL),
+(6, 3, 91, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 1061.00, 1, 'ts_6a0eb774a3ed4_p91', 'eSewa', 'pending', 'placed', 'pending', 0, NULL, NULL, 0, NULL, '2026-05-21 07:42:44', '2026-05-21 07:42:44', NULL),
+(7, 3, 91, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 500.00, 1, 'ts_6a0ebcad3a3a5_p91', 'eSewa', 'pending', 'placed', 'pending', 0, NULL, NULL, 0, NULL, '2026-05-21 08:05:01', '2026-05-21 08:05:01', NULL),
+(8, 3, 91, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 500.00, 1, 'ts_6a0ebce3a1fa0_p91', 'eSewa', 'pending', 'placed', 'pending', 0, NULL, NULL, 0, NULL, '2026-05-21 08:05:55', '2026-05-21 08:05:55', NULL),
+(9, 3, 91, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 500.00, 1, 'ts_6a0ebd2daa0c9_p91', 'eSewa', 'paid', 'confirmed', 'pending', 0, NULL, NULL, 0, '000FIKL', '2026-05-21 08:07:09', '2026-05-21 08:07:58', NULL),
+(10, 3, 3, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 50.00, 1, 'ts_6a1538b7c3bfa_p3', 'eSewa', 'paid', 'confirmed', 'pending', 0, NULL, NULL, 0, '000FJT2', '2026-05-26 06:07:51', '2026-05-26 06:08:38', NULL),
+(11, 3, 78, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '9841295114', NULL, 1925.00, 1, 'TS-1780807406-3-78', 'eSewa', 'paid', 'confirmed', 'pending', 0, NULL, NULL, 0, 'LOCAL-1780807406', '2026-06-07 04:43:26', '2026-06-07 04:43:26', 'Bhaktapur'),
+(12, 3, 77, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '9841295114', '', 300.00, 1, 'ts_6a24fef9c02af_p77', 'eSewa', 'paid', 'confirmed', 'pending', 0, NULL, NULL, 0, '000FNMT', '2026-06-07 05:17:45', '2026-06-07 05:18:41', NULL),
+(13, 3, 12, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '9841295114', '', 100.00, 1, 'ts_6a24ffcc20190_p12', 'eSewa', 'paid', 'completed', 'delivered', 1, '2026-06-07 13:42:05', '2026-06-07 13:42:05', 0, '000FNMU', '2026-06-07 05:21:16', '2026-06-07 07:57:05', NULL);
 
 -- --------------------------------------------------------
 
@@ -344,7 +358,9 @@ INSERT INTO `payment_logs` (`id`, `order_id`, `transaction_uuid`, `status`, `raw
 (19, 3, 'ts_6a014e8018205', 'paid', '{\"transaction_code\":\"000F977\",\"status\":\"COMPLETE\",\"total_amount\":\"317.0\",\"transaction_uuid\":\"ts_6a014e8018205\",\"product_code\":\"EPAYTEST\",\"signed_field_names\":\"transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names\",\"signature\":\"3TxRbfHn4FFBpwExyhYojMLt+yCWsJ/695MX6nQ6OX8=\"}', '2026-05-11 03:35:46'),
 (20, 4, 'ts_6a0150d44f338', 'paid', '{\"transaction_code\":\"000F97C\",\"status\":\"COMPLETE\",\"total_amount\":\"317.0\",\"transaction_uuid\":\"ts_6a0150d44f338\",\"product_code\":\"EPAYTEST\",\"signed_field_names\":\"transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names\",\"signature\":\"Qvx35eQK+w9ZP76UxLuj4ZG+hlG5u0ni0HO2pqL84XQ=\"}', '2026-05-11 03:45:43'),
 (21, 9, 'ts_6a0ebd2daa0c9', 'paid', '{\"transaction_code\":\"000FIKL\",\"status\":\"COMPLETE\",\"total_amount\":\"500.0\",\"transaction_uuid\":\"ts_6a0ebd2daa0c9\",\"product_code\":\"EPAYTEST\",\"signed_field_names\":\"transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names\",\"signature\":\"Wrem0oBEQ8VpGJbOCOJ0oIQM/R2y413pa25O6JRC638=\"}', '2026-05-21 08:07:58'),
-(22, 10, 'ts_6a1538b7c3bfa', 'paid', '{\"transaction_code\":\"000FJT2\",\"status\":\"COMPLETE\",\"total_amount\":\"50.0\",\"transaction_uuid\":\"ts_6a1538b7c3bfa\",\"product_code\":\"EPAYTEST\",\"signed_field_names\":\"transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names\",\"signature\":\"zk24YqHxYL2WzeC/qjEwQk8SQAKKiBpoDF4IqZHOKCg=\"}', '2026-05-26 06:08:38');
+(22, 10, 'ts_6a1538b7c3bfa', 'paid', '{\"transaction_code\":\"000FJT2\",\"status\":\"COMPLETE\",\"total_amount\":\"50.0\",\"transaction_uuid\":\"ts_6a1538b7c3bfa\",\"product_code\":\"EPAYTEST\",\"signed_field_names\":\"transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names\",\"signature\":\"zk24YqHxYL2WzeC/qjEwQk8SQAKKiBpoDF4IqZHOKCg=\"}', '2026-05-26 06:08:38'),
+(23, 12, 'ts_6a24fef9c02af', 'paid', '{\"transaction_code\":\"000FNMT\",\"status\":\"COMPLETE\",\"total_amount\":\"300.0\",\"transaction_uuid\":\"ts_6a24fef9c02af\",\"product_code\":\"EPAYTEST\",\"signed_field_names\":\"transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names\",\"signature\":\"LSxj4/Cwn9JahkQoZ19XMuRoA0kiZaizNDraw7mVq6E=\"}', '2026-06-07 05:18:41'),
+(24, 13, 'ts_6a24ffcc20190', 'paid', '{\"transaction_code\":\"000FNMU\",\"status\":\"COMPLETE\",\"total_amount\":\"100.0\",\"transaction_uuid\":\"ts_6a24ffcc20190\",\"product_code\":\"EPAYTEST\",\"signed_field_names\":\"transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names\",\"signature\":\"xDhpDl71QoDVvy88LFLeeAH71+ZcrP5Maepg3E21gKg=\"}', '2026-06-07 05:21:43');
 
 -- --------------------------------------------------------
 
@@ -510,7 +526,8 @@ INSERT INTO `product_offers` (`id`, `product_id`, `buyer_id`, `seller_id`, `offe
 (7, 76, 3, 2, 300.00, 'accepted', 'VLffU/AH9ATvh5gNv3+MWn3uAPO67vDOoVuPItGRBysgMOdwnYZ9b0LBk1f9ShdwC+I/Re4tLGDsrWip/DULpW6KTL82ZfKBz9zZjqkR0JPasDLoY8ccuyjJtNEFTRsSuCBsgdRyyX7FG+YK1Z3d9Dv7knSrWXXEsoLVUhQEqux4FaoruJA4EaeYhFrAgSyv+prOlp97ANpvFUFl1Z5xOgcbbP+JVGR1xlRqfOBwURI7XLkX1JwIgZCqW3lK8FBZSH+9o3C7XWfNQDaRVzcRGkiO5x4Tsnsncdmxx2OXp/zt5+fW/x7VWD2qoAT9vp/3J3uA8S7zdVcPfEDqBBKp4g==', 'UFvdXKB7Ihl4X9ArMAgJjlGNJNcbmSyETB5l1VNalbgVUkY7jjXmeub7XvJdPQNr2fc3riPbJ+RwnxDP6g1gAjkRsY2EO1bo4P02+EguYsILbSiq6g0v+mAqhAshpuOSV8WQDvk9usaGw8PESsOdnR2nXEgRSzXtvaffG1un/xlgL4ZnpNUIHkbPMibKJarzWPiVqQbT+ixufXwO4xma9slbmKerafmmfEtctBEjqasF8t7JMpiU04jQly3AfsocCSHysnbF+W/eJCFi+flKMjIxb+waCXZroAi/PtksMAftBLoHGJ4dLmhIBXSJ1/qXiNZ4H4fD60p/c8Xt1hHYgg==', '2026-06-02 03:40:18', '2026-06-02 09:26:18', NULL, NULL),
 (8, 90, 3, 2, 300.00, 'pending', 'JnhxOFIUCnAIg86fQBtUZC3UhN1kqr+zwIN1HfJWZ+qGF3AwjRxIHuOjyngflUoxL+MaHI3488ej5/ypnvXwY2OrmvPTyPsSxrJ+wdwNxHvTWyGhqUDwxlhxKTzYe0VZcEpAiAs27snNkzg+QV7ylDiex6uJer8LFT9zDnSq/WYptaXV5gMSkRh+ZhnyGrarnmvWemliPe4161WB3RXfVowLoag/1rkrwQhkSvaiB+HrrrKP636Aj1k3tmQ3doHb+3eNXJzreK+MjB5fP1PR6JOeEqpzQs+/NUn/7sJN2CmWiuXbEBELlLPP6CU2yREMleFAtQzszpbBXtRDHhAMpw==', NULL, '2026-06-02 03:57:58', NULL, NULL, NULL),
 (9, 77, 3, 2, 300.00, 'accepted', 'cesHriZhC8IQK1edi+VA+EblBmJm3kgt30C9ePV5etECo3WSNEF7LEZHZ4lq+PNiHiZhGx6D5fKbJdfOoH6Uhty9TQl9XV4B8PgDgvLCw12DUBV+K1oObp0iCk2En/eIg8s6441nHLCVXd5F3EM7D2TSOuvoumpbp8h6YMnq9CU95R8sWBGnOaeEIn8rf1Cb9aW19jvIqpdBDikqTQWpFHRBGNBo6mYgsXDFTui6Z71AkvluEO8q1l4VT06tHI5xGOw1RTnsuU4UKKKcdnMK1JLQKlCIX51bxP95wDAdaZZaLUwiMk0xPCLfX/mSBMpZsofxijZfewnLjoUi9E3p/w==', 'IYpVxHU4mXl1UIt3vROUKE8faXlqZvXj0FIJLxA4GfMgNPa4hDQOtftcVHpxRhYQ1hwORjx/CLi4Y7L0PBi1wuzqsRFzQto0doQrudiCyNNs/ycejAE9DyeK3ON72hMwFe+HR9HUflE548/IrkOp+CRkKBFHCXE4Iy4NXOMUnKPkS3v21R9Jjf7y8HkCPnFdS+k3ZzWG1Kn6nWZ/JNLo1qiaWogneVZ8ZF5U+OXdIN9cGAeGiD6SdnD0ajLYtHVs1Jf7N8Q7dAmF3zKKLLh7njf9bsbIkqYPHo+mKFPTH7SRSETN6Qi0qp/I7Nzz/kauZR29OJDDdBEMai96UCcAYg==', '2026-06-02 04:06:54', '2026-06-02 09:52:14', NULL, NULL),
-(10, 78, 3, 2, 200.00, 'accepted', 'isZgXz+4QCH05ZySu3xu5Htk6VPQobmgUXOcpFK4tNQlHhgR9hPeycIe+wAIqFcX9kvLYfTtWmq6PAbL82Wk6031zGf3A87LFuRfgL1msDF+xFNQAPluP/wUQnlHFQAw9NR3OImbOWBEf4ZRyd6d+rP6rJu7meZnH5Rww2g3AkqwxiOke1obL+Ak50OpIdmer/dqKFIYacxIH2795Y94RpkBga9xOym8QuAO2/76ZCyGVCBpBCafDG+V6jo4qiHJ02EqQJyxwlACb0AfjgvL8XVt8SzKiN0BibY8nVqXdsD7fsLjcRfHksMqm9RObsJiMtZdD+sILbzY1XH8zax50g==', 'TCpSF4C5ojsWs8Sl0+yRt6gyU68lWP0C+fQ01v9SUIkS1bPwp6l1dSEzvq+rM0jMnqc7pRe4zD0RdEliv51JuqxHpZAGLxwaNS1n/E0i3Hfa+alEFPjmZH5QvP0v8sKNWhakBwvBRU3/6w7shd0Ucc7lmsTskgUkYI2Ueu4BaT1NNm79lUln7uOGfASYcp2k0uSVKpaARwcD66nigcQMx2OH4LdzLEdE5sxW4HLUOO/XM+9BL3VcYE2URe8yAfbYm3G9yCOHF0icj5LQtz0+slwXGuJhsEioxJtNxY4v/Pz8DOr34j+viOYcM6+5rA9evHrX9rpwnsPo3CjuL5XlNw==', '2026-06-06 09:36:35', '2026-06-06 15:21:46', '{\"action\":\"offer_created\",\"product_id\":78,\"buyer_id\":3,\"seller_id\":2,\"offer_amount\":200,\"timestamp\":\"2026-06-06 11:36:34\"}', '{\"action\":\"offer_accepted\",\"offer_id\":10,\"product_id\":78,\"buyer_id\":3,\"seller_id\":2,\"offer_amount\":200,\"timestamp\":\"2026-06-06 11:36:46\"}');
+(10, 78, 3, 2, 200.00, 'accepted', 'isZgXz+4QCH05ZySu3xu5Htk6VPQobmgUXOcpFK4tNQlHhgR9hPeycIe+wAIqFcX9kvLYfTtWmq6PAbL82Wk6031zGf3A87LFuRfgL1msDF+xFNQAPluP/wUQnlHFQAw9NR3OImbOWBEf4ZRyd6d+rP6rJu7meZnH5Rww2g3AkqwxiOke1obL+Ak50OpIdmer/dqKFIYacxIH2795Y94RpkBga9xOym8QuAO2/76ZCyGVCBpBCafDG+V6jo4qiHJ02EqQJyxwlACb0AfjgvL8XVt8SzKiN0BibY8nVqXdsD7fsLjcRfHksMqm9RObsJiMtZdD+sILbzY1XH8zax50g==', 'TCpSF4C5ojsWs8Sl0+yRt6gyU68lWP0C+fQ01v9SUIkS1bPwp6l1dSEzvq+rM0jMnqc7pRe4zD0RdEliv51JuqxHpZAGLxwaNS1n/E0i3Hfa+alEFPjmZH5QvP0v8sKNWhakBwvBRU3/6w7shd0Ucc7lmsTskgUkYI2Ueu4BaT1NNm79lUln7uOGfASYcp2k0uSVKpaARwcD66nigcQMx2OH4LdzLEdE5sxW4HLUOO/XM+9BL3VcYE2URe8yAfbYm3G9yCOHF0icj5LQtz0+slwXGuJhsEioxJtNxY4v/Pz8DOr34j+viOYcM6+5rA9evHrX9rpwnsPo3CjuL5XlNw==', '2026-06-06 09:36:35', '2026-06-06 15:21:46', '{\"action\":\"offer_created\",\"product_id\":78,\"buyer_id\":3,\"seller_id\":2,\"offer_amount\":200,\"timestamp\":\"2026-06-06 11:36:34\"}', '{\"action\":\"offer_accepted\",\"offer_id\":10,\"product_id\":78,\"buyer_id\":3,\"seller_id\":2,\"offer_amount\":200,\"timestamp\":\"2026-06-06 11:36:46\"}'),
+(11, 12, 3, 2, 100.00, 'accepted', 'cxBnH+qQYgCcyfZ2DJIjuzsRmqT0fjKNJ4TCnw5ClVzcWShVYF2ElCQ/0d3p28/mOHP6IQJxZbPKTXXCekHjuMkyq9HuXjLPzddWJf/LbxHkmAj3tRZimQPYTv1me4jyBTYxnNIJU4a/0mluiAIKZAJ5tmRZXnXUqizC7q6Ocq3vEKi+C/sDfk6dSAOeKE7qtW+QLNxH7eSZb8BpMjaxd6CgrfdcDavusmeDgIthwTiOB7KAcjIiiGmP2zLsd1dAJxgBZi8Mf1at6x4UpXbFWYrFZLwt//f9+/YAkPMS2g/kJvtwAZC1wQfvpW9CCAcdqDz9I8jytG8Zi3WE2cJTjg==', 'QhIO0rjDyQVp3xY+FGey0vwKED0sRYl3T2C2KlxfvrEZnt0V9g+/5qt1Ge6zss4DhlOS+ZvzrlkNxgXToRFSfvvRSDCPe6TQypjNrLme12XUaggnwof4RXul0vl2wz6zLt9MmVq+UE4tvRzDZAYUHgDiMeuuvwGu0zFtem18rXGaRAxGuXCsq7SU92KT82W50R3vHU5nQfWNlJVyRG5GJHtom4VHbOuqt6Xdk+xZyufQ0vMElphxcY7kJo0ZXMY5lolumNRrwPu1cqS7/osAZB5IXvcP+vRkMM04o9gJWBC0WHZl6FWCFHDSIUpxbELVo4/rh3YvLKZvICrdyr+scQ==', '2026-06-07 05:20:38', '2026-06-07 11:05:57', '{\"action\":\"offer_created\",\"product_id\":12,\"buyer_id\":3,\"seller_id\":2,\"offer_amount\":100,\"timestamp\":\"2026-06-07 07:20:38\"}', '{\"action\":\"offer_accepted\",\"offer_id\":11,\"product_id\":12,\"buyer_id\":3,\"seller_id\":2,\"offer_amount\":100,\"timestamp\":\"2026-06-07 07:20:57\"}');
 
 -- --------------------------------------------------------
 
@@ -558,10 +575,10 @@ CREATE TABLE `product_views` (
 --
 
 INSERT INTO `product_views` (`id`, `user_id`, `product_id`, `category_id`, `viewed_at`) VALUES
-(1, 3, 12, 1, '2026-05-30 09:06:42'),
+(1, 3, 12, 1, '2026-06-07 05:26:00'),
 (2, 3, 95, 8, '2026-04-21 02:10:26'),
 (3, 2, 96, 8, '2026-04-22 10:26:07'),
-(4, 2, 95, 8, '2026-06-02 04:06:16'),
+(4, 2, 95, 8, '2026-06-07 05:24:50'),
 (5, 2, 3, 1, '2026-04-22 10:27:53'),
 (6, 3, 87, 8, '2026-05-30 07:11:12'),
 (7, 3, 88, 8, '2026-05-30 07:11:26'),
@@ -572,12 +589,14 @@ INSERT INTO `product_views` (`id`, `user_id`, `product_id`, `category_id`, `view
 (12, 3, 91, 8, '2026-05-21 04:10:39'),
 (13, 3, 3, 1, '2026-05-24 16:00:02'),
 (14, 3, 83, 7, '2026-05-26 06:53:10'),
-(15, 3, 93, 8, '2026-05-30 06:37:20'),
+(15, 3, 93, 8, '2026-06-07 05:26:11'),
 (16, 3, 90, 8, '2026-06-02 03:57:48'),
 (17, 3, 76, 7, '2026-06-02 03:40:06'),
-(18, 2, 91, 8, '2026-06-02 03:57:36'),
-(19, 3, 77, 7, '2026-06-02 04:06:32'),
-(20, 3, 78, 7, '2026-06-06 09:36:22');
+(18, 2, 91, 8, '2026-06-07 05:24:53'),
+(19, 3, 77, 7, '2026-06-07 05:20:18'),
+(20, 3, 78, 7, '2026-06-07 05:23:32'),
+(21, 2, 78, 7, '2026-06-07 05:23:04'),
+(22, 3, 49, 5, '2026-06-07 05:26:07');
 
 -- --------------------------------------------------------
 
@@ -668,7 +687,16 @@ INSERT INTO `signatures` (`id`, `user_id`, `action_type`, `related_id`, `signed_
 (66, 3, 'product_created', 100, '{\"user_id\":3,\"product_id\":100,\"action\":\"product_created\",\"product_name\":\"Laptop\",\"timestamp\":\"2026-06-02 05:56:12\"}', 'e7dME4nfq8OfBNk9FfbUeKvFNi0/qPt7VmDtYYIzqy8BPrp5ocJOtUQvlHXJOxa3ciNCSebGdM4p/nxGX8b/ha9aZ6tFELpq/KDBQT19mI8RlJmF4DVRcprhHcSzfHIJRzxc9EPQXMIIrWGGJv1Qm+6qgWcCynTEeMDougq4pU+6mw7g3gZ1q9dTZNsnS2S4ckuR8Le9Tz4t8gGwuTGiAXdQkHjIW1mZDb3SyOvv89MAQ6GRFYB63PLrrNmChvUBAwTINakzjWmAJVDFtSuDSjqAtR8j7tRCZLjAziVoRAXj+e5kGxLdpPDQ/dLTJa0z+gB3/z1e2100Z4uQuD+TSQ==', '2026-06-02 03:56:12'),
 (67, 3, 'product_deleted', 100, '{\"user_id\":3,\"product_id\":100,\"product_name\":\"Laptop\",\"action\":\"product_deleted\",\"timestamp\":\"2026-06-02 05:56:34\"}', 'epTT84jbDUC7uKxhNA/h0QsGW3GMJcrOhi9VGbPyK+H3r1WqvGyBDqQ4rUd+NvTdOI1+Ateo7/L+l7qjNaixF7lbhgB160oBstskiH+xmXjeJIHTe6zYlj6lwUHUYm+34cnoEyf5Iz72Nq18+WR8QDwIb5bnXmtCTqNypOSCy1OOWgBS44WE6dSamvOJtEzPjipSk/W0o41XYju6nqJcWFf14aTTw/U8NIKWDKTiNj6nT7Phai15jglol+/u4xBKeyqjcH2KKmbO/q/4g/jsqjdh7kOQglkzc0ezL4HDIlWjgrafB2JN1Igx8s575uwIjR3jrA2xG7UsEekjRuQppQ==', '2026-06-02 03:56:34'),
 (68, 3, 'offer_created', 10, '{\"action\":\"offer_created\",\"product_id\":78,\"buyer_id\":3,\"seller_id\":2,\"offer_amount\":200,\"timestamp\":\"2026-06-06 11:36:34\"}', 'isZgXz+4QCH05ZySu3xu5Htk6VPQobmgUXOcpFK4tNQlHhgR9hPeycIe+wAIqFcX9kvLYfTtWmq6PAbL82Wk6031zGf3A87LFuRfgL1msDF+xFNQAPluP/wUQnlHFQAw9NR3OImbOWBEf4ZRyd6d+rP6rJu7meZnH5Rww2g3AkqwxiOke1obL+Ak50OpIdmer/dqKFIYacxIH2795Y94RpkBga9xOym8QuAO2/76ZCyGVCBpBCafDG+V6jo4qiHJ02EqQJyxwlACb0AfjgvL8XVt8SzKiN0BibY8nVqXdsD7fsLjcRfHksMqm9RObsJiMtZdD+sILbzY1XH8zax50g==', '2026-06-06 09:36:35'),
-(69, 2, 'offer_accepted', 10, '{\"action\":\"offer_accepted\",\"offer_id\":10,\"product_id\":78,\"buyer_id\":3,\"seller_id\":2,\"offer_amount\":200,\"timestamp\":\"2026-06-06 11:36:46\"}', 'TCpSF4C5ojsWs8Sl0+yRt6gyU68lWP0C+fQ01v9SUIkS1bPwp6l1dSEzvq+rM0jMnqc7pRe4zD0RdEliv51JuqxHpZAGLxwaNS1n/E0i3Hfa+alEFPjmZH5QvP0v8sKNWhakBwvBRU3/6w7shd0Ucc7lmsTskgUkYI2Ueu4BaT1NNm79lUln7uOGfASYcp2k0uSVKpaARwcD66nigcQMx2OH4LdzLEdE5sxW4HLUOO/XM+9BL3VcYE2URe8yAfbYm3G9yCOHF0icj5LQtz0+slwXGuJhsEioxJtNxY4v/Pz8DOr34j+viOYcM6+5rA9evHrX9rpwnsPo3CjuL5XlNw==', '2026-06-06 09:36:46');
+(69, 2, 'offer_accepted', 10, '{\"action\":\"offer_accepted\",\"offer_id\":10,\"product_id\":78,\"buyer_id\":3,\"seller_id\":2,\"offer_amount\":200,\"timestamp\":\"2026-06-06 11:36:46\"}', 'TCpSF4C5ojsWs8Sl0+yRt6gyU68lWP0C+fQ01v9SUIkS1bPwp6l1dSEzvq+rM0jMnqc7pRe4zD0RdEliv51JuqxHpZAGLxwaNS1n/E0i3Hfa+alEFPjmZH5QvP0v8sKNWhakBwvBRU3/6w7shd0Ucc7lmsTskgUkYI2Ueu4BaT1NNm79lUln7uOGfASYcp2k0uSVKpaARwcD66nigcQMx2OH4LdzLEdE5sxW4HLUOO/XM+9BL3VcYE2URe8yAfbYm3G9yCOHF0icj5LQtz0+slwXGuJhsEioxJtNxY4v/Pz8DOr34j+viOYcM6+5rA9evHrX9rpwnsPo3CjuL5XlNw==', '2026-06-06 09:36:46'),
+(70, 3, 'order_created', 11, '{\"action\":\"order_created\",\"user_id\":3,\"order_id\":11,\"product_id\":78,\"seller_user_id\":2,\"quantity\":1,\"amount\":1925,\"buyer_name\":\"Harry Potter\",\"buyer_email\":\"hellwrld0045@gmail.com\",\"buyer_phone\":\"9841295114\",\"transaction_uuid\":\"TS-1780807406-3-78\",\"payment_status\":\"pending\",\"order_status\":\"placed\",\"timestamp\":\"2026-06-07 06:43:26\"}', 'U8nccNEktQwpVhnv2xgggsQD8e348P1BI4+8YHoH6cuP1Uh+pKc0FyJGkcYFsUCqborxr9+MsTZL1Hx+3b9CERqIHJantkdsrbyyXo5gUCQUmc3YYAGhdlnMD+ojl1dO2uIKGlZC3F9kbIUb4AaFEd/SUYi1euGlZ4XWylbQ7xnxTMuDwKvJ3imRgWB3eRwJgJbjyug5df0k4qGnL/sxjI8kXhk1IedyqTqCGsmtUhQq4xDA6Ko19utc1/vMga0A45PMpujxh0PoGm9Xn/QXU9Zm4T4rtMf4/temrH8eS7B2wtNB07ymb5uAcG/FsosWjzCCdJPKu9eIkM2Jg3aC+Q==', '2026-06-07 04:43:26'),
+(71, 3, 'payment_success', 11, '{\"action\":\"payment_success\",\"user_id\":3,\"order_id\":11,\"product_id\":78,\"seller_user_id\":2,\"transaction_uuid\":\"TS-1780807406-3-78\",\"esewa_ref_id\":\"LOCAL-1780807406\",\"payment_status\":\"paid\",\"order_status\":\"confirmed\",\"amount\":\"1925.00\",\"timestamp\":\"2026-06-07 06:43:26\"}', 'k+Q6bhmZxtQwyZvqMYZ4NwsOIACt0YFM9YxSzkoIyaDyEyflRVfwvCuaGKyPFC4SaW7pvzsdos3zm7CgPw5PrnTvJWtgMVVCSiZR1j1kgVwpvcmqPUju1xl1SUAe98TjhtYvJ/gsWVXSNqTFSqa2jxWxuAw4rWVhsTcEadmpO5cpCiLHcuPlbFCgbOptopU+o0IWGpadHHShVq6LadgWWr7+CRIjaNwsnk7+dKBbdtr7lUTMMNPz3SLKVipIdelyunI8u3SIkGeInqZBvV+gjcZBFUFv7wsSS5l7QwUI9r5eWujY65rjFjqM20OPItgeBz6MOqq9pYILdgHVRTvJOQ==', '2026-06-07 04:43:26'),
+(72, 3, 'order_created', 12, '{\"action\":\"order_created\",\"user_id\":3,\"order_id\":12,\"product_id\":77,\"seller_user_id\":2,\"buyer_name\":\"Harry Potter\",\"buyer_email\":\"hellwrld0045@gmail.com\",\"buyer_phone\":\"9841295114\",\"amount\":300,\"quantity\":1,\"transaction_uuid\":\"ts_6a24fef9c02af_p77\",\"payment_method\":\"eSewa\",\"payment_status\":\"pending\",\"order_status\":\"placed\",\"timestamp\":\"2026-06-07 07:17:45\"}', 'XCJbXyJ07L9yeDNFa11VrUpTc5xAPVne53cRwS+EzAtTYO/NXle7oqNyb8qwKMVUFrwJsp0iUx0CbW3Hd8tTpx3beYsEz9U+/iS3heUboPbtzBuLZlgWx52VwCQ01dsVPL8YOjq91++GFdoXQ2RNRa3qFvUj1op1YXbn4xBPtxKJ6aDBTEoLaKwuFfb6HL0hAwiHhrh/Q+emhF+wmZdLzgoD2DruXgQEAvaiKHPjT8Omm93DiYoStQI8YSziczxqjpvz4as6Rs6PZYXeCU6d/HLBUozEHy02Su3KpNinGtPVNublIhQ4RyqmYGzNhC6AqRkl82GUx7fOGw1ar+NIwA==', '2026-06-07 05:17:45'),
+(73, 3, 'payment_success', 12, '{\"action\":\"payment_success\",\"user_id\":3,\"order_id\":12,\"product_id\":77,\"seller_user_id\":2,\"transaction_uuid\":\"ts_6a24fef9c02af\",\"esewa_ref_id\":\"000FNMT\",\"payment_status\":\"paid\",\"order_status\":\"confirmed\",\"amount\":\"300.00\",\"timestamp\":\"2026-06-07 07:18:41\"}', 'XOUXDL/EIioFMYJOP8Orn3XER2/dZfGRPoZCqqi8WhtkleFabFR6BiNjzj9McsKWTj8+DVYS3IAhqesM03kv29VPZo9FgW8Et9w0YVeBw5q1sEBVDJcsaS0GUjghHtH+n2nSGTOeKWeYc80zm1wsb+/p2g/JJUu2HEkJUmcXQzHB8cYZtSSWQzHxxXBJUMkrMqIldgupsswauavtr5pYdzfE3l10V3B8a+zfJOTnZe4z12VHdIlUSOgr0WCi6fTBlsUMox6vd8NI6om7bftoFvNCbj3TdN2ecCdFAdguoVktO/C3hGd7rbsINCq8eIXb1+IAOtktZQixSzh97sjSJQ==', '2026-06-07 05:18:41'),
+(74, 3, 'offer_created', 11, '{\"action\":\"offer_created\",\"product_id\":12,\"buyer_id\":3,\"seller_id\":2,\"offer_amount\":100,\"timestamp\":\"2026-06-07 07:20:38\"}', 'cxBnH+qQYgCcyfZ2DJIjuzsRmqT0fjKNJ4TCnw5ClVzcWShVYF2ElCQ/0d3p28/mOHP6IQJxZbPKTXXCekHjuMkyq9HuXjLPzddWJf/LbxHkmAj3tRZimQPYTv1me4jyBTYxnNIJU4a/0mluiAIKZAJ5tmRZXnXUqizC7q6Ocq3vEKi+C/sDfk6dSAOeKE7qtW+QLNxH7eSZb8BpMjaxd6CgrfdcDavusmeDgIthwTiOB7KAcjIiiGmP2zLsd1dAJxgBZi8Mf1at6x4UpXbFWYrFZLwt//f9+/YAkPMS2g/kJvtwAZC1wQfvpW9CCAcdqDz9I8jytG8Zi3WE2cJTjg==', '2026-06-07 05:20:38'),
+(75, 2, 'offer_accepted', 11, '{\"action\":\"offer_accepted\",\"offer_id\":11,\"product_id\":12,\"buyer_id\":3,\"seller_id\":2,\"offer_amount\":100,\"timestamp\":\"2026-06-07 07:20:57\"}', 'QhIO0rjDyQVp3xY+FGey0vwKED0sRYl3T2C2KlxfvrEZnt0V9g+/5qt1Ge6zss4DhlOS+ZvzrlkNxgXToRFSfvvRSDCPe6TQypjNrLme12XUaggnwof4RXul0vl2wz6zLt9MmVq+UE4tvRzDZAYUHgDiMeuuvwGu0zFtem18rXGaRAxGuXCsq7SU92KT82W50R3vHU5nQfWNlJVyRG5GJHtom4VHbOuqt6Xdk+xZyufQ0vMElphxcY7kJo0ZXMY5lolumNRrwPu1cqS7/osAZB5IXvcP+vRkMM04o9gJWBC0WHZl6FWCFHDSIUpxbELVo4/rh3YvLKZvICrdyr+scQ==', '2026-06-07 05:20:57'),
+(76, 3, 'order_created', 13, '{\"action\":\"order_created\",\"user_id\":3,\"order_id\":13,\"product_id\":12,\"seller_user_id\":2,\"buyer_name\":\"Harry Potter\",\"buyer_email\":\"hellwrld0045@gmail.com\",\"buyer_phone\":\"9841295114\",\"amount\":100,\"quantity\":1,\"transaction_uuid\":\"ts_6a24ffcc20190_p12\",\"payment_method\":\"eSewa\",\"payment_status\":\"pending\",\"order_status\":\"placed\",\"timestamp\":\"2026-06-07 07:21:16\"}', 'oLNbfd5bFkyiR+16zxq3Rw/3b/6rTNiNqZV8ZCG1zPLR/D6zcbAPx+WDraD7vHwfxgL9qd+ouBQXsu07l+NLcyjrGGSvIAf7qGs2ORDSg4dGDt2qz4BTjVviEyyRAxRfzEEmo73vZUWZVFbhypDn2ndPChfGqPNrBmQe3ZnjEaypMqaEIFmavfISV/3zBABDbRIeq9FevO9wFb+jCZ3ZWnkYqCvnAp1VHdwEHEAF8PZ1TdNyLG+9j/P2qFx4q/JqQdhBJ+RQEoVogkiIpzjqCtXgIAdhlIOPSe7njBGr5vXGqz90v/JQ5wCNEm+ChfDzlhw4nFHcmI4Q48Jn8iTHVw==', '2026-06-07 05:21:16'),
+(77, 3, 'payment_success', 13, '{\"action\":\"payment_success\",\"user_id\":3,\"order_id\":13,\"product_id\":12,\"seller_user_id\":2,\"transaction_uuid\":\"ts_6a24ffcc20190\",\"esewa_ref_id\":\"000FNMU\",\"payment_status\":\"paid\",\"order_status\":\"confirmed\",\"amount\":\"100.00\",\"timestamp\":\"2026-06-07 07:21:43\"}', 'Y2CRAjVTW49d8VFexzxqq6aQOLfoV9r5LsxMide6Lxjx5f+7oBeuKUiOctz4ESjlSs5jsZ09Q/6+wewjD0Ac7sBjK0TU3r/Y+Zih9EAhJqznS3s501Z/fvPflf7MTvEwC4kgoInAtEubIEO7R5tVL1jnoSSeOTmgm3+8StpglRR6UpWrWexBnsWiwzIjKl+aLTebPF11GCeZpJvMGUXAmnEZCRFwO++wLSDnxeArBu2Kbdy+gXjBgIwlX1HLI5154k4gJyhWXOxSHrO/fizfdRjpNW1hbdv4Kdckiu5aOoNmKTu8apnBcUvtT8g+JXoFPnae8/JC5bniFhWJVoLDxw==', '2026-06-07 05:21:43'),
+(78, 2, 'product_status_update', 78, '{\"user_id\":2,\"product_id\":78,\"old_status\":\"sold\",\"new_status\":\"available\",\"action\":\"product_status_update\",\"timestamp\":\"2026-06-07 07:23:25\"}', 'ha+fi8GQiYOXMs/iUlNkvr1kHX35oZXY5avj+YZcWYPJYJD6HnxlrmxiPJG1opZfJDOZgfqloYjnPu0NqJZht3jHztKCiUAuEvdy8/liMfmEopvABC/KkiyrVFU7Y9wQL4kiB6E9lP0Kaamql/sThpBSSh1i6c9b+VT9Xkn8rWoNppbCb0WYOxV/tX6rx1k6WXZPXuWgdj8blP8flg8QBzTQ9qwTOIM0EYh7TPfp3HaQB3fuPEHOfmt0gDRs08Et5BaAtEhXT+9ZG2Pqmgm68/3w9Obx9sTIWmvf1khbhtEUwtqXdCc6kVPUZsp6olf+4gCzuCtEPQpfE2rwvN2y2A==', '2026-06-07 05:23:25');
 
 -- --------------------------------------------------------
 
@@ -834,7 +862,7 @@ ALTER TABLE `wishlist`
 -- AUTO_INCREMENT for table `cart`
 --
 ALTER TABLE `cart`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `categories`
@@ -846,31 +874,31 @@ ALTER TABLE `categories`
 -- AUTO_INCREMENT for table `chat_messages`
 --
 ALTER TABLE `chat_messages`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=62;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=66;
 
 --
 -- AUTO_INCREMENT for table `chat_rooms`
 --
 ALTER TABLE `chat_rooms`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=83;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=88;
 
 --
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `payment_logs`
 --
 ALTER TABLE `payment_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT for table `products`
@@ -882,7 +910,7 @@ ALTER TABLE `products`
 -- AUTO_INCREMENT for table `product_offers`
 --
 ALTER TABLE `product_offers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `product_ratings`
@@ -894,13 +922,13 @@ ALTER TABLE `product_ratings`
 -- AUTO_INCREMENT for table `product_views`
 --
 ALTER TABLE `product_views`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
 -- AUTO_INCREMENT for table `signatures`
 --
 ALTER TABLE `signatures`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=70;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=79;
 
 --
 -- AUTO_INCREMENT for table `users`
