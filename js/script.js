@@ -157,3 +157,28 @@ function markSingleNotificationRead(event, notificationId, redirectUrl) {
         window.location.href = redirectUrl;
     });
 }
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".product-card").forEach(function (card) {
+        const detailsLink = card.querySelector('a[href*="product_details.php?id="]');
+
+        if (!detailsLink) return;
+
+        card.style.cursor = "pointer";
+
+        card.addEventListener("click", function (event) {
+            if (
+                event.target.closest("a") ||
+                event.target.closest("button") ||
+                event.target.closest("form") ||
+                event.target.closest("select") ||
+                event.target.closest("input") ||
+                event.target.closest("textarea") ||
+                event.target.closest(".card-menu")
+            ) {
+                return;
+            }
+
+            window.location.href = detailsLink.href;
+        });
+    });
+});
