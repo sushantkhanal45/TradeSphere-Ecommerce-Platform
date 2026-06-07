@@ -158,6 +158,14 @@ $receivedOrders = $conn->query("
         <h2 class="section-title" style="text-align:left;margin-bottom:20px;">All Received Orders</h2>
 
         <?php if ($receivedOrders && $receivedOrders->num_rows > 0): ?>
+            <div style="margin-bottom:20px;">
+    <input 
+        type="text" 
+        id="profileSearchInput" 
+        placeholder="Search records..." 
+        style="width:100%;padding:12px 14px;border:1px solid #d1d5db;border-radius:12px;font-size:15px;"
+    >
+</div>
             <div class="products-grid">
                 <?php while ($row = $receivedOrders->fetch_assoc()): ?>
                     <div class="product-card tracked-order-card <?php echo ($highlightOrderId === (int)$row['id']) ? 'active-track' : ''; ?>" id="order-card-<?php echo (int)$row['id']; ?>">
@@ -212,6 +220,28 @@ $receivedOrders = $conn->query("
 </div>
 
 <footer>© 2026 TradeSphere. All rights reserved.</footer>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const searchInput = document.getElementById("profileSearchInput");
+    const cards = document.querySelectorAll(".product-card");
+
+    if (!searchInput) return;
+
+    searchInput.addEventListener("input", function () {
+        const keyword = this.value.toLowerCase().trim();
+
+        cards.forEach(function (card) {
+            const text = card.textContent.toLowerCase();
+
+            if (text.includes(keyword)) {
+                card.style.display = "";
+            } else {
+                card.style.display = "none";
+            }
+        });
+    });
+});
+</script>
 
 <script src="js/script.js"></script>
 
