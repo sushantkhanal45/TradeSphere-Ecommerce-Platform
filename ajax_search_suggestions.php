@@ -284,6 +284,7 @@ $result = $conn->query("
     FROM products p
     LEFT JOIN categories c ON p.category_id = c.id
     WHERE p.status = 'available'
+    AND p.ai_status = 'approved'
     ORDER BY p.id DESC
     LIMIT 150
 ");

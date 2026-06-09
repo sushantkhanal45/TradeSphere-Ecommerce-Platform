@@ -75,6 +75,67 @@ if (isset($_SESSION['user'])) {
     }
 }
 
+function tradesphereNotificationLink($message) {
+    $msg = strtolower((string)$message);
+
+    if (
+        strpos($msg, "under admin review") !== false ||
+        strpos($msg, "manual review") !== false ||
+        strpos($msg, "sent for admin review") !== false
+    ) {
+        return "profile.php#pending-verification";
+    }
+
+    if (
+        strpos($msg, "product") !== false &&
+        strpos($msg, "rejected") !== false
+    ) {
+        return "profile.php#rejected-products";
+    }
+
+    if (
+        strpos($msg, "product") !== false &&
+        strpos($msg, "approved") !== false
+    ) {
+        return "profile.php#listings";
+    }
+
+    if (
+        strpos($msg, "product") !== false &&
+        strpos($msg, "removed") !== false
+    ) {
+        return "profile.php#rejected-products";
+    }
+
+    if (
+        strpos($msg, "seller verification") !== false &&
+        strpos($msg, "approved") !== false
+    ) {
+        return "sell.php";
+    }
+
+    if (
+        strpos($msg, "seller verification") !== false &&
+        (
+            strpos($msg, "rejected") !== false ||
+            strpos($msg, "pending") !== false ||
+            strpos($msg, "reset") !== false
+        )
+    ) {
+        return "profile.php";
+    }
+
+    if (
+        strpos($msg, "message") !== false ||
+        strpos($msg, "chat") !== false ||
+        strpos($msg, "offer") !== false
+    ) {
+        return "messages.php";
+    }
+
+    return "profile.php";
+}
+
 $firstLetter = $navUser ? strtoupper(substr($navUser['name'], 0, 1)) : "U";
 ?>
 
@@ -134,25 +195,23 @@ $firstLetter = $navUser ? strtoupper(substr($navUser['name'], 0, 1)) : "U";
                         <?php if (!empty($notifications)): ?>
                             <?php foreach ($notifications as $n): ?>
                                 <?php
-                                    $msg = strtolower($n['message']);
-                                    $notiLink = "profile.php";
-
-                                    if (
-                                        strpos($msg, "message") !== false ||
-                                        strpos($msg, "chat") !== false ||
-                                        strpos($msg, "offer") !== false
-                                    ) {
-                                        $notiLink = "messages.php";
-                                    }
+                                    $notiMessage = $n['message'] ?? '';
+                                    $notiLink = tradesphereNotificationLink($notiMessage);
                                 ?>
 
                                 <a
-                                    href="<?php echo $notiLink; ?>"
+                                    href="<?php echo htmlspecialchars($notiLink, ENT_QUOTES); ?>"
                                     class="notification-item <?php echo ((int)$n['is_read'] === 0) ? 'unread' : ''; ?>"
-                                    onclick="markSingleNotificationRead(event, <?php echo (int)$n['id']; ?>, '<?php echo htmlspecialchars($notiLink, ENT_QUOTES); ?>')"
+                                    data-message="<?php echo htmlspecialchars($notiMessage, ENT_QUOTES); ?>"
+                                    onclick="markSingleNotificationRead(
+                                        event,
+                                        <?php echo (int)$n['id']; ?>,
+                                        '<?php echo htmlspecialchars($notiLink, ENT_QUOTES); ?>',
+                                        this.dataset.message
+                                    )"
                                 >
                                     <div>
-                                        <?php echo htmlspecialchars($n['message']); ?>
+                                        <?php echo htmlspecialchars($notiMessage); ?>
                                     </div>
 
                                     <small>
@@ -180,6 +239,8 @@ $firstLetter = $navUser ? strtoupper(substr($navUser['name'], 0, 1)) : "U";
                         <a href="profile.php#orders_received">Received Orders</a>
                         <a href="profile.php#sales">Completed Sales</a>
                         <a href="profile.php#listings">My Listings</a>
+                        <a href="profile.php#pending-verification">Pending Verification</a>
+                        <a href="profile.php#rejected-products">Rejected Products</a>
                         <a href="logout.php">Logout</a>
                     </div>
                 </div>

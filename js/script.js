@@ -11,23 +11,35 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // PROFILE DROPDOWN
-    const profileToggle = document.getElementById("profileToggle");
-    const profileDropdown = document.getElementById("profileDropdown");
+  const profileToggle = document.getElementById("profileToggle");
+const profileDropdown = document.getElementById("profileDropdown");
 
-    if (profileToggle && profileDropdown) {
-        profileToggle.addEventListener("click", function (e) {
-            e.stopPropagation();
-            profileDropdown.classList.toggle("show");
-        });
+if (profileToggle && profileDropdown) {
 
-        profileDropdown.addEventListener("click", function (e) {
-            e.stopPropagation();
-        });
+    profileToggle.addEventListener("click", function (e) {
 
-        document.addEventListener("click", function () {
-            profileDropdown.classList.remove("show");
-        });
-    }
+        e.stopPropagation();
+
+        const notificationDropdown =
+            document.getElementById("notificationDropdown");
+
+        // close notification if open
+        if (notificationDropdown) {
+            notificationDropdown.classList.remove("show");
+        }
+
+        // toggle profile
+        profileDropdown.classList.toggle("show");
+    });
+
+    profileDropdown.addEventListener("click", function (e) {
+        e.stopPropagation();
+    });
+
+    document.addEventListener("click", function () {
+        profileDropdown.classList.remove("show");
+    });
+}
 
 });
 
@@ -96,7 +108,16 @@ function showToast(message, type = "success") {
     }, 2500);
 }
 function toggleNotifications() {
-    const dropdown = document.getElementById("notificationDropdown");
+
+    const dropdown =
+        document.getElementById("notificationDropdown");
+
+    const profileDropdown =
+        document.getElementById("profileDropdown");
+
+    if (profileDropdown) {
+        profileDropdown.classList.remove("show");
+    }
 
     if (dropdown) {
         dropdown.classList.toggle("show");
@@ -139,8 +160,24 @@ document.addEventListener("click", function(e) {
         }
     }
 });
-function markSingleNotificationRead(event, notificationId, redirectUrl) {
+function markSingleNotificationRead(event, notificationId, redirectUrl, message = "") {
     event.preventDefault();
+
+    const item = event.currentTarget;
+    const text = String(message || "").toLowerCase();
+
+    const isVerificationNotice =
+        text.includes("seller verification") ||
+        (
+            text.includes("product") &&
+            (
+                text.includes("approved") ||
+                text.includes("rejected") ||
+                text.includes("admin review") ||
+                text.includes("not listed") ||
+                text.includes("failed automatic verification")
+            )
+        );
 
     const formData = new URLSearchParams();
     formData.append("notification_id", notificationId);
@@ -151,10 +188,26 @@ function markSingleNotificationRead(event, notificationId, redirectUrl) {
     })
     .then(response => response.json())
     .then(() => {
-        window.location.href = redirectUrl;
+        if (isVerificationNotice) {
+            showNotificationDialog(message);
+
+            if (item) {
+                item.classList.remove("unread");
+            }
+        } else {
+            window.location.href = redirectUrl;
+        }
     })
     .catch(() => {
-        window.location.href = redirectUrl;
+        if (isVerificationNotice) {
+            showNotificationDialog(message);
+
+            if (item) {
+                item.classList.remove("unread");
+            }
+        } else {
+            window.location.href = redirectUrl;
+        }
     });
 }
 document.addEventListener("DOMContentLoaded", function () {
@@ -182,3 +235,28 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 });
+function showNotificationDialog(message) {
+    let modal = document.getElementById("notificationDialog");
+
+    if (!modal) {
+        modal = document.createElement("div");
+        modal.id = "notificationDialog";
+        modal.innerHTML = `
+            <div class="notification-dialog-overlay">
+                <div class="notification-dialog-box">
+                    <h3>TradeSphere Notification</h3>
+                    <p id="notificationDialogMessage"></p>
+                    <button type="button" id="notificationDialogOk">OK</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById("notificationDialogOk").addEventListener("click", function () {
+            modal.style.display = "none";
+        });
+    }
+
+    document.getElementById("notificationDialogMessage").textContent = message;
+    modal.style.display = "block";
+}

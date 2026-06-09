@@ -322,7 +322,7 @@ $sql = "
     SELECT p.*, c.name AS category_name
     FROM products p
     LEFT JOIN categories c ON p.category_id = c.id
-    WHERE 1=1
+    WHERE p.ai_status = 'approved'
 ";
 
 if ($categoryId > 0) {
