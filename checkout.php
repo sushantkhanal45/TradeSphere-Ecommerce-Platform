@@ -1,7 +1,6 @@
 <?php
 session_start();
 include "config/db.php";
-include "includes/rsa_helper.php";
 
 if (!isset($_SESSION['user'])) {
     header("Location: login.php");
@@ -55,10 +54,12 @@ $cartQuery = $conn->query("
         p.city,
         p.image,
         p.status,
+        p.ai_status,
         p.contact_number,
         p.seller_email
     FROM cart
-    INNER JOIN products p ON cart.product_id = p.id
+    INNER JOIN products p 
+        ON cart.product_id = p.id
     WHERE cart.user_id = $userId
     ORDER BY cart.id DESC
 ");
@@ -66,6 +67,8 @@ $cartQuery = $conn->query("
 $cartItems = [];
 $totalAmount = 0;
 $hasAvailableItems = false;
+$hasOwnProduct = false;
+$hasUnapprovedProduct = false;
 
 if ($cartQuery) {
     while ($row = $cartQuery->fetch_assoc()) {
@@ -80,12 +83,21 @@ if ($cartQuery) {
         $row['final_price'] = $finalPrice;
         $row['has_accepted_offer'] = ((float)$finalPrice !== (float)$row['price']);
 
-        $cartItems[] = $row;
-
-        if ($row['status'] !== 'sold') {
+        if ((int)$row['seller_user_id'] === $userId) {
+            $hasOwnProduct = true;
+            $row['checkout_blocked_reason'] = "You cannot purchase your own product.";
+        } elseif (($row['ai_status'] ?? '') !== 'approved') {
+            $hasUnapprovedProduct = true;
+            $row['checkout_blocked_reason'] = "This product is not approved for checkout.";
+        } elseif ($row['status'] === 'sold') {
+            $row['checkout_blocked_reason'] = "This product is already sold.";
+        } else {
+            $row['checkout_blocked_reason'] = "";
             $totalAmount += ($finalPrice * (int)$row['quantity']);
             $hasAvailableItems = true;
         }
+
+        $cartItems[] = $row;
     }
 }
 
@@ -103,8 +115,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
     $buyerMessage = trim($_POST['buyer_message'] ?? '');
 
     if ($buyerName === '' || $buyerEmail === '' || $buyerPhone === '') {
-        $error = "Please fill in buyer name, email, and phone number.";
-    } elseif (!$hasAvailableItems) {
+        $error = "Please fill in all required fields.";
+    } elseif (strlen($buyerName) < 3) {
+        $error = "Buyer name must contain at least 3 characters.";
+    } elseif (!preg_match('/^[a-zA-Z\s]+$/', $buyerName)) {
+        $error = "Buyer name should contain letters and spaces only.";
+    } elseif (!filter_var($buyerEmail, FILTER_VALIDATE_EMAIL)) {
+        $error = "Please enter a valid email address.";
+    } elseif (!preg_match('/^[0-9]{10}$/', $buyerPhone)) {
+        $error = "Phone number must contain exactly 10 digits.";
+    } elseif (strlen($buyerMessage) > 500) {
+        $error = "Message cannot exceed 500 characters.";
+    } elseif ($hasOwnProduct) {
+        $error = "Your cart contains your own product. Please remove it before checkout.";
+    } elseif ($hasUnapprovedProduct) {
+        $error = "Your cart contains products that are not approved for checkout.";
+    } elseif (!$hasAvailableItems || $totalAmount <= 0) {
         $error = "There are no available items in your cart for checkout.";
     } else {
         $transactionUuid = uniqid("ts_");
@@ -119,13 +145,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
         $insertedOrderIds = [];
 
         foreach ($cartItems as $item) {
-            if ($item['status'] === 'sold') {
+            if (
+                $item['status'] === 'sold' ||
+                ($item['ai_status'] ?? '') !== 'approved' ||
+                (int)$item['seller_user_id'] === $userId
+            ) {
                 continue;
             }
 
             $productId = (int)$item['product_id'];
             $sellerUserId = (int)$item['seller_user_id'];
-            $qty = (int)$item['quantity'];
+            $qty = max(1, (int)$item['quantity']);
             $finalPrice = getFinalCheckoutPrice($conn, $productId, $userId, $sellerUserId, $item['price']);
             $amount = $finalPrice * $qty;
 
@@ -164,39 +194,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
             ";
 
             if ($conn->query($insertOrder)) {
-                $newOrderId = (int)$conn->insert_id;
-                $insertedOrderIds[] = $newOrderId;
-
-                $actionData = json_encode([
-                    "action" => "order_created",
-                    "user_id" => $userId,
-                    "order_id" => $newOrderId,
-                    "product_id" => $productId,
-                    "seller_user_id" => $sellerUserId,
-                    "buyer_name" => $buyerName,
-                    "buyer_email" => $buyerEmail,
-                    "buyer_phone" => $buyerPhone,
-                    "amount" => $amount,
-                    "quantity" => $qty,
-                    "transaction_uuid" => $itemTransactionUuid,
-                    "payment_method" => "eSewa",
-                    "payment_status" => "pending",
-                    "order_status" => "placed",
-                    "timestamp" => date("Y-m-d H:i:s")
-                ]);
-
-                $signature = signData($actionData);
-
-                if ($signature) {
-                    storeSignatureRecord(
-                        $conn,
-                        $userId,
-                        "order_created",
-                        $newOrderId,
-                        $actionData,
-                        $signature
-                    );
-                }
+                $insertedOrderIds[] = (int)$conn->insert_id;
             }
         }
 
@@ -226,17 +224,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
                 <p style="text-align:center; margin-top:40px;">Redirecting to eSewa...</p>
 
                 <form id="esewaForm" action="https://rc-epay.esewa.com.np/api/epay/main/v2/form" method="POST">
-                    <input type="hidden" name="amount" value="<?php echo $totalAmount; ?>">
+                    <input type="hidden" name="amount" value="<?php echo htmlspecialchars($totalAmount); ?>">
                     <input type="hidden" name="tax_amount" value="0">
-                    <input type="hidden" name="total_amount" value="<?php echo $totalAmount; ?>">
+                    <input type="hidden" name="total_amount" value="<?php echo htmlspecialchars($totalAmount); ?>">
                     <input type="hidden" name="transaction_uuid" value="<?php echo htmlspecialchars($transactionUuid); ?>">
-                    <input type="hidden" name="product_code" value="<?php echo $productCode; ?>">
+                    <input type="hidden" name="product_code" value="<?php echo htmlspecialchars($productCode); ?>">
                     <input type="hidden" name="product_service_charge" value="0">
                     <input type="hidden" name="product_delivery_charge" value="0">
-                    <input type="hidden" name="success_url" value="<?php echo $successUrl; ?>">
-                    <input type="hidden" name="failure_url" value="<?php echo $failureUrl; ?>">
-                    <input type="hidden" name="signed_field_names" value="<?php echo $signedFieldNames; ?>">
-                    <input type="hidden" name="signature" value="<?php echo $signature; ?>">
+                    <input type="hidden" name="success_url" value="<?php echo htmlspecialchars($successUrl); ?>">
+                    <input type="hidden" name="failure_url" value="<?php echo htmlspecialchars($failureUrl); ?>">
+                    <input type="hidden" name="signed_field_names" value="<?php echo htmlspecialchars($signedFieldNames); ?>">
+                    <input type="hidden" name="signature" value="<?php echo htmlspecialchars($signature); ?>">
                 </form>
 
                 <script>
@@ -268,11 +266,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
         <p class="section-subtitle">Confirm your details and proceed to eSewa. Accepted offers are applied automatically.</p>
 
         <?php if ($success): ?>
-            <div class="success-msg"><?php echo $success; ?></div>
+            <div class="success-msg"><?php echo htmlspecialchars($success); ?></div>
         <?php endif; ?>
 
         <?php if ($error): ?>
-            <div class="error-msg"><?php echo $error; ?></div>
+            <div class="error-msg"><?php echo htmlspecialchars($error); ?></div>
+        <?php endif; ?>
+
+        <?php if ($hasOwnProduct): ?>
+            <div class="error-msg">Your cart contains your own product. Please remove it before checkout.</div>
+        <?php endif; ?>
+
+        <?php if ($hasUnapprovedProduct): ?>
+            <div class="error-msg">Your cart contains products that are not approved for checkout.</div>
         <?php endif; ?>
 
         <div class="detail-card" style="grid-template-columns: 1fr; max-width: 980px; margin: 0 auto;">
@@ -298,45 +304,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
                         <?php endif; ?>
 
                         <p class="meta">Quantity: <?php echo (int)$item['quantity']; ?></p>
-                        <p class="meta">
-                            Line Total:
-                            Rs <?php echo number_format((float)$item['final_price'] * (int)$item['quantity'], 2); ?>
-                        </p>
+
+                        <?php if (empty($item['checkout_blocked_reason'])): ?>
+                            <p class="meta">
+                                Line Total:
+                                Rs <?php echo number_format((float)$item['final_price'] * (int)$item['quantity'], 2); ?>
+                            </p>
+                        <?php endif; ?>
+
                         <p class="meta">Seller Email: <?php echo htmlspecialchars($item['seller_email']); ?></p>
                         <p class="meta">Contact Number: <?php echo htmlspecialchars($item['contact_number'] ?? 'Not provided'); ?></p>
                         <p class="meta">Status: <?php echo htmlspecialchars(ucfirst($item['status'])); ?></p>
 
-                        <?php if ($item['status'] === 'sold'): ?>
-                            <p style="color:#b91c1c; font-weight:600;">This item is sold and will not be included in payment.</p>
+                        <?php if (!empty($item['checkout_blocked_reason'])): ?>
+                            <p style="color:#b91c1c; font-weight:600;">
+                                <?php echo htmlspecialchars($item['checkout_blocked_reason']); ?>
+                            </p>
                         <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
 
                 <h3 style="margin-top:20px;">Total Payable: Rs <?php echo number_format($totalAmount, 2); ?></h3>
 
-                <form method="POST" style="margin-top: 24px;">
+                <form method="POST" style="margin-top: 24px;" id="checkoutForm" novalidate>
                     <div class="form-group">
                         <label>Buyer Name</label>
-                        <input type="text" name="buyer_name" value="<?php echo htmlspecialchars($user['name']); ?>" required>
+                        <input
+                            type="text"
+                            name="buyer_name"
+                            value="<?php echo htmlspecialchars($_POST['buyer_name'] ?? $user['name']); ?>"
+                            minlength="3"
+                            pattern="[A-Za-z\s]+"
+                            required
+                        >
                     </div>
 
                     <div class="form-group">
                         <label>Buyer Email</label>
-                        <input type="email" name="buyer_email" value="<?php echo htmlspecialchars($user['email']); ?>" required>
+                        <input
+                            type="email"
+                            name="buyer_email"
+                            value="<?php echo htmlspecialchars($_POST['buyer_email'] ?? $user['email']); ?>"
+                            required
+                        >
                     </div>
 
                     <div class="form-group">
                         <label>Buyer Phone</label>
-                        <input type="text" name="buyer_phone" placeholder="Enter your contact number" required>
+                        <input
+                            type="tel"
+                            name="buyer_phone"
+                            placeholder="98XXXXXXXX"
+                            value="<?php echo htmlspecialchars($_POST['buyer_phone'] ?? ''); ?>"
+                            pattern="[0-9]{10}"
+                            maxlength="10"
+                            required
+                        >
                     </div>
 
                     <div class="form-group">
                         <label>Message to Seller (optional)</label>
-                        <textarea name="buyer_message" placeholder="Any note for the seller..."></textarea>
+                        <textarea
+                            name="buyer_message"
+                            maxlength="500"
+                            placeholder="Any note for the seller..."
+                        ><?php echo htmlspecialchars($_POST['buyer_message'] ?? ''); ?></textarea>
                     </div>
 
                     <div class="form-actions">
-                        <button type="submit" name="place_order" class="btn btn-primary">Pay with eSewa</button>
+                        <button
+                            type="submit"
+                            name="place_order"
+                            class="btn btn-primary"
+                            <?php echo (!$hasAvailableItems || $hasOwnProduct || $hasUnapprovedProduct) ? 'disabled style="opacity:0.6;cursor:not-allowed;"' : ''; ?>
+                        >
+                            Pay with eSewa
+                        </button>
                         <a href="cart.php" class="btn btn-dark">Back to Cart</a>
                     </div>
                 </form>
@@ -346,6 +389,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
 </div>
 
 <footer>© 2026 TradeSphere. All rights reserved.</footer>
+
+<script src="js/script.js"></script>
+<script>
+const checkoutForm = document.getElementById("checkoutForm");
+
+if (checkoutForm) {
+    checkoutForm.addEventListener("submit", function (e) {
+        const name = checkoutForm.querySelector("[name='buyer_name']").value.trim();
+        const email = checkoutForm.querySelector("[name='buyer_email']").value.trim();
+        const phone = checkoutForm.querySelector("[name='buyer_phone']").value.trim();
+        const message = checkoutForm.querySelector("[name='buyer_message']").value.trim();
+
+        let error = "";
+
+        if (!name || name.length < 3 || !/^[A-Za-z\s]+$/.test(name)) {
+            error = "Please enter a valid buyer name.";
+        } else if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            error = "Please enter a valid email address.";
+        } else if (!/^[0-9]{10}$/.test(phone)) {
+            error = "Phone number must contain exactly 10 digits.";
+        } else if (message.length > 500) {
+            error = "Message cannot exceed 500 characters.";
+        }
+
+        if (error) {
+            e.preventDefault();
+
+            if (typeof showToast === "function") {
+                showToast(error, "error");
+            } else {
+                alert(error);
+            }
+        }
+    });
+}
+</script>
 
 </body>
 </html>
