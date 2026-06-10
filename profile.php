@@ -258,10 +258,10 @@ if (isset($_POST['confirm_received'])) {
     }
 }
 
-$totalListingsRes = $conn->query("SELECT COUNT(*) AS total FROM products WHERE user_id=$userId AND ai_status='approved'");
+$totalListingsRes = $conn->query("SELECT COUNT(*) AS total FROM products WHERE user_id=$userId");
 $totalListings = $totalListingsRes ? (int)$totalListingsRes->fetch_assoc()['total'] : 0;
 
-$soldListingsRes = $conn->query("SELECT COUNT(*) AS total FROM products WHERE user_id=$userId AND status='sold' AND ai_status='approved'");
+$soldListingsRes = $conn->query("SELECT COUNT(*) AS total FROM products WHERE user_id=$userId AND status='sold'");
 $soldListings = $soldListingsRes ? (int)$soldListingsRes->fetch_assoc()['total'] : 0;
 
 $completedSalesRes = $conn->query("
@@ -314,33 +314,8 @@ $myListings = $conn->query("
     FROM products p
     LEFT JOIN categories c ON p.category_id = c.id
     WHERE p.user_id = $userId
-    AND p.ai_status = 'approved'
     ORDER BY p.id DESC
 ");
-
-$pendingListings = $conn->query("
-    SELECT p.*, c.name AS category_name
-    FROM products p
-    LEFT JOIN categories c ON p.category_id = c.id
-    WHERE p.user_id = $userId
-    AND p.ai_status = 'manual_review'
-    ORDER BY p.id DESC
-");
-
-$rejectedListings = $conn->query("
-    SELECT p.*, c.name AS category_name
-    FROM products p
-    LEFT JOIN categories c ON p.category_id = c.id
-    WHERE p.user_id = $userId
-    AND p.ai_status = 'rejected'
-    ORDER BY p.id DESC
-");
-
-$pendingListingsCountRes = $conn->query("SELECT COUNT(*) AS total FROM products WHERE user_id=$userId AND ai_status='manual_review'");
-$pendingListingsCount = $pendingListingsCountRes ? (int)$pendingListingsCountRes->fetch_assoc()['total'] : 0;
-
-$rejectedListingsCountRes = $conn->query("SELECT COUNT(*) AS total FROM products WHERE user_id=$userId AND ai_status='rejected'");
-$rejectedListingsCount = $rejectedListingsCountRes ? (int)$rejectedListingsCountRes->fetch_assoc()['total'] : 0;
 
 $myPurchases = $conn->query("
     SELECT 
@@ -967,19 +942,19 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
                                 <?php endif; ?>
 
                                 <div class="card-menu">
-                                    <button type="button" class="card-menu-btn" onclick="toggleListingMenu(<?php echo (int)$row['id']; ?>)">⋮</button>
-                                    <div class="card-menu-dropdown" id="listing-menu-<?php echo (int)$row['id']; ?>">
-                                        <a href="edit_product.php?id=<?php echo (int)$row['id']; ?>">Edit Product</a>
+                                    <button type="button" class="card-menu-btn" onclick="toggleListingMenu(<?php echo $row['id']; ?>)">⋮</button>
+                                    <div class="card-menu-dropdown" id="listing-menu-<?php echo $row['id']; ?>">
+                                        <a href="edit_product.php?id=<?php echo $row['id']; ?>">Edit Product</a>
 
                                         <form method="POST">
-                                            <input type="hidden" name="product_id" value="<?php echo (int)$row['id']; ?>">
+                                            <input type="hidden" name="product_id" value="<?php echo $row['id']; ?>">
                                             <button type="submit" name="toggle_status" class="menu-action-btn">
                                                 <?php echo ($row['status'] === 'sold') ? 'Mark as Available' : 'Mark as Sold'; ?>
                                             </button>
                                         </form>
 
                                         <form method="POST" onsubmit="return confirm('Are you sure you want to delete this product?');">
-                                            <input type="hidden" name="product_id" value="<?php echo (int)$row['id']; ?>">
+                                            <input type="hidden" name="product_id" value="<?php echo $row['id']; ?>">
                                             <button type="submit" name="delete_product" class="menu-action-btn">
                                                 Delete Product
                                             </button>
@@ -1009,103 +984,12 @@ $firstLetter = strtoupper(substr($user['name'], 0, 1));
                                 <p class="meta"><strong>Condition:</strong> <?php echo htmlspecialchars($row['product_condition']); ?></p>
                                 <p class="meta"><strong>City:</strong> <?php echo htmlspecialchars($row['city']); ?></p>
                                 <p class="meta"><strong>Status:</strong> <?php echo htmlspecialchars(ucfirst($row['status'])); ?></p>
-                                <p class="meta"><strong>Verification:</strong> Approved</p>
                             </div>
                         </div>
                     <?php endwhile; ?>
                 </div>
-
-                <?php if ($totalListings > 6): ?>
-                    <div class="profile-show-all-row">
-                        <a href="my_listings.php" class="small-btn dark">Show All Listings</a>
-                    </div>
-                <?php endif; ?>
             <?php else: ?>
-                <p class="inline-empty">You have no approved product listings yet.</p>
-            <?php endif; ?>
-        </div>
-
-        <div class="profile-section-card" id="pending-verification">
-            <h2 class="section-title" style="text-align:left; margin-bottom:20px;">Pending Verification</h2>
-
-            <?php if ($pendingListings && $pendingListings->num_rows > 0): ?>
-                <div class="products-grid">
-                    <?php while ($row = $pendingListings->fetch_assoc()): ?>
-                        <div class="product-card seller-card">
-                            <div class="product-image-wrap">
-                                <img src="uploads/<?php echo htmlspecialchars($row['image']); ?>" alt="Pending Product">
-                                <div class="sold-badge" style="background:#f59e0b;">REVIEW</div>
-                            </div>
-
-                            <div class="product-body">
-                                <h3><?php echo htmlspecialchars($row['name']); ?></h3>
-                                <p class="price">Rs <?php echo htmlspecialchars($row['price']); ?></p>
-                                <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category_name']); ?></p>
-                                <p class="meta"><strong>Condition:</strong> <?php echo htmlspecialchars($row['product_condition']); ?></p>
-                                <p class="meta"><strong>City:</strong> <?php echo htmlspecialchars($row['city']); ?></p>
-                                <p class="meta"><strong>Verification:</strong> Under Admin Review</p>
-                                <?php if (!empty($row['ai_reason'])): ?>
-                                    <p class="meta"><strong>Reason:</strong> <?php echo htmlspecialchars($row['ai_reason']); ?></p>
-                                <?php endif; ?>
-                                <p class="meta" style="color:#92400e;font-weight:700;">This product is hidden from buyers until admin approval.</p>
-                            </div>
-                        </div>
-                    <?php endwhile; ?>
-                </div>
-
-                <?php if ($pendingListingsCount > 6): ?>
-                    <div class="profile-show-all-row">
-                        <a href="my_listings.php?status=manual_review" class="small-btn dark">Show All Pending</a>
-                    </div>
-                <?php endif; ?>
-            <?php else: ?>
-                <p class="inline-empty">No products are pending verification.</p>
-            <?php endif; ?>
-        </div>
-
-        <div class="profile-section-card" id="rejected-products">
-            <h2 class="section-title" style="text-align:left; margin-bottom:20px;">Rejected Products</h2>
-
-            <?php if ($rejectedListings && $rejectedListings->num_rows > 0): ?>
-                <div class="products-grid">
-                    <?php while ($row = $rejectedListings->fetch_assoc()): ?>
-                        <div class="product-card seller-card">
-                            <div class="product-image-wrap">
-                                <img src="uploads/<?php echo htmlspecialchars($row['image']); ?>" alt="Rejected Product">
-                                <div class="sold-badge">REJECTED</div>
-                            </div>
-
-                            <div class="product-body">
-                                <h3><?php echo htmlspecialchars($row['name']); ?></h3>
-                                <p class="price">Rs <?php echo htmlspecialchars($row['price']); ?></p>
-                                <p class="meta"><strong>Category:</strong> <?php echo htmlspecialchars($row['category_name']); ?></p>
-                                <p class="meta"><strong>Condition:</strong> <?php echo htmlspecialchars($row['product_condition']); ?></p>
-                                <p class="meta"><strong>City:</strong> <?php echo htmlspecialchars($row['city']); ?></p>
-                                <p class="meta"><strong>Verification:</strong> Rejected</p>
-
-                                <?php if (!empty($row['ai_reason'])): ?>
-                                    <p class="meta"><strong>Reason:</strong> <?php echo htmlspecialchars($row['ai_reason']); ?></p>
-                                <?php endif; ?>
-
-                                <p class="meta" style="color:#b91c1c;font-weight:700;">
-                                    This product is not visible to buyers. Check your email for full details and submit again with better information.
-                                </p>
-
-                                <div class="product-actions" style="display:flex;gap:10px;flex-wrap:wrap;">
-                                    <a href="edit_product.php?id=<?php echo (int)$row['id']; ?>" class="small-btn primary">Edit & Resubmit</a>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endwhile; ?>
-                </div>
-
-                <?php if ($rejectedListingsCount > 6): ?>
-                    <div class="profile-show-all-row">
-                        <a href="my_listings.php?status=rejected" class="small-btn dark">Show All Rejected</a>
-                    </div>
-                <?php endif; ?>
-            <?php else: ?>
-                <p class="inline-empty">No rejected products.</p>
+                <p class="inline-empty">You have not listed any products yet.</p>
             <?php endif; ?>
         </div>
     </div>
@@ -1415,6 +1299,55 @@ document.addEventListener("DOMContentLoaded", function () {
         <?php echo (int)$openRatingModalOrderId; ?>,
         "Your purchased product"
     );
+});
+<?php endif; ?>
+
+
+<?php if ($success): ?>
+document.addEventListener("DOMContentLoaded", function () {
+    if (typeof showToast === "function") {
+        showToast("<?php echo addslashes($success); ?>", "success");
+    }
+});
+<?php endif; ?>
+
+<?php if ($error): ?>
+document.addEventListener("DOMContentLoaded", function () {
+    if (typeof showToast === "function") {
+        showToast("<?php echo addslashes($error); ?>", "error");
+    }
+});
+<?php endif; ?>
+
+<?php if (isset($_GET['deleted']) && $_GET['deleted'] == 1): ?>
+document.addEventListener("DOMContentLoaded", function () {
+    if (typeof showToast === "function") {
+        showToast("Product deleted successfully.", "success");
+    }
+});
+<?php endif; ?>
+
+<?php if (isset($_GET['delete_error']) && $_GET['delete_error'] == 1): ?>
+document.addEventListener("DOMContentLoaded", function () {
+    if (typeof showToast === "function") {
+        showToast("Could not delete product.", "error");
+    }
+});
+<?php endif; ?>
+
+<?php if (isset($_GET['resubmitted']) && $_GET['resubmitted'] == 1): ?>
+document.addEventListener("DOMContentLoaded", function () {
+    if (typeof showToast === "function") {
+        showToast("Product updated and resubmitted for admin verification.", "success");
+    }
+});
+<?php endif; ?>
+
+<?php if (isset($_GET['updated']) && $_GET['updated'] == 1): ?>
+document.addEventListener("DOMContentLoaded", function () {
+    if (typeof showToast === "function") {
+        showToast("Product updated successfully.", "success");
+    }
 });
 <?php endif; ?>
 </script>

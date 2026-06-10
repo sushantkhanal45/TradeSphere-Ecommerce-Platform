@@ -2255,3 +2255,11 @@ img {
     cursor: pointer;
     font-weight: 700;
 }
+.small-btn.danger {
+    background: #dc2626;
+    color: white;
+}
+
+.small-btn.danger:hover {
+    background: #b91c1c;
+}
