@@ -80,66 +80,66 @@ function tsBuildProductDocument($product) {
     );
 }
 
-function tsDirectSearchRank($query, $product) {
-    $query = tsSearchNormalize($query);
+// function tsDirectSearchRank($query, $product) {
+//     $query = tsSearchNormalize($query);
 
-    if ($query === '') {
-        return 0;
-    }
+//     if ($query === '') {
+//         return 0;
+//     }
 
-    $name = tsSearchNormalize($product['name'] ?? '');
-    $category = tsSearchNormalize($product['category_name'] ?? '');
-    $description = tsSearchNormalize($product['description'] ?? '');
-    $city = tsSearchNormalize($product['city'] ?? '');
-    $condition = tsSearchNormalize($product['product_condition'] ?? '');
+//     $name = tsSearchNormalize($product['name'] ?? '');
+//     $category = tsSearchNormalize($product['category_name'] ?? '');
+//     $description = tsSearchNormalize($product['description'] ?? '');
+//     $city = tsSearchNormalize($product['city'] ?? '');
+//     $condition = tsSearchNormalize($product['product_condition'] ?? '');
 
-    $rank = 0;
+//     $rank = 0;
 
-    if ($name === $query) {
-        $rank += 1000;
-    }
+//     if ($name === $query) {
+//         $rank += 1000;
+//     }
 
-    if (strpos($name, $query) === 0) {
-        $rank += 800;
-    }
+//     if (strpos($name, $query) === 0) {
+//         $rank += 800;
+//     }
 
-    if (strpos($name, $query) !== false) {
-        $rank += 650;
-    }
+//     if (strpos($name, $query) !== false) {
+//         $rank += 650;
+//     }
 
-    if (strpos($category, $query) !== false) {
-        $rank += 400;
-    }
+//     if (strpos($category, $query) !== false) {
+//         $rank += 400;
+//     }
 
-    if (strpos($description, $query) !== false) {
-        $rank += 250;
-    }
+//     if (strpos($description, $query) !== false) {
+//         $rank += 250;
+//     }
 
-    if (strpos($city, $query) !== false) {
-        $rank += 120;
-    }
+//     if (strpos($city, $query) !== false) {
+//         $rank += 120;
+//     }
 
-    if (strpos($condition, $query) !== false) {
-        $rank += 80;
-    }
+//     if (strpos($condition, $query) !== false) {
+//         $rank += 80;
+//     }
 
-    $queryTokens = tsSearchTokens($query);
-    $queryTokens = tsExpandSearchTokens($queryTokens);
+//     $queryTokens = tsSearchTokens($query);
+//     $queryTokens = tsExpandSearchTokens($queryTokens);
 
-    $productTokens = tsSearchTokens($name . ' ' . $category . ' ' . $description . ' ' . $city . ' ' . $condition);
+//     $productTokens = tsSearchTokens($name . ' ' . $category . ' ' . $description . ' ' . $city . ' ' . $condition);
 
-    foreach ($queryTokens as $qToken) {
-        foreach ($productTokens as $pToken) {
-            if ($qToken === $pToken) {
-                $rank += 120;
-            } elseif (strlen($qToken) >= 4 && levenshtein($qToken, $pToken) <= 2) {
-                $rank += 70;
-            }
-        }
-    }
+//     foreach ($queryTokens as $qToken) {
+//         foreach ($productTokens as $pToken) {
+//             if ($qToken === $pToken) {
+//                 $rank += 120;
+//             } elseif (strlen($qToken) >= 4 && levenshtein($qToken, $pToken) <= 2) {
+//                 $rank += 70;
+//             }
+//         }
+//     }
 
-    return $rank;
-}
+//     return $rank;
+// }
 
 function tsTermFrequency($tokens) {
     $tf = [];
@@ -179,8 +179,8 @@ function tsInverseDocumentFrequency($documents) {
     }
 
     foreach ($idf as $term => $docCount) {
-        $idf[$term] = log(($totalDocs + 1) / ($docCount + 1)) + 1;
-    }
+    $idf[$term] = log($totalDocs / $docCount);
+}
 
     return $idf;
 }
@@ -239,26 +239,20 @@ function tsRankProductsForSearch($query, $products) {
         $productTokens = tsSearchTokens(tsBuildProductDocument($product));
         $productVector = tsBuildTfidfVector($productTokens, $idf);
 
-        $tfidfScore = tsCosineSimilarity($queryVector, $productVector) * 100;
-        $directRank = tsDirectSearchRank($query, $product);
+$tfidfScore = tsCosineSimilarity($queryVector, $productVector) * 100;
 
-        $product['direct_rank'] = $directRank;
-        $product['search_score'] = round($tfidfScore, 4);
+$product['search_score'] = round($tfidfScore, 4);
     }
 
     unset($product);
 
-    $products = array_filter($products, function ($product) {
-        return ($product['direct_rank'] ?? 0) > 0 || ($product['search_score'] ?? 0) >= 12;
-    });
+   $products = array_filter($products, function ($product) {
+    return ($product['search_score'] ?? 0) >= 30;
+});
 
     usort($products, function ($a, $b) {
-        if (($a['direct_rank'] ?? 0) !== ($b['direct_rank'] ?? 0)) {
-            return ($b['direct_rank'] ?? 0) <=> ($a['direct_rank'] ?? 0);
-        }
-
-        return ($b['search_score'] ?? 0) <=> ($a['search_score'] ?? 0);
-    });
+    return ($b['search_score'] ?? 0) <=> ($a['search_score'] ?? 0);
+});
 
     return array_values($products);
 }
@@ -590,42 +584,16 @@ if ($search !== "") {
                                         Your Listing
                                     </button>
                                 <?php elseif ($row['status'] !== 'sold'): ?>
-                                    <?php $cardCartQty = $cartQuantities[(int)$row['id']] ?? 0; ?>
 
-                                    <button
-                                        type="button"
-                                        class="small-btn dark"
-                                        data-product-add-button="<?php echo (int)$row['id']; ?>"
-                                        style="<?php echo $cardCartQty > 0 ? 'display:none;' : ''; ?>"
-                                        onclick="event.stopPropagation(); addToCartFromBrowse(<?php echo (int)$row['id']; ?>)"
-                                    >
-                                        Add to Cart
-                                    </button>
+    <button
+        type="button"
+        class="small-btn dark"
+        onclick="event.stopPropagation(); addToCartFromBrowse(<?php echo (int)$row['id']; ?>)"
+    >
+        Add to Cart
+    </button>
 
-                                    <div
-                                        class="product-card-qty-control"
-                                        data-product-qty-control="<?php echo (int)$row['id']; ?>"
-                                        style="<?php echo $cardCartQty > 0 ? '' : 'display:none;'; ?>"
-                                        onclick="event.stopPropagation();"
-                                    >
-                                        <button
-                                            type="button"
-                                            class="product-card-qty-btn"
-                                            onclick="event.stopPropagation(); updateProductCardQty(<?php echo (int)$row['id']; ?>, 'decrease', this)"
-                                        >−</button>
-
-                                        <span
-                                            class="product-card-qty-value"
-                                            data-product-qty-value="<?php echo (int)$row['id']; ?>"
-                                        ><?php echo max(1, (int)$cardCartQty); ?></span>
-
-                                        <button
-                                            type="button"
-                                            class="product-card-qty-btn"
-                                            onclick="event.stopPropagation(); updateProductCardQty(<?php echo (int)$row['id']; ?>, 'increase', this)"
-                                        >+</button>
-                                    </div>
-                                <?php else: ?>
+<?php else: ?>
                                     <button type="button" class="small-btn dark" disabled style="opacity:0.65; cursor:not-allowed;">Sold</button>
                                 <?php endif; ?>
 

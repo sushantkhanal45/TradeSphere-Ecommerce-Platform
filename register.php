@@ -1,5 +1,9 @@
 <?php
 session_start();
+
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 include "config/db.php";
 include "includes/mail_helper.php";
 
@@ -7,10 +11,18 @@ $error = "";
 $success = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
+    if (
+        !isset($_POST['csrf_token']) ||
+        !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])
+    ) {
+        die("Invalid CSRF Token.");
+    }
+
     $name = trim($_POST['name']);
     $email = trim($_POST['email']);
-    $passwordRaw = $_POST['password'];
-    $confirmPassword = $_POST['confirm_password'];
+    $passwordRaw = trim($_POST['password']);
+    $confirmPassword = trim($_POST['confirm_password']);
 
     if ($name === "" || $email === "" || $passwordRaw === "" || $confirmPassword === "") {
         $error = "Please fill in all fields.";
@@ -21,10 +33,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } elseif (strlen($passwordRaw) < 6) {
         $error = "Password must be at least 6 characters long.";
     } else {
-        $safeName = $conn->real_escape_string($name);
-        $safeEmail = $conn->real_escape_string($email);
+$stmt = $conn->prepare("SELECT * FROM users WHERE email = ? LIMIT 1");
+$stmt->bind_param("s", $email);
+$stmt->execute();
 
-        $check = $conn->query("SELECT * FROM users WHERE email='$safeEmail' LIMIT 1");
+$check = $stmt->get_result();
 
         $otp = str_pad((string)random_int(0, 999999), 6, "0", STR_PAD_LEFT);
         $otpHash = password_hash($otp, PASSWORD_DEFAULT);
@@ -37,14 +50,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             if ((int)$existing['is_verified'] === 1) {
                 $error = "An account with this email already exists.";
             } else {
-                $update = $conn->query("
-                    UPDATE users
-                    SET name='$safeName',
-                        password='$passwordHash',
-                        email_otp='$otpHash',
-                        otp_expires_at='$expiresAt'
-                    WHERE email='$safeEmail'
-                ");
+                $stmt = $conn->prepare(" 
+    UPDATE users
+    SET
+        name = ?,
+        password = ?,
+        email_otp = ?,
+        otp_expires_at = ?
+    WHERE email = ?
+"); //prepared statement to prevent SQL injection
+
+$stmt->bind_param(
+    "sssss",
+    $name,
+    $passwordHash,
+    $otpHash,
+    $expiresAt,
+    $email
+);
+
+$update = $stmt->execute();
 
                 if (!$update) {
                     $error = "Registration update failed. Please try again.";
@@ -56,14 +81,41 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 }
             }
         } else {
-            $sql = "
-                INSERT INTO users 
-                (name, email, password, role, is_verified, email_otp, otp_expires_at, seller_status)
-                VALUES 
-                ('$safeName', '$safeEmail', '$passwordHash', 'user', 0, '$otpHash', '$expiresAt', 'none')
-            ";
+            $stmt = $conn->prepare("
+    INSERT INTO users
+    (
+        name,
+        email,
+        password,
+        role,
+        is_verified,
+        email_otp,
+        otp_expires_at,
+        seller_status
+    )
+    VALUES
+    (
+        ?,
+        ?,
+        ?,
+        'user',
+        0,
+        ?,
+        ?,
+        'none'
+    )
+");
 
-            if ($conn->query($sql)) {
+$stmt->bind_param(
+    "sssss",
+    $name,
+    $email,
+    $passwordHash,
+    $otpHash,
+    $expiresAt
+);
+
+if ($stmt->execute()) {
                 $_SESSION['pending_email'] = $email;
                 sendOtpEmail($email, $name, $otp);
                 header("Location: verify_otp.php");
@@ -112,6 +164,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <?php endif; ?>
 
         <form method="POST">
+<input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
             <div class="form-group">
                 <label>Full Name</label>
                 <input type="text" name="name" placeholder="Enter your full name" required>

@@ -279,11 +279,11 @@ function getUserRecommendedProducts($conn, $userId, $limit = 6) {
             }
         }
 
-        if ($bestScore > 0) {
-            $candidate['recommendation_score'] = $bestScore;
-            $candidate['recommendation_reason'] = getRecommendationReason();
-            $recommended[] = $candidate;
-        }
+        if ($bestScore >= 30) {
+    $candidate['recommendation_score'] = $bestScore;
+    $candidate['recommendation_reason'] = getRecommendationReason();
+    $recommended[] = $candidate;
+}
     }
 
     usort($recommended, function ($a, $b) {
@@ -337,11 +337,11 @@ function getSimilarProducts($conn, $productId, $limit = 4) {
     foreach ($candidates as $candidate) {
         $score = calculateRecommendationScore($targetProduct, $candidate);
 
-        if ($score > 0) {
-            $candidate['recommendation_score'] = $score;
-            $candidate['recommendation_reason'] = getRecommendationReason();
-            $similar[] = $candidate;
-        }
+if ($score >= 30) {
+    $candidate['recommendation_score'] = $score;
+    $candidate['recommendation_reason'] = getRecommendationReason();
+    $similar[] = $candidate;
+}
     }
 
     usort($similar, function ($a, $b) {

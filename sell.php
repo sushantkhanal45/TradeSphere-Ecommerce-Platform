@@ -1,5 +1,8 @@
 <?php
 session_start();
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 include "config/db.php";
 include "includes/rsa_helper.php";
 
@@ -151,10 +154,28 @@ function insertSellerNotification($conn, $userId, $message) {
     $userId = (int)$userId;
     $safeMessage = $conn->real_escape_string($message);
 
-    $conn->query("
-        INSERT INTO notifications (user_id, order_id, message)
-        VALUES ($userId, NULL, '$safeMessage')
-    ");
+  $stmt = $conn->prepare("
+    INSERT INTO notifications
+    (
+        user_id,
+        order_id,
+        message
+    )
+    VALUES
+    (
+        ?,
+        NULL,
+        ?
+    )
+");
+
+$stmt->bind_param(
+    "is",
+    $userId,
+    $safeMessage
+);
+
+$stmt->execute();
 }
 
 $error = "";
@@ -171,14 +192,22 @@ $old = [
     "contact_number" => ""
 ];
 
-$userEmail = $conn->real_escape_string($_SESSION['user']);
-
-$userRes = $conn->query("
-    SELECT id, name, email, seller_status
+$userEmail = $_SESSION['user'];
+$stmt = $conn->prepare("
+    SELECT
+        id,
+        name,
+        email,
+        seller_status
     FROM users
-    WHERE email='$userEmail'
+    WHERE email = ?
     LIMIT 1
 ");
+
+$stmt->bind_param("s", $userEmail);
+$stmt->execute();
+
+$userRes = $stmt->get_result();
 
 $user = $userRes ? $userRes->fetch_assoc() : null;
 
@@ -195,12 +224,23 @@ if (!isset($user['seller_status']) || $user['seller_status'] === "") {
 
 /* Request seller verification */
 if (isset($_POST['request_seller'])) {
-    $conn->query("
-        UPDATE users
-        SET seller_status='pending',
-            seller_requested_at=NOW()
-        WHERE id=$userId
-    ");
+
+    if (
+        !isset($_POST['csrf_token']) ||
+        !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])
+    ) {
+        die("Invalid CSRF Token.");
+    }
+       $stmt = $conn->prepare("
+    UPDATE users
+    SET
+        seller_status = 'pending',
+        seller_requested_at = NOW()
+    WHERE id = ?
+");
+
+$stmt->bind_param("i", $userId);
+$stmt->execute();
 
     $user['seller_status'] = "pending";
     $success = "Your seller verification request has been sent to admin.";
@@ -208,6 +248,12 @@ if (isset($_POST['request_seller'])) {
 
 /* Add Product */
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['add_product'])) {
+    if (
+    !isset($_POST['csrf_token']) ||
+    !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])
+) {
+    die("Invalid CSRF Token.");
+}
     foreach ($old as $key => $value) {
         $old[$key] = trim($_POST[$key] ?? "");
     }
@@ -332,40 +378,58 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['add_product'])) {
                 $safeAiStatus = $conn->real_escape_string($aiStatus);
                 $safeAiReason = $conn->real_escape_string($aiReason);
 
-                $insert = $conn->query("
-                    INSERT INTO products
-                    (
-                        user_id,
-                        name,
-                        category_id,
-                        price,
-                        description,
-                        product_condition,
-                        city,
-                        contact_number,
-                        seller_email,
-                        image,
-                        status,
-                        ai_status,
-                        ai_reason
-                    )
-                    VALUES
-                    (
-                        $userId,
-                        '$safeName',
-                        $categoryId,
-                        $priceValue,
-                        '$safeDescription',
-                        '$safeCondition',
-                        '$safeCity',
-                        '$safeContact',
-                        '$safeEmail',
-                        '$safeImage',
-                        'available',
-                        '$safeAiStatus',
-                        '$safeAiReason'
-                    )
-                ");
+               $stmt = $conn->prepare("
+    INSERT INTO products
+    (
+        user_id,
+        name,
+        category_id,
+        price,
+        description,
+        product_condition,
+        city,
+        contact_number,
+        seller_email,
+        image,
+        status,
+        ai_status,
+        ai_reason
+    )
+    VALUES
+    (
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        'available',
+        ?,
+        ?
+    )
+");
+
+$stmt->bind_param(
+    "isidssssssss",
+    $userId,
+    $safeName,
+    $categoryId,
+    $priceValue,
+    $safeDescription,
+    $safeCondition,
+    $safeCity,
+    $safeContact,
+    $safeEmail,
+    $safeImage,
+    $safeAiStatus,
+    $safeAiReason
+);
+
+$insert = $stmt->execute();
 
                 if ($insert) {
                     $productId = (int)$conn->insert_id;
@@ -471,11 +535,19 @@ function fieldClass($name, $invalidFields) {
                     <h3>Seller Verification Required</h3>
                     <p>To start selling on TradeSphere, you must request seller verification.</p>
 
-                    <form method="POST">
-                        <button type="submit" name="request_seller" class="btn btn-primary">
-                            Request Seller Verification
-                        </button>
-                    </form>
+                 <form method="POST">
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="<?php echo $_SESSION['csrf_token']; ?>">
+
+    <button
+        type="submit"
+        name="request_seller"
+        class="btn btn-primary">
+        Request Again
+    </button>
+</form>
 
                 <?php elseif ($user['seller_status'] === "pending"): ?>
                     <span class="status-pill status-pending">Pending Approval</span>
@@ -488,10 +560,18 @@ function fieldClass($name, $invalidFields) {
                     <p>Your seller verification request was rejected by admin.</p>
 
                     <form method="POST">
-                        <button type="submit" name="request_seller" class="btn btn-primary">
-                            Request Again
-                        </button>
-                    </form>
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="<?php echo $_SESSION['csrf_token']; ?>">
+
+    <button
+        type="submit"
+        name="request_seller"
+        class="btn btn-primary">
+        Request Again
+    </button>
+</form>
                 <?php endif; ?>
 
             </div>
@@ -507,7 +587,10 @@ function fieldClass($name, $invalidFields) {
                 <?php if ($error): ?><div class="error-msg"><?php echo nl2br(h($error)); ?></div><?php endif; ?>
 
                 <form method="POST" enctype="multipart/form-data" id="sellForm" class="<?php echo !empty($invalidFields) ? 'submitted' : ''; ?>" novalidate>
-
+<input
+    type="hidden"
+    name="csrf_token"
+    value="<?php echo $_SESSION['csrf_token']; ?>">
                     <div class="<?php echo fieldClass('name', $invalidFields); ?>">
                         <label>Product Name <span class="required-star">*</span></label>
                         <input type="text" name="name" value="<?php echo h($old['name']); ?>">

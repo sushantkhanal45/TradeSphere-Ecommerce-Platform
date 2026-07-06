@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 10, 2026 at 10:10 AM
+-- Generation Time: Jul 05, 2026 at 05:17 PM
 -- Server version: 10.4.28-MariaDB
 -- PHP Version: 8.2.4
 
@@ -338,7 +338,8 @@ INSERT INTO `orders` (`id`, `user_id`, `product_id`, `seller_user_id`, `buyer_na
 (10, 3, 3, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '98348695743895', '', 50.00, 1, 'ts_6a1538b7c3bfa_p3', 'eSewa', 'paid', 'confirmed', 'pending', 0, NULL, NULL, 0, '000FJT2', '2026-05-26 06:07:51', '2026-05-26 06:08:38', NULL),
 (11, 3, 78, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '9841295114', NULL, 1925.00, 1, 'TS-1780807406-3-78', 'eSewa', 'paid', 'confirmed', 'pending', 0, NULL, NULL, 0, 'LOCAL-1780807406', '2026-06-07 04:43:26', '2026-06-07 04:43:26', 'Bhaktapur'),
 (12, 3, 77, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '9841295114', '', 300.00, 1, 'ts_6a24fef9c02af_p77', 'eSewa', 'paid', 'confirmed', 'pending', 0, NULL, NULL, 0, '000FNMT', '2026-06-07 05:17:45', '2026-06-07 05:18:41', NULL),
-(13, 3, 12, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '9841295114', '', 100.00, 1, 'ts_6a24ffcc20190_p12', 'eSewa', 'paid', 'completed', 'delivered', 1, '2026-06-07 13:42:05', '2026-06-07 13:42:05', 0, '000FNMU', '2026-06-07 05:21:16', '2026-06-07 07:57:05', NULL);
+(13, 3, 12, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '9841295114', '', 100.00, 1, 'ts_6a24ffcc20190_p12', 'eSewa', 'paid', 'completed', 'delivered', 1, '2026-06-07 13:42:05', '2026-06-07 13:42:05', 0, '000FNMU', '2026-06-07 05:21:16', '2026-06-07 07:57:05', NULL),
+(14, 3, 80, 2, 'Harry Potter', 'hellwrld0045@gmail.com', '9860678556', '', 951.00, 1, 'ts_6a47e0fa42880_p80', 'eSewa', 'paid', 'confirmed', 'pending', 0, NULL, NULL, 0, '000G1KN', '2026-07-03 16:19:06', '2026-07-03 16:19:54', NULL);
 
 -- --------------------------------------------------------
 
@@ -369,7 +370,8 @@ INSERT INTO `payment_logs` (`id`, `order_id`, `transaction_uuid`, `status`, `raw
 (21, 9, 'ts_6a0ebd2daa0c9', 'paid', '{\"transaction_code\":\"000FIKL\",\"status\":\"COMPLETE\",\"total_amount\":\"500.0\",\"transaction_uuid\":\"ts_6a0ebd2daa0c9\",\"product_code\":\"EPAYTEST\",\"signed_field_names\":\"transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names\",\"signature\":\"Wrem0oBEQ8VpGJbOCOJ0oIQM/R2y413pa25O6JRC638=\"}', '2026-05-21 08:07:58'),
 (22, 10, 'ts_6a1538b7c3bfa', 'paid', '{\"transaction_code\":\"000FJT2\",\"status\":\"COMPLETE\",\"total_amount\":\"50.0\",\"transaction_uuid\":\"ts_6a1538b7c3bfa\",\"product_code\":\"EPAYTEST\",\"signed_field_names\":\"transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names\",\"signature\":\"zk24YqHxYL2WzeC/qjEwQk8SQAKKiBpoDF4IqZHOKCg=\"}', '2026-05-26 06:08:38'),
 (23, 12, 'ts_6a24fef9c02af', 'paid', '{\"transaction_code\":\"000FNMT\",\"status\":\"COMPLETE\",\"total_amount\":\"300.0\",\"transaction_uuid\":\"ts_6a24fef9c02af\",\"product_code\":\"EPAYTEST\",\"signed_field_names\":\"transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names\",\"signature\":\"LSxj4/Cwn9JahkQoZ19XMuRoA0kiZaizNDraw7mVq6E=\"}', '2026-06-07 05:18:41'),
-(24, 13, 'ts_6a24ffcc20190', 'paid', '{\"transaction_code\":\"000FNMU\",\"status\":\"COMPLETE\",\"total_amount\":\"100.0\",\"transaction_uuid\":\"ts_6a24ffcc20190\",\"product_code\":\"EPAYTEST\",\"signed_field_names\":\"transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names\",\"signature\":\"xDhpDl71QoDVvy88LFLeeAH71+ZcrP5Maepg3E21gKg=\"}', '2026-06-07 05:21:43');
+(24, 13, 'ts_6a24ffcc20190', 'paid', '{\"transaction_code\":\"000FNMU\",\"status\":\"COMPLETE\",\"total_amount\":\"100.0\",\"transaction_uuid\":\"ts_6a24ffcc20190\",\"product_code\":\"EPAYTEST\",\"signed_field_names\":\"transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names\",\"signature\":\"xDhpDl71QoDVvy88LFLeeAH71+ZcrP5Maepg3E21gKg=\"}', '2026-06-07 05:21:43'),
+(25, 14, 'ts_6a47e0fa42880', 'paid', '{\"transaction_code\":\"000G1KN\",\"status\":\"COMPLETE\",\"total_amount\":\"951.0\",\"transaction_uuid\":\"ts_6a47e0fa42880\",\"product_code\":\"EPAYTEST\",\"signed_field_names\":\"transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names\",\"signature\":\"+7c8tkjHppfJ8fQH2UEX6e1y4yrKdBlHVlWHQEfpDKI=\"}', '2026-07-03 16:19:54');
 
 -- --------------------------------------------------------
 
@@ -722,7 +724,8 @@ INSERT INTO `signatures` (`id`, `user_id`, `action_type`, `related_id`, `signed_
 (89, 3, 'product_updated', 107, '{\"action\":\"product_updated\",\"user_id\":3,\"product_id\":107,\"old_product\":{\"name\":\"Sushant Khanal\",\"category_id\":\"2\",\"price\":\"123.00\",\"city\":\"Kathmandu\",\"description\":\"good product\",\"product_condition\":\"New\",\"status\":\"available\",\"image\":\"1780984227_6a27a9a3bce1c.png\"},\"new_product\":{\"name\":\"Sushant Khanal\",\"category_id\":2,\"price\":\"123.00\",\"city\":\"Kathmandu\",\"description\":\"nice product\",\"product_condition\":\"New\",\"status\":\"available\",\"image\":\"1780984227_6a27a9a3bce1c.png\"},\"timestamp\":\"2026-06-09 09:20:31\"}', 'Faz6D+A1sbcDM1VGOODTXspT6RYRH4MNh9EFMp+bvnvtvVv+pQpFIlTLsGdgFQn0Emc4PEngt3xEPuRm0ZEoiD1L/i91fliwgmIDhLA+Y0zzXFvoIsEk3nNkq80T0wsVE0V3CVfk0wphlqTUy29ayfoKX5uskqJHf9t0x4FwD3IbMUDTPZpvcS7q9KvlFvvy8WW+cty80AVnteVncT8U7FFNNkcLJ9q4OMvmsm6thzD8qatHlUpyM3RbhAoA5OGv2snlr25pK5tcPOLpP1Se6s2RBUxHOhoTxIOIDbLtr1PefiTLsesBfzq5My9VBT4IwrUGzOmAT06e09y+DT2PyA==', '2026-06-09 07:20:31'),
 (90, 3, 'product_resubmitted', 107, '{\"action\":\"product_resubmitted\",\"user_id\":3,\"product_id\":107,\"old_product\":{\"name\":\"Sushant Khanal\",\"category_id\":\"2\",\"price\":\"123.00\",\"city\":\"Kathmandu\",\"description\":\"nice product\",\"product_condition\":\"New\",\"status\":\"available\",\"image\":\"1780984227_6a27a9a3bce1c.png\",\"ai_status\":\"rejected\",\"ai_reason\":\"not full information\"},\"new_product\":{\"name\":\"Sushant Khanal\",\"category_id\":2,\"price\":\"123.00\",\"city\":\"Kathmandu\",\"description\":\"good product\",\"product_condition\":\"New\",\"status\":\"available\",\"image\":\"1780984227_6a27a9a3bce1c.png\",\"ai_status\":\"manual_review\",\"ai_reason\":\"Product resubmitted by seller after correction.\"},\"timestamp\":\"2026-06-09 17:49:36\"}', 'L4zSYO+oikHbzUv9ur+G3WRY8/or8EMWmjeS3EMmBGG4gGrseBrbjwikONXwqb9Xxppi20MRFBsxAOtiCZ2tEYCNFEVuw4KQuX5LL2q1zVDiIe9LOPVZpqwySmCh85yVv5ebupPKmpWA06VKAd9TNwqNEBe9gGKIbX1QUaP9sPC++dZ59jXB1JpfLneJZCbjfIIVKaE8eHDu9QhOsUAVKim4LgO0XOONO8dHIDVoduuQWYenHTfLTB7EQmgq057CbbLi1KyFvgPNTmWI8XHatiJsN1AAVtp61mmZfdxHwGXTNTAcNG7RsA58GRm7wmkqLG2FLgnMUU1XaytqmSitBg==', '2026-06-09 15:49:36'),
 (91, 3, 'product_resubmitted', 107, '{\"action\":\"product_resubmitted\",\"user_id\":3,\"product_id\":107,\"old_product\":{\"name\":\"Sushant Khanal\",\"category_id\":\"2\",\"price\":\"123.00\",\"city\":\"Kathmandu\",\"description\":\"good product\",\"product_condition\":\"New\",\"status\":\"available\",\"image\":\"1780984227_6a27a9a3bce1c.png\",\"ai_status\":\"rejected\",\"ai_reason\":\"not full information\"},\"new_product\":{\"name\":\"Sushant Khanal\",\"category_id\":2,\"price\":\"123.00\",\"city\":\"Kathmandu\",\"description\":\"nice product\",\"product_condition\":\"New\",\"status\":\"available\",\"image\":\"1780984227_6a27a9a3bce1c.png\",\"ai_status\":\"manual_review\",\"ai_reason\":\"Product resubmitted by seller after correction.\"},\"timestamp\":\"2026-06-09 18:45:37\"}', 'VntX2GQ82uUV9O++pCcwTtrNVCe/bGX6mGZNxXFakz1RLpAou7zKfqBUdPuOunmkM+E9/6j9iEYqMT9V4dpTGNXLX5Qli5/jV3T3Nu2ftRYo9vmjjs0pgI6egVQWE/hDLaUQ1SLSRpVnwbTwphZSU23GT2ZVRUzXHx05ExjkhktsgFOBlOWWOKHqZJkY2gEA28ozVl/q+7LaV7EFkApFHlLkPuWa/yVlAXm2b+Vsd6xqJoOuCM3JbE6UvKsoJRhEQt+sbwS7d6LqPw8q10FhJyh2khoc7bVKwa1v2gdRI1s58ak4HBc8xA2+l7k1dj/LN+uA4zcc2HD882Vk+xDlvQ==', '2026-06-09 16:45:37'),
-(92, 3, 'product_resubmitted', 107, '{\"action\":\"product_resubmitted\",\"user_id\":3,\"product_id\":107,\"old_product\":{\"name\":\"Sushant Khanal\",\"category_id\":\"2\",\"price\":\"123.00\",\"city\":\"Kathmandu\",\"description\":\"nice product\",\"product_condition\":\"New\",\"status\":\"available\",\"image\":\"1780984227_6a27a9a3bce1c.png\",\"ai_status\":\"rejected\",\"ai_reason\":\"not full information\"},\"new_product\":{\"name\":\"Sushant Khanal\",\"category_id\":2,\"price\":\"123.00\",\"city\":\"Kathmandu\",\"description\":\"good product\",\"product_condition\":\"New\",\"status\":\"available\",\"image\":\"1780984227_6a27a9a3bce1c.png\",\"ai_status\":\"manual_review\",\"ai_reason\":\"Product resubmitted by seller after correction.\"},\"timestamp\":\"2026-06-10 06:50:38\"}', 'n9fl1o4NcCKpI4Y+rr/FSpj6get0X4hJVDFhntogzIkB5vvPETdCw0Olfylm8tk4n/CGTl0f2HzzBc5NBOrmbbUucPbEi0e2SJs6NNiDKHTsWZ40eedbgQP1yP6ngqQbkRo8Yi1VR5arMYj55MD5g640Dow5RqLQGvMVMutDqNfIYeajPtCBoCg8zIt71nSaPZ+yUXHbyMeidwaP2zp693ALzT7EB/JgQQ8koSL22gWFUFFBHnSRXQige4JQUu+bYvkH6ekgI1uWq27LkQPa2XYMrinfZZBCoMel/rsyiIJgIh04brmt2fcz8W5ui61qrqQOMfs+6IN5qvXQISFFdQ==', '2026-06-10 04:50:38');
+(92, 3, 'product_resubmitted', 107, '{\"action\":\"product_resubmitted\",\"user_id\":3,\"product_id\":107,\"old_product\":{\"name\":\"Sushant Khanal\",\"category_id\":\"2\",\"price\":\"123.00\",\"city\":\"Kathmandu\",\"description\":\"nice product\",\"product_condition\":\"New\",\"status\":\"available\",\"image\":\"1780984227_6a27a9a3bce1c.png\",\"ai_status\":\"rejected\",\"ai_reason\":\"not full information\"},\"new_product\":{\"name\":\"Sushant Khanal\",\"category_id\":2,\"price\":\"123.00\",\"city\":\"Kathmandu\",\"description\":\"good product\",\"product_condition\":\"New\",\"status\":\"available\",\"image\":\"1780984227_6a27a9a3bce1c.png\",\"ai_status\":\"manual_review\",\"ai_reason\":\"Product resubmitted by seller after correction.\"},\"timestamp\":\"2026-06-10 06:50:38\"}', 'n9fl1o4NcCKpI4Y+rr/FSpj6get0X4hJVDFhntogzIkB5vvPETdCw0Olfylm8tk4n/CGTl0f2HzzBc5NBOrmbbUucPbEi0e2SJs6NNiDKHTsWZ40eedbgQP1yP6ngqQbkRo8Yi1VR5arMYj55MD5g640Dow5RqLQGvMVMutDqNfIYeajPtCBoCg8zIt71nSaPZ+yUXHbyMeidwaP2zp693ALzT7EB/JgQQ8koSL22gWFUFFBHnSRXQige4JQUu+bYvkH6ekgI1uWq27LkQPa2XYMrinfZZBCoMel/rsyiIJgIh04brmt2fcz8W5ui61qrqQOMfs+6IN5qvXQISFFdQ==', '2026-06-10 04:50:38'),
+(93, 3, 'payment_success', 14, '{\"action\":\"payment_success\",\"user_id\":3,\"order_id\":14,\"product_id\":80,\"seller_user_id\":2,\"transaction_uuid\":\"ts_6a47e0fa42880\",\"esewa_ref_id\":\"000G1KN\",\"payment_status\":\"paid\",\"order_status\":\"confirmed\",\"amount\":\"951.00\",\"timestamp\":\"2026-07-03 18:19:54\"}', 'Ei/tzkpF5A6hnTAO3YsQq+y3aPYmrd/70ZXIHJQFHw4Q3ggJbWnI5/ghGvf86X1lPVen8hhoUX89dv0IlvXPeT89K+xrHX7v102k2mTI+DDYxZoV8pbBmZcRjVAA++QQgifCoz9wjtWq0H0AyLNU0STMEj/UqWRiGpcBeG79ETbel7ONh0QhbGtf+H1j6iuGFbUwINYRhQ7E2T11HU9zlB++q6lZ2vBZXzPvpgQnec2hQ4FdeYS5+c2+RFNrVaV2fZHdedhGwWOFkOq6MJOc8sAIOqoOJygda0ItOIADmbsttm+8NUj02bqhxywuLZ4ux0sZY1M5lpv6LQDVQnbvBg==', '2026-07-03 16:19:54');
 
 -- --------------------------------------------------------
 
@@ -891,7 +894,7 @@ ALTER TABLE `wishlist`
 -- AUTO_INCREMENT for table `cart`
 --
 ALTER TABLE `cart`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT for table `categories`
@@ -921,13 +924,13 @@ ALTER TABLE `notifications`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `payment_logs`
 --
 ALTER TABLE `payment_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
 -- AUTO_INCREMENT for table `products`
@@ -957,7 +960,7 @@ ALTER TABLE `product_views`
 -- AUTO_INCREMENT for table `signatures`
 --
 ALTER TABLE `signatures`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=93;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=94;
 
 --
 -- AUTO_INCREMENT for table `users`

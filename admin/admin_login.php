@@ -11,9 +11,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if ($email === "" || $password === "") {
         $error = "Please fill in all fields.";
     } else {
-        $safeEmail = $conn->real_escape_string($email);
-        $result = $conn->query("SELECT * FROM users WHERE email='$safeEmail'");
-        $user = $result ? $result->fetch_assoc() : null;
+        $stmt = $conn->prepare("SELECT * FROM users WHERE email = ? LIMIT 1"); //prepared statement to prevent SQL injection    
+$stmt->bind_param("s", $email);
+$stmt->execute();
+
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
 
         if (!$user) {
             $error = "Invalid email or password.";

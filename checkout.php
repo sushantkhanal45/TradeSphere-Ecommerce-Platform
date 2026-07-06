@@ -1,5 +1,8 @@
 <?php
 session_start();
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 include "config/db.php";
 
 if (!isset($_SESSION['user'])) {
@@ -8,10 +11,19 @@ if (!isset($_SESSION['user'])) {
 }
 
 $userEmail = $_SESSION['user'];
-$safeUserEmail = $conn->real_escape_string($userEmail);
 
-$userRes = $conn->query("SELECT id, name, email FROM users WHERE email='$safeUserEmail' LIMIT 1");
-$user = $userRes ? $userRes->fetch_assoc() : null;
+$stmt = $conn->prepare("
+    SELECT id, name, email
+    FROM users
+    WHERE email = ?
+    LIMIT 1
+");
+
+$stmt->bind_param("s", $userEmail);
+$stmt->execute();
+
+$userRes = $stmt->get_result();
+$user = $userRes->fetch_assoc();
 
 if (!$user) {
     die("User not found.");
@@ -24,16 +36,28 @@ function getFinalCheckoutPrice($conn, $productId, $buyerId, $sellerUserId, $orig
     $buyerId = (int)$buyerId;
     $sellerUserId = (int)$sellerUserId;
 
-    $offerRes = $conn->query("
-        SELECT offer_amount
-        FROM product_offers
-        WHERE product_id = $productId
-        AND buyer_id = $buyerId
-        AND seller_id = $sellerUserId
+   $stmt = $conn->prepare("
+    SELECT offer_amount
+    FROM product_offers
+    WHERE
+        product_id = ?
+        AND buyer_id = ?
+        AND seller_id = ?
         AND status = 'accepted'
-        ORDER BY id DESC
-        LIMIT 1
-    ");
+    ORDER BY id DESC
+    LIMIT 1
+");
+
+$stmt->bind_param(
+    "iii",
+    $productId,
+    $buyerId,
+    $sellerUserId
+);
+
+$stmt->execute();
+
+$offerRes = $stmt->get_result();
 
     if ($offerRes && $offerRes->num_rows > 0) {
         $offer = $offerRes->fetch_assoc();
@@ -43,26 +67,31 @@ function getFinalCheckoutPrice($conn, $productId, $buyerId, $sellerUserId, $orig
     return (float)$originalPrice;
 }
 
-$cartQuery = $conn->query("
-    SELECT 
-        cart.id AS cart_id,
-        cart.product_id,
-        cart.quantity,
-        p.user_id AS seller_user_id,
-        p.name,
-        p.price,
-        p.city,
-        p.image,
-        p.status,
-        p.ai_status,
-        p.contact_number,
-        p.seller_email
-    FROM cart
-    INNER JOIN products p 
-        ON cart.product_id = p.id
-    WHERE cart.user_id = $userId
-    ORDER BY cart.id DESC
+$stmt = $conn->prepare("
+SELECT
+    cart.id AS cart_id,
+    cart.product_id,
+    cart.quantity,
+    p.user_id AS seller_user_id,
+    p.name,
+    p.price,
+    p.city,
+    p.image,
+    p.status,
+    p.ai_status,
+    p.contact_number,
+    p.seller_email
+FROM cart
+INNER JOIN products p
+    ON cart.product_id = p.id
+WHERE cart.user_id = ?
+ORDER BY cart.id DESC
 ");
+
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+
+$cartQuery = $stmt->get_result();
 
 $cartItems = [];
 $totalAmount = 0;
@@ -109,7 +138,14 @@ $success = "";
 $error = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
-    $buyerName = trim($_POST['buyer_name'] ?? '');
+
+    if (
+        !isset($_POST['csrf_token']) ||
+        !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])
+    ) {
+        die("Invalid CSRF Token.");
+    }
+        $buyerName = trim($_POST['buyer_name'] ?? '');
     $buyerEmail = trim($_POST['buyer_email'] ?? '');
     $buyerPhone = trim($_POST['buyer_phone'] ?? '');
     $buyerMessage = trim($_POST['buyer_message'] ?? '');
@@ -137,10 +173,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
         $productCode = "EPAYTEST";
         $secretKey = "8gBm/:&EnhH.1/q";
 
-        $safeBuyerName = $conn->real_escape_string($buyerName);
-        $safeBuyerEmail = $conn->real_escape_string($buyerEmail);
-        $safeBuyerPhone = $conn->real_escape_string($buyerPhone);
-        $safeBuyerMessage = $conn->real_escape_string($buyerMessage);
+
 
         $insertedOrderIds = [];
 
@@ -161,41 +194,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
 
             $itemTransactionUuid = $transactionUuid . "_p" . $productId;
 
-            $insertOrder = "
-                INSERT INTO orders (
-                    user_id,
-                    product_id,
-                    seller_user_id,
-                    buyer_name,
-                    buyer_email,
-                    buyer_phone,
-                    buyer_message,
-                    amount,
-                    quantity,
-                    transaction_uuid,
-                    payment_method,
-                    payment_status,
-                    order_status
-                ) VALUES (
-                    $userId,
-                    $productId,
-                    $sellerUserId,
-                    '$safeBuyerName',
-                    '$safeBuyerEmail',
-                    '$safeBuyerPhone',
-                    '$safeBuyerMessage',
-                    '$amount',
-                    '$qty',
-                    '$itemTransactionUuid',
-                    'eSewa',
-                    'pending',
-                    'placed'
-                )
-            ";
+       $stmt = $conn->prepare("
+    INSERT INTO orders
+    (
+        user_id,
+        product_id,
+        seller_user_id,
+        buyer_name,
+        buyer_email,
+        buyer_phone,
+        buyer_message,
+        amount,
+        quantity,
+        transaction_uuid,
+        payment_method,
+        payment_status,
+        order_status
+    )
+    VALUES
+    (
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        'eSewa',
+        'pending',
+        'placed'
+    )
+");
 
-            if ($conn->query($insertOrder)) {
-                $insertedOrderIds[] = (int)$conn->insert_id;
-            }
+$stmt->bind_param(
+    "iiissssdis",
+    $userId,
+    $productId,
+    $sellerUserId,
+    $buyerName,
+    $buyerEmail,
+    $buyerPhone,
+    $buyerMessage,
+    $amount,
+    $qty,
+    $itemTransactionUuid
+);
+
+if ($stmt->execute()) {
+    $insertedOrderIds[] = $conn->insert_id;
+}
         }
 
         if (count($insertedOrderIds) === 0) {
@@ -327,6 +377,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
                 <h3 style="margin-top:20px;">Total Payable: Rs <?php echo number_format($totalAmount, 2); ?></h3>
 
                 <form method="POST" style="margin-top: 24px;" id="checkoutForm" novalidate>
+                    <input
+    type="hidden"
+    name="csrf_token"
+    value="<?php echo $_SESSION['csrf_token']; ?>">
                     <div class="form-group">
                         <label>Buyer Name</label>
                         <input
