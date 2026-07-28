@@ -1,3 +1,5 @@
 includes/mail_config.php
 includes/mail_errors.txt
 includes/search_helper.php
+keys/private.pem
+keys/public.pem
